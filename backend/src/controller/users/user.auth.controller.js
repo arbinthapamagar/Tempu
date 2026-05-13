@@ -12,7 +12,7 @@ import { uploadOnCloudinary } from '../../utils/cloudinary.js';
 import { generateOtp, otpExpireTime } from '../../utils/generateOtp.js';
 import { forgetPasswordTemplate } from '../../utils/forgetPasswordTemplete.js';
 
-import jsonwebtoken from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 
 // userRegister handeling
 
@@ -79,8 +79,6 @@ const userRegister = asyncHandler(async (req, res) => {
         console.log(`OTP for ${phone}: ${otpCode}`); // free for dev
     } else {
     }
-    // terminal shows OTP
-    console.log(`OTP for ${phone}: ${otpCode}`);
 
     if (email) {
         // const verifyEmailUrl = `${process.env.FRONTEND_URL}/verify-email?code=${user._id}`;
@@ -94,34 +92,96 @@ const userRegister = asyncHandler(async (req, res) => {
             }),
         });
     }
-     const tempToken = jwt.sign(
-    { _id: user._id },
-    process.env.TEMP_TOKEN_SECRET,
-    { expiresIn: '10m' }
-  )
+    const tempToken = jwt.sign({ _id: user._id }, process.env.TEMP_TOKEN_SECRET, {
+        expiresIn: '10m',
+    });
     const userResponse = await User.findById(user._id).select('-password -refreshToken -otp');
 
-    return res.status(201).json(new apiResponse(201, userResponse,tempToken,  'Registered successfully'));
+    return res
+        .status(201)
+        .json(new apiResponse(201, userResponse, tempToken, 'Registered successfully'));
 });
 
+
+
+
 const verifyOtp = asyncHandler(async (req, res) => {
-    {/*
-        1. get phone/email + otp from req.body
-2. validate both required
-3. find user by phone or email
-4. check user exists
-5. check otp.code exists in DB
-6. check otp not expired
-7. check otp matches
-8. set isVerified true
-9. clear otp from DB
-10. generate tokens
-11. save refreshToken
-12. return response + tokens
-        
-    */}
+    {
+        /*
 
- const {otp }= req.body
- 
+        get the otp form the body 
+        get temp from header 
+        validate it 
+        decode tempToken  with jwt.verify ()
+        find user in db 
+        check otp exits or Notification
+        check if exired also or not 
+        check matches ?
+        then update cser isphoneverifed ues 
+        clear otp from db 
+        generate access token and refresh after that and send it into respone, 
+    */
+    }
 
+    const { otp } = req.body;
+    const tempToken = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!otp) {
+        throw new apiError(400, 'OTP is Required ');
+    }
+    if (!tempToken) {
+        throw new apiError(401, ' unauthorized ');
+    }
+    // decode token now
+
+    const decodedToken = jwt.verify(tempToken, process.env.TEMP_TOKEN_SECRET);
+
+    // now find the user in db
+
+    const user = await User.findById(decodedToken._id);
+    if (!user) {
+        throw new apiError(404, ' user not found ');
+    }
+
+    // check otp exits or not
+    if (!user.otp.code) throw new apiError(400, 'OTP not requested');
+
+    // 7. check otp expired
+    if (user.otp.expiresAt < new Date()) throw new apiError(400, 'OTP expired');
+    if (user.otp.code !== otp) throw new apiError(400, 'Invalid OTP');
+
+    // 9. update user
+    user.isPhoneVerified = true;
+    user.otp.code = null;
+    user.otp.expiresAt = null;
+
+    // 10. generate tokens
+
+
+    // 11. clean response
+    
+    const accessToken = user.generateAccessToken()
+    const refreshToken = user.generateRefreshToken()
+    user.refreshToken = refreshToken 
+    await user.save()
+    const userResponse = await User.findById(user._id).select('-password -refreshToken -otp');
+
+
+    const option = {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'None',
+    };
+
+    return res.status(200).json(
+        new apiResponse(
+            200,
+            {
+                user: userResponse,
+                accessToken,
+                refreshToken, 
+            },
+            'OTP verified successfully'
+        )
+    );
 });

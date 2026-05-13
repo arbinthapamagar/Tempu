@@ -1,8 +1,24 @@
 Auth (user.auth.controller.js)
-1. Register          →  create new user =====> Done 
+1. Register          →  create new user send the tempToken in header  =====> Done 
+ 
+    
 
+2. get phone/email + otp from req.body
+/*
 
-1. get phone/email + otp from req.body
+        get the otp form the body 
+        get temp from header 
+        validate it 
+        decode tempToken  with jwt.verify ()
+        find user in db 
+        check otp exits or Not
+        check if exired also or not 
+        check matches ?
+        then update cser isphoneverifed ues 
+        clear otp from db 
+        generate access token and refresh after that and send it into respone, 
+    */
+
 2. validate both required
 3. find user by phone or email
 4. check user exists
