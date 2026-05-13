@@ -1,5 +1,5 @@
 Auth (user.auth.controller.js)
-1. Register          →  create new user
+1. Register          →  create new user =====> Done 
 2. Login             →  phone + password
 3. Logout            →  clear refresh token
 4. Refresh Token     →  get new access token
