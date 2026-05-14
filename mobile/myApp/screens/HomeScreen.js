@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import {
   Animated,
   Easing,
@@ -45,7 +47,7 @@ export default function HomeScreen({ onOpenProfile }) {
   const [step, setStep] = useState('home');
   const [pickup, setPickup] = useState('Current location');
   const [destination, setDestination] = useState('');
-  const [vehicleId, setVehicleId] = useState('taxi');
+  const [vehicleId, setVehicleId] = useState('tuktuk');
   const [offeredPrice, setOfferedPrice] = useState('');
   const [payment, setPayment] = useState(CURRENT_USER.preferredPaymentMethod);
   const [acceptedBid, setAcceptedBid] = useState(null);
@@ -64,7 +66,7 @@ export default function HomeScreen({ onOpenProfile }) {
   const reset = () => {
     setStep('home');
     setDestination('');
-    setVehicleId('taxi');
+    setVehicleId('tuktuk');
     setOfferedPrice('');
     setAcceptedBid(null);
     setTripStatus('arriving');
@@ -72,6 +74,7 @@ export default function HomeScreen({ onOpenProfile }) {
 
   const goBack = () => {
     if (step === 'search') setStep('home');
+    else if (step === 'map-pick') setStep('search');
     else if (step === 'options') setStep('search');
     else if (step === 'bidding') setStep('options');
     else if (step === 'active') reset();
@@ -133,6 +136,16 @@ export default function HomeScreen({ onOpenProfile }) {
               setStep('options');
             }}
             onSubmit={() => destination.trim() && setStep('options')}
+            onOpenMapPicker={() => setStep('map-pick')}
+          />
+        )}
+        {step === 'map-pick' && (
+          <MapPickSheet
+            onCancel={() => setStep('search')}
+            onConfirm={(label) => {
+              setDestination(label);
+              setStep('options');
+            }}
           />
         )}
         {step === 'options' && (
@@ -180,38 +193,10 @@ function HomeView({ onOpenProfile, onTapSearch, onPickSaved }) {
     setTimeout(() => setRefreshing(false), 1200);
   };
   const services = [
-    {
-      id: 'rickshaw',
-      label: 'Rickshaw',
-      sub: 'Local & cheap',
-      type: 'tuktuk',
-      eta: '4 min',
-      price: 'from Rs 160',
-    },
-    {
-      id: 'scooter',
-      label: 'EV Scooter',
-      sub: 'Eco-friendly ride',
-      type: 'scooter',
-      eta: '2 min',
-      price: 'from Rs 90',
-    },
-    {
-      id: 'delivery',
-      label: 'Delivery',
-      sub: 'Parcels & goods',
-      type: 'tuktuk_delivery',
-      eta: '6 min',
-      price: 'from Rs 200',
-    },
-    {
-      id: 'subscribe',
-      label: 'Subscribe',
-      sub: 'Daily school / business',
-      type: 'bike',
-      eta: 'Plan',
-      price: 'Rs 7,500/mo',
-    },
+    { id: 'rickshaw', label: 'Rickshaw', sub: 'Local', type: 'tuktuk' },
+    { id: 'scooter', label: 'EV Scooter', sub: 'Eco', type: 'scooter' },
+    { id: 'delivery', label: 'Delivery', sub: 'Parcels', type: 'tuktuk_delivery' },
+    { id: 'subscribe', label: 'Subscribe', sub: 'Daily', type: 'bike' },
   ];
 
   return (
@@ -246,7 +231,6 @@ function HomeView({ onOpenProfile, onTapSearch, onPickSaved }) {
           />
         }
       >
-        <Text style={styles.bigHeading}>Where to?</Text>
         <Pressable style={styles.searchBar} onPress={onTapSearch}>
           <SearchIcon size={18} color={colors.text} />
           <Text style={styles.searchPlaceholder}>Search destination</Text>
@@ -255,8 +239,7 @@ function HomeView({ onOpenProfile, onTapSearch, onPickSaved }) {
           </View>
         </Pressable>
 
-        <Text style={styles.sectionLabel}>Choose a service</Text>
-        <View style={styles.serviceList}>
+        <View style={styles.serviceGrid}>
           {services.map((s) => {
             const selected = s.id === selectedService;
             return (
@@ -264,42 +247,21 @@ function HomeView({ onOpenProfile, onTapSearch, onPickSaved }) {
                 key={s.id}
                 onPress={() => setSelectedService(s.id)}
                 style={[
-                  styles.serviceRow,
-                  selected && styles.serviceRowSelected,
+                  styles.serviceTile,
+                  selected && styles.serviceTileSelected,
                 ]}
               >
-                <View style={styles.serviceArt}>
-                  <VehiclePhoto type={s.type} size={48} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.serviceLabel}>{s.label}</Text>
-                  <Text style={styles.serviceSub}>{s.sub}</Text>
-                </View>
-                <View style={styles.serviceRight}>
-                  <Text style={styles.servicePrice}>{s.price}</Text>
-                  <Text style={styles.serviceEta}>{s.eta}</Text>
-                </View>
-                <View
-                  style={[
-                    styles.selectDot,
-                    selected && styles.selectDotOn,
-                  ]}
-                >
-                  {selected && (
-                    <Ionicons name="checkmark" size={14} color="#ffffff" />
-                  )}
-                </View>
+                <VehiclePhoto type={s.type} size={44} />
+                <Text style={styles.serviceTileLabel} numberOfLines={1}>
+                  {s.label}
+                </Text>
+                <Text style={styles.serviceTileSub} numberOfLines={1}>
+                  {s.sub}
+                </Text>
               </Pressable>
             );
           })}
         </View>
-
-        <Pressable style={styles.continueBtn} onPress={onTapSearch}>
-          <Text style={styles.continueBtnText}>
-            Continue with{' '}
-            {services.find((s) => s.id === selectedService)?.label}
-          </Text>
-        </Pressable>
 
         <View style={styles.savedSectionRow}>
           <Text style={styles.savedSectionTitle}>Saved places</Text>
@@ -361,7 +323,15 @@ function BrandLogo() {
   );
 }
 
-function SearchSheet({ pickup, setPickup, destination, setDestination, onPick, onSubmit }) {
+function SearchSheet({
+  pickup,
+  setPickup,
+  destination,
+  setDestination,
+  onPick,
+  onSubmit,
+  onOpenMapPicker,
+}) {
   const [pinning, setPinning] = useState(null); // 'from' | 'to' | null
 
   return (
@@ -412,11 +382,7 @@ function SearchSheet({ pickup, setPickup, destination, setDestination, onPick, o
         </Pressable>
         <Pressable
           style={[styles.routeAction, pinning === 'to' && styles.routeActionOn]}
-          onPress={() => {
-            setPinning('to');
-            setDestination('Pinned location');
-            setTimeout(() => onSubmit(), 300);
-          }}
+          onPress={onOpenMapPicker}
         >
           <Ionicons name="map" size={16} color="#5c6fff" />
           <Text style={styles.routeActionText}>Set on map</Text>
@@ -501,6 +467,11 @@ function OptionsSheet({
     <View style={[styles.sheet, styles.sheetTall]}>
       <View style={styles.handle} />
 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 8 }}
+        keyboardShouldPersistTaps="handled"
+      >
       <View style={styles.routeStrip}>
         <PinIcon size={10} color={colors.primary} />
         <Text style={styles.routeStripText} numberOfLines={1}>
@@ -515,107 +486,82 @@ function OptionsSheet({
 
       <Text style={styles.sectionLabel}>Choose a ride</Text>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.vehicleRow}
-      >
-        {VEHICLE_TYPES.map((r) => {
+      <View style={styles.rideList}>
+        {VEHICLE_TYPES.map((r, i) => {
           const selected = r.id === vehicleId;
+          const current = Number(offeredPrice) || r.baseFare;
+          const bump = (delta) => {
+            const next = Math.max(50, current + delta);
+            setOfferedPrice(String(next));
+          };
           return (
-            <Pressable
+            <View
               key={r.id}
-              onPress={() => {
-                setVehicleId(r.id);
-                if (!offeredPrice) setOfferedPrice(String(r.baseFare));
-              }}
               style={[
-                styles.vehicleCard,
-                {
-                  backgroundColor: selected
-                    ? VEHICLE_TILE_BG[r.id] || colors.primarySoft
-                    : '#ffffff',
-                  borderColor: selected ? colors.primary : colors.border,
-                  borderWidth: selected ? 2 : 1,
-                },
+                styles.rideRowWrap,
+                i !== VEHICLE_TYPES.length - 1 && styles.rideRowDivider,
+                selected && styles.rideRowSelected,
               ]}
             >
-              <View style={styles.vehicleArt}>
-                <VehiclePhoto type={r.id} size={84} />
-              </View>
-              <Text style={styles.vehicleName}>{r.name}</Text>
-              <View style={styles.vehicleMetaRow}>
-                <View style={styles.dotTiny} />
-                <Text style={styles.vehicleMeta}>{r.eta} min</Text>
-              </View>
-              <Text style={styles.vehiclePrice}>Rs {r.baseFare}</Text>
-              <Text style={styles.vehicleNote} numberOfLines={1}>
-                {r.note}
-              </Text>
-            </Pressable>
+              <Pressable
+                onPress={() => {
+                  setVehicleId(r.id);
+                  setOfferedPrice(String(r.baseFare));
+                }}
+                style={styles.rideRow}
+              >
+                <View style={styles.rideArt}>
+                  <VehiclePhoto type={r.id} size={44} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rideName}>{r.name}</Text>
+                  <Text style={styles.rideNote} numberOfLines={1}>
+                    {r.note}
+                  </Text>
+                </View>
+                <View style={styles.rideRight}>
+                  <Text style={styles.ridePrice}>
+                    Rs {selected ? current : r.baseFare}
+                  </Text>
+                  <View style={styles.rideEtaRow}>
+                    <Ionicons name="time-outline" size={11} color={colors.textMuted} />
+                    <Text style={styles.rideEta}>{r.eta} min</Text>
+                  </View>
+                </View>
+              </Pressable>
+
+              {selected && (
+                <View style={styles.fareAdjust}>
+                  <Pressable
+                    style={styles.fareBtn}
+                    onPress={() => bump(-20)}
+                    hitSlop={4}
+                  >
+                    <Ionicons name="remove" size={20} color={colors.text} />
+                  </Pressable>
+                  <View style={styles.fareCenter}>
+                    <Text style={styles.fareLabel}>Your offer</Text>
+                    <Text style={styles.fareValue}>Rs {current}</Text>
+                  </View>
+                  <Pressable
+                    style={styles.fareBtn}
+                    onPress={() => bump(20)}
+                    hitSlop={4}
+                  >
+                    <Ionicons name="add" size={20} color={colors.text} />
+                  </Pressable>
+                </View>
+              )}
+            </View>
           );
         })}
-      </ScrollView>
-
-      <Text style={styles.sectionLabel}>Your offer</Text>
-      <View style={styles.offerBox}>
-        <Text style={styles.offerCurrency}>Rs</Text>
-        <TextInput
-          value={offeredPrice}
-          onChangeText={(t) => setOfferedPrice(t.replace(/[^0-9]/g, ''))}
-          placeholder={String(suggested)}
-          placeholderTextColor={colors.textFaint}
-          keyboardType="number-pad"
-          style={styles.offerInput}
-        />
-        <View style={styles.offerQuick}>
-          <Pressable
-            style={styles.offerChip}
-            onPress={() => setOfferedPrice(String(Math.max(50, suggested - 30)))}
-          >
-            <Text style={styles.offerChipText}>−30</Text>
-          </Pressable>
-          <Pressable
-            style={styles.offerChip}
-            onPress={() => setOfferedPrice(String(suggested))}
-          >
-            <Text style={styles.offerChipText}>Suggested</Text>
-          </Pressable>
-          <Pressable
-            style={styles.offerChip}
-            onPress={() => setOfferedPrice(String(suggested + 30))}
-          >
-            <Text style={styles.offerChipText}>+30</Text>
-          </Pressable>
-        </View>
       </View>
+
       <Text style={styles.offerHint}>
-        Drivers will bid on your offer. You pick the best one.
+        Drivers bid on your offer. You pick the best one.
       </Text>
 
-      <Text style={styles.sectionLabel}>Payment</Text>
-      <View style={styles.paymentRowList}>
-        {PAYMENT_METHODS.map((p) => {
-          const selected = payment === p.id;
-          return (
-            <Pressable
-              key={p.id}
-              style={[styles.paymentChip, selected && styles.paymentChipSelected]}
-              onPress={() => setPayment(p.id)}
-            >
-              <PaymentLogo id={p.id} size={26} />
-              <Text
-                style={[
-                  styles.paymentChipText,
-                  selected && styles.paymentChipTextSelected,
-                ]}
-              >
-                {p.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      </ScrollView>
 
       <Pressable
         style={({ pressed }) => [
@@ -630,6 +576,119 @@ function OptionsSheet({
           Request {vehicle?.name} for Rs {priceNum || suggested}
         </Text>
       </Pressable>
+    </View>
+  );
+}
+
+function MapPickSheet({ onCancel, onConfirm }) {
+  const mapRef = useRef(null);
+  const [region, setRegion] = useState(KATHMANDU);
+  const [center, setCenter] = useState({
+    latitude: KATHMANDU.latitude,
+    longitude: KATHMANDU.longitude,
+  });
+  const [address, setAddress] = useState('Loading address…');
+  const [resolving, setResolving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const me = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const c = { latitude: me.coords.latitude, longitude: me.coords.longitude };
+      const r = { ...c, latitudeDelta: 0.01, longitudeDelta: 0.01 };
+      setRegion(r);
+      setCenter(c);
+      mapRef.current?.animateToRegion(r, 600);
+    })();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setResolving(true);
+    (async () => {
+      try {
+        const res = await Location.reverseGeocodeAsync(center);
+        if (cancelled) return;
+        const first = res?.[0];
+        if (first) {
+          const parts = [
+            first.name,
+            first.street,
+            first.district,
+            first.city,
+          ].filter(Boolean);
+          setAddress(parts.slice(0, 2).join(', ') || 'Selected location');
+        } else {
+          setAddress('Selected location');
+        }
+      } catch {
+        if (!cancelled) setAddress('Selected location');
+      } finally {
+        if (!cancelled) setResolving(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [center.latitude, center.longitude]);
+
+  return (
+    <View style={styles.mapPickRoot}>
+      <MapView
+        ref={mapRef}
+        style={styles.mapPickMap}
+        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+        initialRegion={region}
+        showsUserLocation
+        showsMyLocationButton={false}
+        showsCompass={false}
+        toolbarEnabled={false}
+        onRegionChangeComplete={(r) => {
+          setCenter({ latitude: r.latitude, longitude: r.longitude });
+        }}
+      />
+      <View pointerEvents="none" style={styles.mapPickCenterPin}>
+        <Ionicons name="location-sharp" size={42} color={colors.primary} />
+      </View>
+
+      <Pressable style={styles.mapPickClose} onPress={onCancel} hitSlop={6}>
+        <Ionicons name="close" size={22} color={colors.text} />
+      </Pressable>
+
+      <Pressable
+        style={styles.mapPickRecenter}
+        onPress={async () => {
+          const me = await Location.getCurrentPositionAsync({});
+          mapRef.current?.animateToRegion(
+            {
+              latitude: me.coords.latitude,
+              longitude: me.coords.longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            },
+            500,
+          );
+        }}
+        hitSlop={6}
+      >
+        <Ionicons name="locate" size={20} color={colors.text} />
+      </Pressable>
+
+      <View style={styles.mapPickSheet}>
+        <Text style={styles.mapPickKicker}>Drop-off</Text>
+        <Text style={styles.mapPickAddress} numberOfLines={2}>
+          {resolving ? 'Finding address…' : address}
+        </Text>
+        <Pressable
+          style={styles.mapPickConfirm}
+          onPress={() => onConfirm(address)}
+        >
+          <Text style={styles.mapPickConfirmText}>Confirm location</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -865,30 +924,89 @@ function DetailRow({ label, value, bold, last }) {
   );
 }
 
+const KATHMANDU = {
+  latitude: 27.7172,
+  longitude: 85.324,
+  latitudeDelta: 0.04,
+  longitudeDelta: 0.04,
+};
+
+const DEST = { latitude: 27.6981, longitude: 85.3592 };
+const DRIVER = { latitude: 27.728, longitude: 85.319 };
+
 function Map({ step }) {
+  const mapRef = useRef(null);
+  const [coords, setCoords] = useState(null);
+  const showDriver = step === 'bidding' || step === 'active';
+
+  useEffect(() => {
+    let sub;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const first = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const c = {
+        latitude: first.coords.latitude,
+        longitude: first.coords.longitude,
+      };
+      setCoords(c);
+      mapRef.current?.animateToRegion(
+        { ...c, latitudeDelta: 0.01, longitudeDelta: 0.01 },
+        800,
+      );
+      sub = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          distanceInterval: 10,
+          timeInterval: 4000,
+        },
+        (loc) =>
+          setCoords({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          }),
+      );
+    })();
+    return () => {
+      sub?.remove?.();
+    };
+  }, []);
+
+  const recenter = () => {
+    if (!coords) return;
+    mapRef.current?.animateToRegion(
+      { ...coords, latitudeDelta: 0.01, longitudeDelta: 0.01 },
+      500,
+    );
+  };
+
   return (
     <View style={styles.map}>
-      <View style={[styles.mapPath, styles.mapPathA]} />
-      <View style={[styles.mapPath, styles.mapPathB]} />
-      <View style={[styles.mapPath, styles.mapPathC]} />
-      <View style={[styles.mapPath, styles.mapPathD]} />
-      <View style={[styles.mapPath, styles.mapPathE]} />
-      <View style={[styles.mapBlock, styles.mapBlockA]} />
-      <View style={[styles.mapBlock, styles.mapBlockB]} />
-      <View style={[styles.mapBlock, styles.mapBlockC]} />
-      <View style={[styles.mapBlock, styles.mapBlockD]} />
-      <View style={[styles.mapPark]} />
-
-      <View style={styles.mapPinShadow} />
-      <View style={styles.mapPin}>
-        <View style={styles.mapPinCore} />
-      </View>
-
-      {(step === 'bidding' || step === 'active') && (
-        <View style={styles.mapDriver}>
-          <View style={styles.mapDriverCore} />
-        </View>
-      )}
+      <MapView
+        ref={mapRef}
+        style={{ flex: 1 }}
+        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+        initialRegion={KATHMANDU}
+        showsUserLocation
+        showsMyLocationButton={false}
+        showsCompass={false}
+        toolbarEnabled={false}
+      >
+        {coords && (
+          <Marker coordinate={coords} title="You" pinColor={colors.primary} />
+        )}
+        {step !== 'home' && (
+          <Marker coordinate={DEST} title="Drop-off" pinColor={colors.text} />
+        )}
+        {showDriver && (
+          <Marker coordinate={DRIVER} title="Driver" pinColor="#1a1a1a" />
+        )}
+      </MapView>
+      <Pressable style={styles.recenterBtn} onPress={recenter} hitSlop={6}>
+        <Ionicons name="locate" size={18} color={colors.text} />
+      </Pressable>
     </View>
   );
 }
@@ -918,9 +1036,109 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   mapPreview: {
-    height: 140,
+    height: 200,
     overflow: 'hidden',
     backgroundColor: '#e8ece6',
+  },
+  recenterBtn: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 4,
+  },
+
+  mapPickRoot: { ...StyleSheet.absoluteFillObject, backgroundColor: '#ffffff' },
+  mapPickMap: { ...StyleSheet.absoluteFillObject },
+  mapPickCenterPin: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginLeft: -21,
+    marginTop: -42,
+  },
+  mapPickClose: {
+    position: 'absolute',
+    top: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 48,
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  mapPickRecenter: {
+    position: 'absolute',
+    bottom: 220,
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  mapPickSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 28,
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: -4 },
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  mapPickKicker: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  mapPickAddress: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 14,
+  },
+  mapPickConfirm: {
+    paddingVertical: 15,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  mapPickConfirmText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '800',
   },
   homeBody: { flex: 1, backgroundColor: '#ffffff' },
   homeBodyContent: {
@@ -1157,6 +1375,112 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginTop: 18,
     marginBottom: 10,
+  },
+  rideList: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  rideRowWrap: { backgroundColor: '#ffffff' },
+  rideRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  rideRowDivider: { borderBottomWidth: 1, borderBottomColor: colors.divider },
+  rideRowSelected: { backgroundColor: colors.primarySoft },
+  rideArt: {
+    width: 52,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rideName: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  rideNote: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  rideRight: { alignItems: 'flex-end' },
+  ridePrice: { color: colors.text, fontSize: 15, fontWeight: '800' },
+  rideEtaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 3,
+  },
+  rideEta: { color: colors.textMuted, fontSize: 11 },
+
+  fareAdjust: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 14,
+    marginBottom: 12,
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  fareBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fareCenter: { alignItems: 'center' },
+  fareLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  fareValue: {
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginTop: 2,
+  },
+
+  serviceGrid: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 14,
+  },
+  serviceTile: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  serviceTileSelected: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+  },
+  serviceTileLabel: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  serviceTileSub: {
+    color: colors.textMuted,
+    fontSize: 10,
+    marginTop: 2,
+    textAlign: 'center',
   },
   serviceList: {
     backgroundColor: '#ffffff',
@@ -1490,15 +1814,15 @@ const styles = StyleSheet.create({
   paymentChipTextSelected: { color: colors.primaryDark },
 
   cta: {
-    marginTop: 18,
+    marginTop: 10,
     backgroundColor: colors.primary,
-    paddingVertical: 18,
+    paddingVertical: 13,
     borderRadius: 999,
     alignItems: 'center',
   },
   ctaPressed: { backgroundColor: colors.primaryDark },
   ctaDisabled: { backgroundColor: '#c4d3cb' },
-  ctaText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
+  ctaText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
 
   bidHeader: {
     flexDirection: 'row',

@@ -57,24 +57,6 @@ export const VEHICLE_TYPES = [
     capacity: 1,
     note: 'For parcels & goods',
   },
-  {
-    id: 'taxi',
-    name: 'Taxi',
-    short: 'TX',
-    eta: 5,
-    baseFare: 240,
-    capacity: 4,
-    note: 'Everyday cab',
-  },
-  {
-    id: 'comfort',
-    name: 'Comfort',
-    short: 'CF',
-    eta: 6,
-    baseFare: 320,
-    capacity: 4,
-    note: 'Newer, more room',
-  },
 ];
 
 export const VEHICLE_SHORT = {
@@ -82,8 +64,6 @@ export const VEHICLE_SHORT = {
   bike: 'BK',
   tuktuk: 'RK',
   tuktuk_delivery: 'DV',
-  taxi: 'TX',
-  comfort: 'CF',
 };
 
 export const PAYMENT_BADGES = {
