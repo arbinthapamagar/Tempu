@@ -11,17 +11,16 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { PaymentLogo, VehiclePhoto } from '../components/Brand';
 import {
   CallIcon,
   ChatIcon,
   ChevronIcon,
   FlagIcon,
-  PaymentBadge,
   PinIcon,
   SearchIcon,
   ShareIcon,
   StarIcon,
-  VehicleIcon,
 } from '../components/Icons';
 import {
   BIDS,
@@ -208,7 +207,7 @@ function HomeSheet({ onTapSearch, onPickSaved }) {
             style={[styles.tile, i === 0 && styles.tileHighlight]}
           >
             <View style={styles.tileIcon}>
-              <VehicleIcon type={t.type} size={42} />
+              <VehiclePhoto type={t.type} size={56} />
             </View>
             <Text style={styles.tileLabel}>{t.label}</Text>
             <Text style={styles.tileSub}>{t.sub}</Text>
@@ -373,7 +372,7 @@ function OptionsSheet({
               style={[styles.vehicleCard, selected && styles.vehicleCardSelected]}
             >
               <View style={styles.vehicleArt}>
-                <VehicleIcon type={r.id} size={42} />
+                <VehiclePhoto type={r.id} size={56} />
               </View>
               <Text style={styles.vehicleName}>{r.name}</Text>
               <View style={styles.vehicleMetaRow}>
@@ -435,7 +434,7 @@ function OptionsSheet({
               style={[styles.paymentChip, selected && styles.paymentChipSelected]}
               onPress={() => setPayment(p.id)}
             >
-              <PaymentBadge id={p.id} size={18} />
+              <PaymentLogo id={p.id} size={20} />
               <Text
                 style={[
                   styles.paymentChipText,
@@ -540,7 +539,7 @@ function BiddingSheet({ vehicle, offeredPrice, onAccept, onCancel }) {
                       .slice(0, 2)}
                   </Text>
                   <View style={styles.bidAvatarBadge}>
-                    <VehicleIcon type={driver.vehicleType} size={18} />
+                    <VehiclePhoto type={driver.vehicleType} size={20} />
                   </View>
                 </View>
                 <View style={{ flex: 1 }}>
@@ -935,7 +934,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySoft,
     borderColor: colors.primary,
   },
-  tileIcon: { height: 38, justifyContent: 'center', marginBottom: 6 },
+  tileIcon: { height: 56, justifyContent: 'center', marginBottom: 6 },
   tileLabel: { color: colors.text, fontSize: 15, fontWeight: '800' },
   tileSub: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
 
@@ -1075,7 +1074,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   vehicleArt: {
-    height: 42,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
