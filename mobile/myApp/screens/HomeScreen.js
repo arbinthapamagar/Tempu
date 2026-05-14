@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -5,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -88,31 +90,30 @@ export default function HomeScreen({ onOpenProfile }) {
     setTimeout(() => setTripStatus('started'), 4000);
   };
 
+  if (step === 'home') {
+    return (
+      <HomeView
+        onOpenProfile={onOpenProfile}
+        onTapSearch={() => setStep('search')}
+        onPickSaved={(addr) => {
+          setDestination(addr);
+          setStep('options');
+        }}
+      />
+    );
+  }
+
   return (
     <View style={styles.root}>
       <Map step={step} />
 
       <View style={styles.topBar}>
-        {step === 'home' ? (
-          <Pressable style={styles.circleBtn} onPress={onOpenProfile} hitSlop={8}>
-            <Text style={styles.avatarLetter}>
-              {CURRENT_USER.name.charAt(0)}
-            </Text>
-          </Pressable>
-        ) : step !== 'active' ? (
+        {step !== 'active' ? (
           <Pressable style={styles.circleBtn} onPress={goBack} hitSlop={8}>
             <View style={styles.backArrow} />
           </Pressable>
         ) : (
           <View />
-        )}
-        {step === 'home' && (
-          <View style={styles.greetingPill}>
-            <View style={styles.greetingDot} />
-            <Text style={styles.greetingText}>
-              {CURRENT_USER.name.split(' ')[0]}
-            </Text>
-          </View>
         )}
       </View>
 
@@ -120,15 +121,6 @@ export default function HomeScreen({ onOpenProfile }) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.sheetWrap}
       >
-        {step === 'home' && (
-          <HomeSheet
-            onTapSearch={() => setStep('search')}
-            onPickSaved={(addr) => {
-              setDestination(addr);
-              setStep('options');
-            }}
-          />
-        )}
         {step === 'search' && (
           <SearchSheet
             pickup={pickup}
@@ -179,67 +171,122 @@ export default function HomeScreen({ onOpenProfile }) {
   );
 }
 
-function HomeSheet({ onTapSearch, onPickSaved }) {
+function HomeView({ onOpenProfile, onTapSearch, onPickSaved }) {
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1200);
+  };
   const tiles = [
-    { id: 'delivery', label: 'Delivery', sub: 'Send parcels', type: 'tuktuk_delivery' },
     { id: 'rickshaw', label: 'Rickshaw', sub: 'Local & cheap', type: 'tuktuk' },
+    { id: 'scooter', label: 'EV Scooter', sub: 'Eco ride', type: 'scooter' },
+    { id: 'delivery', label: 'Delivery', sub: 'Send parcels', type: 'tuktuk_delivery' },
     { id: 'subscribe', label: 'Subscribe', sub: 'Daily rides', type: 'bike' },
   ];
+
   return (
-    <View style={styles.sheet}>
-      <View style={styles.handle} />
-
-      <Text style={styles.bigHeading}>Where to?</Text>
-
-      <Pressable style={styles.searchBar} onPress={onTapSearch}>
-        <SearchIcon size={18} color={colors.text} />
-        <Text style={styles.searchPlaceholder}>Search destination</Text>
-        <View style={styles.searchTrail}>
-          <Text style={styles.searchLater}>Later</Text>
-        </View>
-      </Pressable>
-
-      <View style={styles.tilesGrid}>
-        {tiles.map((t) => (
-          <Pressable key={t.id} style={styles.tile}>
-            <View style={styles.tileIcon}>
-              <VehiclePhoto type={t.type} size={88} />
-            </View>
-            <Text style={styles.tileLabel}>{t.label}</Text>
-            <Text style={styles.tileSub}>{t.sub}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <View style={styles.savedSectionRow}>
-        <Text style={styles.savedSectionTitle}>Saved places</Text>
-        <Pressable hitSlop={8}>
-          <Text style={styles.seeAll}>See all</Text>
+    <View style={styles.homeRoot}>
+      <View style={styles.homeHeader}>
+        <BrandLogo />
+        <Pressable
+          style={styles.avatarBtn}
+          onPress={onOpenProfile}
+          hitSlop={8}
+        >
+          <Text style={styles.avatarLetter}>
+            {CURRENT_USER.name.charAt(0)}
+          </Text>
         </Pressable>
       </View>
 
-      <View style={styles.savedList}>
-        {CURRENT_USER.savedAddresses.slice(0, 2).map((s, i, arr) => (
-          <Pressable
-            key={s.label}
-            style={[styles.savedRow, i !== arr.length - 1 && styles.savedRowDivider]}
-            onPress={() => onPickSaved(s.address)}
-          >
-            <View style={styles.savedIcon}>
-              <PinIcon size={18} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.savedLabel}>
-                {s.label.charAt(0).toUpperCase() + s.label.slice(1)}
-              </Text>
-              <Text style={styles.savedAddress} numberOfLines={1}>
-                {s.address}
-              </Text>
-            </View>
-            <ChevronIcon dir="right" />
-          </Pressable>
-        ))}
+      <View style={styles.mapPreview}>
+        <Map step="home" />
       </View>
+
+      <ScrollView
+        style={styles.homeBody}
+        contentContainerStyle={styles.homeBodyContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
+        <Text style={styles.bigHeading}>Where to?</Text>
+        <Pressable style={styles.searchBar} onPress={onTapSearch}>
+          <SearchIcon size={18} color={colors.text} />
+          <Text style={styles.searchPlaceholder}>Search destination</Text>
+          <View style={styles.searchTrail}>
+            <Text style={styles.searchLater}>Later</Text>
+          </View>
+        </Pressable>
+
+        <View style={styles.tilesGrid}>
+          {tiles.map((t) => (
+            <Pressable key={t.id} style={styles.tile}>
+              <View style={styles.tileIcon}>
+                <VehiclePhoto type={t.type} size={44} />
+              </View>
+              <Text style={styles.tileLabel} numberOfLines={1}>
+                {t.label}
+              </Text>
+              <Text style={styles.tileSub} numberOfLines={1}>
+                {t.sub}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={styles.savedSectionRow}>
+          <Text style={styles.savedSectionTitle}>Saved places</Text>
+          <Pressable hitSlop={8}>
+            <Text style={styles.seeAll}>See all</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.savedList}>
+          {CURRENT_USER.savedAddresses.slice(0, 2).map((s, i, arr) => (
+            <Pressable
+              key={s.label}
+              style={[
+                styles.savedRow,
+                i !== arr.length - 1 && styles.savedRowDivider,
+              ]}
+              onPress={() => onPickSaved(s.address)}
+            >
+              <View style={styles.savedIcon}>
+                <PinIcon size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.savedLabel}>
+                  {s.label.charAt(0).toUpperCase() + s.label.slice(1)}
+                </Text>
+                <Text style={styles.savedAddress} numberOfLines={1}>
+                  {s.address}
+                </Text>
+              </View>
+              <ChevronIcon dir="right" />
+            </Pressable>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function BrandLogo() {
+  return (
+    <View style={styles.brandRow}>
+      <View style={styles.brandBoltCircle}>
+        <Ionicons name="flash" size={20} color="#ffffff" />
+      </View>
+      <Text style={styles.brandText}>
+        Ev<Text style={styles.brandTextDark}>Nepal</Text>
+      </Text>
     </View>
   );
 }
@@ -732,6 +779,38 @@ function Map({ step }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#ffffff' },
 
+  homeRoot: { flex: 1, backgroundColor: '#ffffff' },
+  homeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? 20 : 8,
+    paddingBottom: 12,
+    backgroundColor: '#ffffff',
+  },
+  avatarBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapPreview: {
+    height: 200,
+    overflow: 'hidden',
+    backgroundColor: '#e8ece6',
+  },
+  homeBody: { flex: 1, backgroundColor: '#ffffff' },
+  homeBodyContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 28,
+  },
+
   map: {
     position: 'absolute',
     top: 0,
@@ -846,6 +925,32 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  brandBoltCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  brandText: {
+    color: colors.primary,
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: -0.8,
+  },
+  brandTextDark: { color: colors.text },
   greetingDot: {
     width: 8,
     height: 8,
@@ -854,7 +959,14 @@ const styles = StyleSheet.create({
   },
   greetingText: { color: colors.text, fontSize: 12, fontWeight: '700' },
 
-  sheetWrap: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  sheetWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'flex-end',
+  },
   sheet: {
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 32,
@@ -882,10 +994,10 @@ const styles = StyleSheet.create({
 
   bigHeading: {
     color: colors.text,
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
     letterSpacing: -0.5,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   softSub: {
     color: colors.textMuted,
@@ -898,11 +1010,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     backgroundColor: '#f3f5f2',
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   searchPlaceholder: {
     flex: 1,
@@ -922,34 +1034,44 @@ const styles = StyleSheet.create({
 
   tilesGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 16,
+    gap: 6,
+    marginTop: 10,
   },
   tile: {
-    width: '47.5%',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderRadius: 18,
+    flex: 1,
+    paddingHorizontal: 4,
+    paddingVertical: 10,
+    borderRadius: 14,
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: colors.border,
+    alignItems: 'center',
   },
   tileIcon: {
-    height: 88,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  tileLabel: { color: colors.text, fontSize: 15, fontWeight: '800' },
-  tileSub: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  tileLabel: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  tileSub: {
+    color: colors.textMuted,
+    fontSize: 10,
+    marginTop: 2,
+    textAlign: 'center',
+  },
 
   savedSectionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 22,
-    marginBottom: 4,
+    marginTop: 14,
+    marginBottom: 2,
   },
   savedSectionTitle: {
     color: colors.text,

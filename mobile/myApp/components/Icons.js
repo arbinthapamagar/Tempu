@@ -7,10 +7,13 @@ export const VEHICLE_META = {
   bike: { name: 'motorbike', color: '#e0464a', lib: 'mci' },
   scooter: { name: 'scooter', color: '#3aa6a0', lib: 'mci' },
   tuktuk: { name: 'rickshaw', color: '#e89711', lib: 'mci' },
-  tuktuk_delivery: { name: 'truck-delivery', color: '#7a4d20', lib: 'mci' },
+  tuktuk_delivery: { name: 'package-variant-closed', color: '#c2864a', lib: 'mci' },
 };
 
 export function VehicleIcon({ type, size = 36, color }) {
+  if (type === 'tuktuk_delivery') {
+    return <DeliveryArt size={size} />;
+  }
   const meta = VEHICLE_META[type] || VEHICLE_META.taxi;
   return (
     <MaterialCommunityIcons
@@ -18,6 +21,35 @@ export function VehicleIcon({ type, size = 36, color }) {
       size={size}
       color={color || meta.color}
     />
+  );
+}
+
+// Stacked delivery illustration: scooter with package on top
+export function DeliveryArt({ size = 64 }) {
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <View style={{ position: 'absolute', top: 0, right: size * 0.18 }}>
+        <MaterialCommunityIcons
+          name="package-variant-closed"
+          size={size * 0.42}
+          color="#c2864a"
+        />
+      </View>
+      <View style={{ position: 'absolute', bottom: 0, left: 0 }}>
+        <MaterialCommunityIcons
+          name="moped"
+          size={size * 0.72}
+          color="#3aa6a0"
+        />
+      </View>
+    </View>
   );
 }
 

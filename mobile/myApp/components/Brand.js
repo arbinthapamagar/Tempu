@@ -31,7 +31,7 @@ const VEHICLE_IMAGES = {
   taxi: null, // require('../assets/vehicles/taxi.png')
   comfort: null, // require('../assets/vehicles/comfort.png')
   bike: null, // require('../assets/vehicles/bike.png')
-  scooter: null, // require('../assets/vehicles/scooter.png')
+  scooter: require('../assets/vehicles/scooter.jpg'),
   tuktuk: require('../assets/vehicles/tuktuk.png'),
   tuktuk_delivery: null, // require('../assets/vehicles/delivery.png')
 };

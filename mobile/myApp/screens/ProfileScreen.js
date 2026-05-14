@@ -1,4 +1,8 @@
 import { useState } from 'react';
+import { Alert, Image, Platform } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { ChevronIcon, StarIcon } from '../components/Icons';
+import { Ionicons } from '@expo/vector-icons';
 import {
   Pressable,
   ScrollView,
@@ -116,6 +120,27 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription })
   const [available, setAvailable] = useState(PROFILE.driverProfile.isAvailable);
   const [pushNotifs, setPushNotifs] = useState(true);
   const [rideReminders, setRideReminders] = useState(true);
+  const [avatarUri, setAvatarUri] = useState(null);
+
+  const pickAvatar = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission needed',
+        'Please allow photo access to change your avatar.',
+      );
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setAvatarUri(result.assets[0].uri);
+    }
+  };
 
   const isDriver = PROFILE.role === 'driver';
   const initials = PROFILE.name
@@ -128,10 +153,11 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription })
     <View style={styles.root}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <View style={styles.backArrow} />
+          <Ionicons name="chevron-back" size={20} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={styles.headerTitle}>Account</Text>
         <Pressable style={styles.editBtn} hitSlop={8}>
+          <Ionicons name="create-outline" size={18} color={colors.primary} />
           <Text style={styles.editText}>Edit</Text>
         </Pressable>
       </View>
@@ -140,13 +166,39 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription })
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.identity}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+        <View style={styles.hero}>
+          <View style={styles.heroDecorA} />
+          <View style={styles.heroDecorB} />
+
+          <Pressable
+            style={styles.avatarWrap}
+            onPress={pickAvatar}
+            hitSlop={8}
+          >
+            <View style={styles.avatarRing}>
+              <View style={styles.avatar}>
+                {avatarUri ? (
+                  <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarText}>{initials}</Text>
+                )}
+              </View>
+            </View>
+            <View style={styles.cameraBadge}>
+              <Ionicons name="camera" size={14} color="#ffffff" />
+            </View>
+          </Pressable>
+
           <Text style={styles.name}>{PROFILE.name}</Text>
+          <Text style={styles.heroSub}>{PROFILE.email}</Text>
+
           <View style={styles.roleRow}>
             <View style={styles.rolePill}>
+              <Ionicons
+                name={isDriver ? 'car-sport' : 'person'}
+                size={12}
+                color={colors.primaryDark}
+              />
               <Text style={styles.rolePillText}>
                 {isDriver ? 'Driver' : 'Passenger'}
               </Text>
@@ -173,26 +225,33 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription })
               </Text>
             </View>
           </View>
-
-          <View style={styles.statsRow}>
-            <Stat
-              value={PROFILE.rating.average.toFixed(2)}
-              label={`${PROFILE.rating.total} ratings`}
-            />
-            <View style={styles.statsDivider} />
-            <Stat
-              value={isDriver ? PROFILE.driverProfile.totalRides : 38}
-              label={isDriver ? 'Total rides' : 'Trips'}
-            />
-            <View style={styles.statsDivider} />
-            <Stat
-              value={formatDate(PROFILE.memberSince).split(' ')[2]}
-              label="Member since"
-            />
-          </View>
         </View>
 
-        <Section title="Personal information">
+        <View style={styles.statsRow}>
+          <Stat
+            icon={<StarIcon size={16} color="#f5b400" />}
+            value={PROFILE.rating.average.toFixed(2)}
+            label={`${PROFILE.rating.total} ratings`}
+          />
+          <View style={styles.statsDivider} />
+          <Stat
+            icon={
+              <Ionicons name="navigate" size={14} color={colors.primary} />
+            }
+            value={isDriver ? PROFILE.driverProfile.totalRides : 38}
+            label={isDriver ? 'Rides' : 'Trips'}
+          />
+          <View style={styles.statsDivider} />
+          <Stat
+            icon={
+              <Ionicons name="calendar" size={14} color="#5c6fff" />
+            }
+            value={formatDate(PROFILE.memberSince).split(' ')[2]}
+            label="Member"
+          />
+        </View>
+
+        <Section title="Personal information" collapsible defaultOpen={false}>
           <Row label="Full name" value={PROFILE.name} />
           <Row
             label="Phone"
@@ -326,7 +385,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription })
               />
             </Section>
 
-            <Section title="Vehicle">
+            <Section title="Vehicle" collapsible defaultOpen={false}>
               <Row
                 label="Type"
                 value={
@@ -348,7 +407,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription })
               />
             </Section>
 
-            <Section title="Licence">
+            <Section title="Licence" collapsible defaultOpen={false}>
               <Row
                 label="Number"
                 value={PROFILE.driverProfile.licenseNumber}
@@ -360,7 +419,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription })
               />
             </Section>
 
-            <Section title="Driving stats">
+            <Section title="Driving stats" collapsible defaultOpen={false}>
               <View style={styles.metricsGrid}>
                 <Metric
                   label="Total rides"
@@ -381,7 +440,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription })
               </View>
             </Section>
 
-            <Section title="Documents">
+            <Section title="Documents" collapsible defaultOpen={false}>
               {PROFILE.driverProfile.documents.map((doc, i) => (
                 <View
                   key={doc.key}
@@ -466,11 +525,27 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription })
   );
 }
 
-function Section({ title, children }) {
+function Section({ title, children, collapsible, defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen);
+  if (!collapsible) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <View style={styles.sectionBody}>{children}</View>
+      </View>
+    );
+  }
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.sectionBody}>{children}</View>
+      <Pressable
+        style={styles.sectionHeaderToggle}
+        onPress={() => setOpen((v) => !v)}
+        hitSlop={6}
+      >
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <ChevronIcon dir={open ? 'up' : 'down'} size={16} color={colors.textMuted} />
+      </Pressable>
+      {open && <View style={styles.sectionBody}>{children}</View>}
     </View>
   );
 }
@@ -516,9 +591,10 @@ function LinkRow({ label, last }) {
   );
 }
 
-function Stat({ value, label }) {
+function Stat({ value, label, icon }) {
   return (
     <View style={styles.stat}>
+      {icon ? <View style={styles.statIcon}>{icon}</View> : null}
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -538,23 +614,19 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
 
   header: {
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingTop: Platform.OS === 'android' ? 28 : 16,
+    paddingBottom: 14,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -569,54 +641,131 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: colors.text,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
   },
-  editBtn: { paddingHorizontal: 6, paddingVertical: 4 },
-  editText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: colors.primarySoft,
+  },
+  editText: { color: colors.primaryDark, fontSize: 13, fontWeight: '700' },
 
   scroll: { paddingBottom: 40 },
 
-  identity: {
+  hero: {
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 28,
-    paddingBottom: 22,
-  },
-  avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    paddingBottom: 24,
+    marginHorizontal: 16,
+    marginTop: 4,
+    borderRadius: 24,
     backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: '#cfe6d8',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  heroDecorA: {
+    position: 'absolute',
+    top: -40,
+    right: -30,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(31, 122, 77, 0.12)',
+  },
+  heroDecorB: {
+    position: 'absolute',
+    bottom: -50,
+    left: -20,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(31, 122, 77, 0.08)',
+  },
+  avatarWrap: { position: 'relative', marginBottom: 14 },
+  avatarRing: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#ffffff',
+    padding: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 6,
   },
+  avatar: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: { width: '100%', height: '100%' },
   avatarText: {
-    color: colors.primaryDark,
-    fontSize: 28,
-    fontWeight: '700',
+    color: '#ffffff',
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -1,
+  },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.text,
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   name: {
     color: colors.text,
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  heroSub: {
+    color: colors.textMuted,
+    fontSize: 13,
+    marginTop: 4,
   },
   roleRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 10,
+    marginTop: 14,
   },
   rolePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: '#ffffff',
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#cfe6d8',
   },
   rolePillText: {
     color: colors.primaryDark,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   statusPill: {
     flexDirection: 'row',
@@ -646,30 +795,33 @@ const styles = StyleSheet.create({
   },
 
   statsRow: {
-    marginTop: 22,
+    marginTop: 14,
+    marginHorizontal: 16,
     flexDirection: 'row',
-    alignSelf: 'stretch',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 20,
-    paddingVertical: 14,
+    paddingVertical: 16,
   },
   stat: { flex: 1, alignItems: 'center' },
+  statIcon: { marginBottom: 4 },
   statValue: {
     color: colors.text,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: -0.3,
   },
   statLabel: {
     color: colors.textMuted,
     fontSize: 11,
-    marginTop: 4,
+    marginTop: 2,
+    fontWeight: '600',
   },
   statsDivider: {
     width: 1,
     backgroundColor: colors.border,
-    marginVertical: 4,
+    marginVertical: 6,
   },
 
   section: {
@@ -684,6 +836,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 10,
     paddingHorizontal: 4,
+  },
+  sectionHeaderToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+    paddingRight: 4,
   },
   sectionBody: {
     backgroundColor: colors.surface,
