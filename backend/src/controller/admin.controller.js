@@ -15,8 +15,12 @@ import jwt from 'jsonwebtoken';
 const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'None',
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
 };
+
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -110,9 +114,13 @@ const createAdmin = asyncHandler(async (req, res) => {
         createdBy: req.admin._id,
     });
 
-    // Override with custom permissions if provided (model pre-save sets role defaults)
+    // Only grant permissions the creator themselves has
     if (permissions && typeof permissions === 'object') {
-        await Admin.findByIdAndUpdate(admin._id, { permissions });
+        const safePermissions = {};
+        Object.keys(permissions).forEach(perm => {
+            safePermissions[perm] = permissions[perm] && (req.admin.permissions[perm] === true);
+        });
+        await Admin.findByIdAndUpdate(admin._id, { permissions: safePermissions });
     }
 
     const adminResponse = await Admin.findById(admin._id).select('-password -refreshToken');
@@ -178,34 +186,39 @@ const deleteAdmin = asyncHandler(async (req, res) => {
 // ─── Users ────────────────────────────────────────────────────────────────────
 
 const getUsers = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.manageUsers) throw new apiError(403, 'Insufficient permissions');
+
     const { page = 1, limit = 20, status, search, role } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitNum = Math.min(parseInt(limit) || 20, 100);
+    const skip = (parseInt(page) - 1) * limitNum;
 
     const filter = {};
     if (status) filter.accountStatus = status;
     if (role) filter.role = role;
     if (search) {
         filter.$or = [
-            { name: { $regex: search, $options: 'i' } },
-            { phone: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } },
+            { name: { $regex: escapeRegex(search), $options: 'i' } },
+            { phone: { $regex: escapeRegex(search), $options: 'i' } },
+            { email: { $regex: escapeRegex(search), $options: 'i' } },
         ];
     }
 
     const [users, total] = await Promise.all([
-        User.find(filter).select('-password -refreshToken -otp').sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+        User.find(filter).select('-password -refreshToken -otp').sort({ createdAt: -1 }).skip(skip).limit(limitNum),
         User.countDocuments(filter),
     ]);
 
     return res.status(200).json(
         new apiResponse(200, {
             users,
-            pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / limit) },
+            pagination: { total, page: parseInt(page), limit: limitNum, pages: Math.ceil(total / limitNum) },
         }, 'Users fetched')
     );
 });
 
 const getUserById = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.manageUsers) throw new apiError(403, 'Insufficient permissions');
+
     const user = await User.findById(req.params.id)
         .select('-password -refreshToken -otp')
         .populate('driverProfile')
@@ -230,8 +243,11 @@ const updateUserStatus = asyncHandler(async (req, res) => {
 // ─── Drivers ──────────────────────────────────────────────────────────────────
 
 const getDrivers = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.manageDrivers) throw new apiError(403, 'Insufficient permissions');
+
     const { page = 1, limit = 20, status, search } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitNum = Math.min(parseInt(limit) || 20, 100);
+    const skip = (parseInt(page) - 1) * limitNum;
 
     const filter = {};
     if (status) filter.status = status;
@@ -239,7 +255,7 @@ const getDrivers = asyncHandler(async (req, res) => {
     let query = Driver.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(parseInt(limit))
+        .limit(limitNum)
         .populate('userId', 'name phone email avatarUrl accountStatus');
 
     const [drivers, total] = await Promise.all([query, Driver.countDocuments(filter)]);
@@ -247,12 +263,14 @@ const getDrivers = asyncHandler(async (req, res) => {
     return res.status(200).json(
         new apiResponse(200, {
             drivers,
-            pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / limit) },
+            pagination: { total, page: parseInt(page), limit: limitNum, pages: Math.ceil(total / limitNum) },
         }, 'Drivers fetched')
     );
 });
 
 const getDriverById = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.manageDrivers) throw new apiError(403, 'Insufficient permissions');
+
     const driver = await Driver.findById(req.params.id)
         .populate('userId', 'name phone email avatarUrl accountStatus');
     if (!driver) throw new apiError(404, 'Driver not found');
@@ -278,12 +296,13 @@ const updateDriverStatus = asyncHandler(async (req, res) => {
     const notifBody = status === 'approved'
         ? 'Your driver account has been approved. You can now go online and accept trips.'
         : `Your driver account has been ${status}.`;
+    const notifType = status === 'approved' ? 'account_approved' : status === 'rejected' ? 'account_rejected' : 'account_suspended';
 
     await Notification.create({
         userId: driver.userId,
         title: notifTitle,
         body: notifBody,
-        type: status === 'approved' ? 'document_verified' : 'document_rejected',
+        type: notifType,
         refId: driver._id,
     });
 
@@ -296,13 +315,14 @@ const getPendingDocuments = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.verifyDocuments) throw new apiError(403, 'Insufficient permissions');
 
     const { page = 1, limit = 20 } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitNum = Math.min(parseInt(limit) || 20, 100);
+    const skip = (parseInt(page) - 1) * limitNum;
 
     const [documents, total] = await Promise.all([
         Document.find({ status: 'pending' })
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(parseInt(limit))
+            .limit(limitNum)
             .populate({
                 path: 'driverId',
                 select: 'vehicleType vehiclePlate userId',
@@ -314,7 +334,7 @@ const getPendingDocuments = asyncHandler(async (req, res) => {
     return res.status(200).json(
         new apiResponse(200, {
             documents,
-            pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / limit) },
+            pagination: { total, page: parseInt(page), limit: limitNum, pages: Math.ceil(total / limitNum) },
         }, 'Pending documents fetched')
     );
 });
@@ -367,8 +387,11 @@ const rejectDocument = asyncHandler(async (req, res) => {
 // ─── Trips ────────────────────────────────────────────────────────────────────
 
 const getTrips = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.manageTrips) throw new apiError(403, 'Insufficient permissions');
+
     const { page = 1, limit = 20, status, vehicleType } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitNum = Math.min(parseInt(limit) || 20, 100);
+    const skip = (parseInt(page) - 1) * limitNum;
 
     const filter = {};
     if (status) filter.status = status;
@@ -378,7 +401,7 @@ const getTrips = asyncHandler(async (req, res) => {
         Trip.find(filter)
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(parseInt(limit))
+            .limit(limitNum)
             .populate('userId', 'name phone')
             .populate('driverId', 'vehiclePlate vehicleType'),
         Trip.countDocuments(filter),
@@ -387,12 +410,14 @@ const getTrips = asyncHandler(async (req, res) => {
     return res.status(200).json(
         new apiResponse(200, {
             trips,
-            pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / limit) },
+            pagination: { total, page: parseInt(page), limit: limitNum, pages: Math.ceil(total / limitNum) },
         }, 'Trips fetched')
     );
 });
 
 const getTripByIdAdmin = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.manageTrips) throw new apiError(403, 'Insufficient permissions');
+
     const trip = await Trip.findById(req.params.id)
         .populate('userId', 'name phone')
         .populate({ path: 'driverId', populate: { path: 'userId', select: 'name phone' } });
@@ -446,7 +471,8 @@ const getSupportTickets = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
 
     const { page = 1, limit = 20, status, category } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitNum = Math.min(parseInt(limit) || 20, 100);
+    const skip = (parseInt(page) - 1) * limitNum;
 
     const filter = {};
     if (status) filter.status = status;
@@ -456,7 +482,7 @@ const getSupportTickets = asyncHandler(async (req, res) => {
         SupportTicket.find(filter)
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(parseInt(limit))
+            .limit(limitNum)
             .populate('userId', 'name phone')
             .populate('assignedTo', 'name'),
         SupportTicket.countDocuments(filter),
@@ -465,7 +491,7 @@ const getSupportTickets = asyncHandler(async (req, res) => {
     return res.status(200).json(
         new apiResponse(200, {
             tickets,
-            pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / limit) },
+            pagination: { total, page: parseInt(page), limit: limitNum, pages: Math.ceil(total / limitNum) },
         }, 'Support tickets fetched')
     );
 });
