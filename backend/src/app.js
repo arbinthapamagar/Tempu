@@ -22,13 +22,49 @@ import { supplierRouter } from './routes/supplier.route.js';
 
 const app = express();
 
+// Simple in-memory rate limiter
+const rateLimitMap = new Map();
+function createRateLimit(windowMs, max, message) {
+    return (req, res, next) => {
+        const key = req.ip + req.path;
+        const now = Date.now();
+        const record = rateLimitMap.get(key) || { count: 0, resetAt: now + windowMs };
+        if (now > record.resetAt) {
+            record.count = 0;
+            record.resetAt = now + windowMs;
+        }
+        record.count += 1;
+        rateLimitMap.set(key, record);
+        if (record.count > max) {
+            return res.status(429).json({ success: false, message });
+        }
+        next();
+    };
+}
+
+const authLimiter = createRateLimit(15 * 60 * 1000, 20, 'Too many requests, please try again later');
+const otpLimiter = createRateLimit(10 * 60 * 1000, 5, 'Too many OTP attempts, please wait 10 minutes');
+
 app.use(cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: (origin, callback) => {
+        const allowed = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) : [];
+        if (!origin || allowed.length === 0 || allowed.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
 }));
 app.use(express.json({ limit: '20kb' }));
 app.use(express.urlencoded({ extended: true, limit: '20kb' }));
-app.use(helmet());
+app.use(helmet({
+    hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+    },
+}));
 app.use(express.static('public'));
 app.use(cookieParser());
 
@@ -36,7 +72,9 @@ app.use(cookieParser());
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 // Routes
-app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/auth/verify-otp', otpLimiter);
+app.use('/api/v1/auth/forgot-password', otpLimiter);
+app.use('/api/v1/auth', authLimiter, authRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/trips', tripRouter);
 app.use('/api/v1/bids', bidRouter);
