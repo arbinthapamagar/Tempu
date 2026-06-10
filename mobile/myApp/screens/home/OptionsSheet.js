@@ -9,7 +9,7 @@ import {
 import { VehiclePhoto } from '../../components/Brand';
 import { FlagIcon, PinIcon } from '../../components/Icons';
 import { Button, Sheet } from '../../components/ui';
-import { VEHICLE_TYPES } from '../../data/mockData';
+import { VEHICLE_TYPES } from './useRideFlow';
 import { colors, radius, spacing, type } from '../../theme';
 
 const MIN_FARE = 50;
@@ -23,6 +23,7 @@ export default function OptionsSheet({
   offeredPrice,
   setOfferedPrice,
   onConfirm,
+  loading = false,
 }) {
   const vehicle = VEHICLE_TYPES.find((v) => v.id === vehicleId);
   const suggested = vehicle?.baseFare ?? 0;
@@ -144,10 +145,10 @@ export default function OptionsSheet({
       </ScrollView>
 
       <Button
-        label={`Request ${vehicle?.name} · Rs ${priceNum || suggested}`}
+        label={loading ? 'Creating trip…' : `Request ${vehicle?.name} · Rs ${priceNum || suggested}`}
         size="md"
         onPress={onConfirm}
-        disabled={!canConfirm}
+        disabled={!canConfirm || loading}
         style={styles.cta}
       />
     </Sheet>

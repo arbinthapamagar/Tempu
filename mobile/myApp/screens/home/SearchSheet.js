@@ -1,110 +1,163 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { Sheet } from '../../components/ui';
 import { FlagIcon, PinIcon } from '../../components/Icons';
 import { confirm as hapticConfirm, pick as hapticPick } from '../../components/haptics';
-import { CURRENT_USER, RECENT_DESTINATIONS } from '../../data/mockData';
+import { useAuth } from '../../context/AuthContext';
 import { colors, radius, spacing, type } from '../../theme';
 
 const SAVED_ICON = { home: 'home', work: 'briefcase' };
 
-function caseInsensitiveIncludes(haystack, needle) {
-  if (!needle) return true;
-  return haystack.toLowerCase().includes(needle.toLowerCase());
+// Kathmandu valley bounding box
+const KTM_VIEWBOX = '85.2200,27.6200,85.5000,27.8000';
+
+async function searchPlaces(query) {
+  const url =
+    `https://nominatim.openstreetmap.org/search` +
+    `?q=${encodeURIComponent(query)}` +
+    `&format=json&addressdetails=1&limit=8` +
+    `&countrycodes=np` +
+    `&viewbox=${KTM_VIEWBOX}&bounded=0` +
+    `&accept-language=en`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'ShaktiApp/1.0 (ride-sharing Nepal)' },
+  });
+  const data = await res.json();
+  return data.sort((a, b) => {
+    const inKtm = (r) => {
+      const lat = parseFloat(r.lat), lon = parseFloat(r.lon);
+      return lat > 27.62 && lat < 27.80 && lon > 85.22 && lon < 85.50;
+    };
+    return (inKtm(b) ? 1 : 0) - (inKtm(a) ? 1 : 0);
+  });
+}
+
+function placeTitle(r) {
+  return r.name || r.display_name.split(',')[0];
+}
+function placeSubtitle(r) {
+  return r.display_name.split(',').map(s => s.trim()).slice(1, 3).join(', ');
 }
 
 export default function SearchSheet({
-  pickup,
-  setPickup,
-  destination,
-  setDestination,
-  onPick,
-  onSubmit,
-  onPickPickupOnMap,
-  onPickDestOnMap,
+  pickup, setPickup, setPickupCoords,
+  destination, setDestination,
+  onPick, onBack, onSubmit,
+  onPickPickupOnMap, onPickDestOnMap,
 }) {
+  const { user } = useAuth();
+  const savedAddresses = user?.savedAddresses || [];
   const [activeField, setActiveField] = useState('dest');
+  const [places, setPlaces] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const debounceRef = useRef(null);
+  const pickupRef = useRef(null);
   const destRef = useRef(null);
 
   const query = activeField === 'pickup' ? pickup : destination;
 
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    if (!query || query.length < 2) { setPlaces([]); setSearching(false); return; }
+    setSearching(true);
+    debounceRef.current = setTimeout(async () => {
+      try { setPlaces((await searchPlaces(query)) || []); }
+      catch { setPlaces([]); }
+      finally { setSearching(false); }
+    }, 400);
+    return () => clearTimeout(debounceRef.current);
+  }, [query]);
+
   const filteredSaved = useMemo(
-    () =>
-      CURRENT_USER.savedAddresses.filter(
-        (s) =>
-          caseInsensitiveIncludes(s.address, query) ||
-          caseInsensitiveIncludes(s.label, query),
-      ),
-    [query],
-  );
-  const filteredRecent = useMemo(
-    () =>
-      RECENT_DESTINATIONS.filter(
-        (r) =>
-          caseInsensitiveIncludes(r.title, query) ||
-          caseInsensitiveIncludes(r.subtitle, query),
-      ),
-    [query],
+    () => savedAddresses.filter(s =>
+      !query ||
+      s.address.toLowerCase().includes(query.toLowerCase()) ||
+      s.label.toLowerCase().includes(query.toLowerCase())
+    ),
+    [query, savedAddresses],
   );
 
-  const pickValue = (value) => {
+  const pickPlace = (result) => {
+    hapticPick();
+    const address = placeTitle(result) + ', ' + placeSubtitle(result);
+    const coords = { lat: parseFloat(result.lat), lng: parseFloat(result.lon) };
+    if (activeField === 'pickup') {
+      setPickup(address); setPickupCoords?.(coords);
+      setPlaces([]); setActiveField('dest');
+      setTimeout(() => destRef.current?.focus(), 50);
+    } else {
+      onPick(address, coords);
+    }
+  };
+
+  const pickSaved = (address) => {
     hapticPick();
     if (activeField === 'pickup') {
-      setPickup(value);
-      // Hand the focus to the destination field so the user keeps flowing.
-      setActiveField('dest');
-      destRef.current?.focus();
+      setPickup(address); setPlaces([]); setActiveField('dest');
+      setTimeout(() => destRef.current?.focus(), 50);
     } else {
-      onPick(value);
+      onPick(address);
     }
   };
 
   return (
-    <Sheet tall>
-      <View style={styles.routeBox}>
-        <View style={styles.routeIcons}>
-          <PinIcon size={14} color={colors.primary} />
-          <View style={styles.vline} />
-          <FlagIcon size={14} color={colors.text} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <View
-            style={[
-              styles.field,
-              activeField === 'pickup' && styles.fieldActive,
-            ]}
-          >
-            <Text style={styles.fieldLabel}>From</Text>
-            <View style={styles.fieldRow}>
+    <View style={styles.root}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.surface} />
+
+      {/* Top bar with back button */}
+      <View style={styles.topBar}>
+        <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
+        </Pressable>
+        <Text style={styles.topTitle}>Search destination</Text>
+      </View>
+
+      <KeyboardAvoidingView
+        style={styles.kav}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
+        {/* Input fields */}
+        <View style={styles.inputBlock}>
+          <View style={styles.routeIcons}>
+            <View style={styles.dotGreen} />
+            <View style={styles.vline} />
+            <View style={styles.dotGrey} />
+          </View>
+          <View style={{ flex: 1, gap: 2 }}>
+            {/* Pickup */}
+            <View style={[styles.inputRow, activeField === 'pickup' && styles.inputRowActive]}>
               <TextInput
+                ref={pickupRef}
                 value={pickup}
                 onChangeText={setPickup}
                 onFocus={() => setActiveField('pickup')}
                 placeholder="Pickup location"
                 placeholderTextColor={colors.textFaint}
-                style={styles.input}
+                style={styles.textInput}
               />
               {pickup ? (
-                <Pressable onPress={() => setPickup('')} hitSlop={6}>
-                  <Ionicons name="close-circle" size={16} color={colors.textFaint} />
+                <Pressable onPress={() => setPickup('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={17} color={colors.textFaint} />
                 </Pressable>
               ) : null}
             </View>
-          </View>
-          <View style={styles.divider} />
-          <View
-            style={[styles.field, activeField === 'dest' && styles.fieldActive]}
-          >
-            <Text style={styles.fieldLabel}>To</Text>
-            <View style={styles.fieldRow}>
+
+            <View style={styles.inputDivider} />
+
+            {/* Destination */}
+            <View style={[styles.inputRow, activeField === 'dest' && styles.inputRowActive]}>
               <TextInput
                 ref={destRef}
                 value={destination}
@@ -113,195 +166,234 @@ export default function SearchSheet({
                 placeholder="Where are you going?"
                 placeholderTextColor={colors.textFaint}
                 autoFocus
-                style={styles.input}
+                style={styles.textInput}
                 returnKeyType="search"
                 onSubmitEditing={onSubmit}
               />
               {destination ? (
-                <Pressable onPress={() => setDestination('')} hitSlop={6}>
-                  <Ionicons name="close-circle" size={16} color={colors.textFaint} />
+                <Pressable onPress={() => setDestination('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={17} color={colors.textFaint} />
                 </Pressable>
               ) : null}
             </View>
           </View>
         </View>
-      </View>
 
-      <View style={styles.actions}>
-        <Pressable
-          style={styles.action}
-          onPress={() => {
-            hapticConfirm();
-            onPickPickupOnMap?.();
-          }}
+        {/* Map pick buttons */}
+        <View style={styles.mapBtns}>
+          <Pressable style={styles.mapBtn} onPress={() => { hapticConfirm(); onPickPickupOnMap?.(); }}>
+            <Ionicons name="locate" size={15} color={colors.primary} />
+            <Text style={styles.mapBtnText}>Set pickup on map</Text>
+          </Pressable>
+          <View style={styles.mapBtnDivider} />
+          <Pressable style={styles.mapBtn} onPress={() => { hapticConfirm(); onPickDestOnMap?.(); }}>
+            <Ionicons name="map-outline" size={15} color="#5c6fff" />
+            <Text style={styles.mapBtnText}>Set drop-off on map</Text>
+          </Pressable>
+        </View>
+
+        {/* Results list — fills space between inputs and keyboard */}
+        <ScrollView
+          style={styles.results}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Ionicons name="locate" size={16} color={colors.primary} />
-          <Text style={styles.actionText}>Pickup on map</Text>
-        </Pressable>
-        <Pressable
-          style={styles.action}
-          onPress={() => {
-            hapticConfirm();
-            onPickDestOnMap?.();
-          }}
-        >
-          <Ionicons name="map" size={16} color="#5c6fff" />
-          <Text style={styles.actionText}>Drop-off on map</Text>
-        </Pressable>
-      </View>
+          {searching && (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.loadingText}>Searching places in Kathmandu…</Text>
+            </View>
+          )}
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        style={{ marginTop: spacing.sm }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Text style={styles.activeHint}>
-          Searching for{' '}
-          <Text style={styles.activeHintStrong}>
-            {activeField === 'pickup' ? 'pickup' : 'drop-off'}
-          </Text>
-          {query ? ` · "${query}"` : ''}
-        </Text>
+          {filteredSaved.length > 0 && (
+            <>
+              <Text style={styles.sectionLabel}>Saved places</Text>
+              {filteredSaved.map((s) => (
+                <Pressable key={s.label} style={styles.row} onPress={() => pickSaved(s.address)}>
+                  <View style={[styles.rowIcon, { backgroundColor: colors.primarySoft }]}>
+                    <Ionicons name={SAVED_ICON[s.label] || 'location'} size={16} color={colors.primaryDark} />
+                  </View>
+                  <View style={styles.rowText}>
+                    <Text style={styles.rowTitle}>{s.label.charAt(0).toUpperCase() + s.label.slice(1)}</Text>
+                    <Text style={styles.rowSub} numberOfLines={1}>{s.address}</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </>
+          )}
 
-        {filteredSaved.length > 0 && (
-          <>
-            <Text style={styles.sectionHeader}>Saved places</Text>
-            {filteredSaved.map((s) => (
-              <Pressable
-                key={s.label}
-                style={styles.suggestion}
-                onPress={() => pickValue(s.address)}
-              >
-                <View style={styles.suggestionIcon}>
-                  <Ionicons
-                    name={SAVED_ICON[s.label] || 'location'}
-                    size={16}
-                    color={colors.primaryDark}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.suggestionTitle}>
-                    {s.label.charAt(0).toUpperCase() + s.label.slice(1)}
-                  </Text>
-                  <Text style={styles.suggestionSub} numberOfLines={1}>
-                    {s.address}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-          </>
-        )}
+          {places.length > 0 && (
+            <>
+              <Text style={styles.sectionLabel}>
+                {query ? `Results for "${query}"` : 'Nearby places'}
+              </Text>
+              {places.map((r) => (
+                <Pressable key={r.place_id} style={styles.row} onPress={() => pickPlace(r)}>
+                  <View style={styles.rowIcon}>
+                    <Ionicons name="location-outline" size={16} color={colors.textMuted} />
+                  </View>
+                  <View style={styles.rowText}>
+                    <Text style={styles.rowTitle} numberOfLines={1}>{placeTitle(r)}</Text>
+                    <Text style={styles.rowSub} numberOfLines={1}>{placeSubtitle(r)}</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </>
+          )}
 
-        {filteredRecent.length > 0 && (
-          <>
-            <Text style={styles.sectionHeader}>Recent</Text>
-            {filteredRecent.map((r) => (
-              <Pressable
-                key={r.id}
-                style={styles.suggestion}
-                onPress={() => pickValue(r.title)}
-              >
-                <View style={styles.suggestionIcon}>
-                  <Ionicons name="time" size={16} color={colors.textMuted} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.suggestionTitle}>{r.title}</Text>
-                  <Text style={styles.suggestionSub} numberOfLines={1}>
-                    {r.subtitle}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-          </>
-        )}
+          {!searching && query?.length >= 2 && places.length === 0 && filteredSaved.length === 0 && (
+            <Text style={styles.empty}>No places found for "{query}"</Text>
+          )}
 
-        {filteredSaved.length === 0 && filteredRecent.length === 0 && (
-          <Text style={styles.empty}>No matches. Try a different name.</Text>
-        )}
-      </ScrollView>
-    </Sheet>
+          {!query && filteredSaved.length === 0 && (
+            <View style={styles.hint}>
+              <Ionicons name="search" size={32} color={colors.border} />
+              <Text style={styles.hintText}>
+                Type to search for {activeField === 'pickup' ? 'pickup location' : 'destination'}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  routeBox: {
+  root: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.surface,
+    zIndex: 100,
+  },
+
+  topBar: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 8 : 56,
+    paddingBottom: 12,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#f3f5f2',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md + 2,
-    paddingVertical: spacing.md + 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
+
+  kav: { flex: 1 },
+
+  inputBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eef0ee',
   },
   routeIcons: {
     alignItems: 'center',
-    width: 16,
-    marginRight: spacing.md + 2,
-    paddingVertical: 6,
-  },
-  vline: { width: 2, flex: 1, backgroundColor: '#c5cac3', marginVertical: 4 },
-  field: {
+    width: 12,
     paddingVertical: 4,
-    paddingHorizontal: 6,
-    marginHorizontal: -6,
-    borderRadius: 8,
+    gap: 0,
   },
-  fieldActive: { backgroundColor: '#ffffff' },
-  fieldLabel: { ...type.eyebrow, color: colors.textMuted },
-  fieldRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  input: { flex: 1, color: colors.text, fontSize: 16, paddingVertical: 4 },
-  divider: { height: 1, backgroundColor: '#cdd2cd', marginVertical: 4 },
+  dotGreen: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: colors.primary,
+    borderWidth: 2, borderColor: '#d1fae5',
+  },
+  vline: { width: 2, height: 20, backgroundColor: '#d1d5db', marginVertical: 3 },
+  dotGrey: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: '#374151',
+    borderWidth: 2, borderColor: '#e5e7eb',
+  },
 
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md - 2 },
-  action: {
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f5f2',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 2,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  inputRowActive: {
+    backgroundColor: '#fff',
+    borderColor: colors.primary,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.text,
+    paddingVertical: 10,
+  },
+  inputDivider: { height: 4 },
+
+  mapBtns: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eef0ee',
+  },
+  mapBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: spacing.md,
-    borderRadius: radius.pill,
-    backgroundColor: '#f3f5f2',
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingVertical: 11,
   },
-  actionText: { ...type.small, color: colors.text, fontWeight: '700' },
+  mapBtnDivider: { width: 1, backgroundColor: '#eef0ee' },
+  mapBtnText: { fontSize: 13, color: colors.text, fontWeight: '600' },
 
-  activeHint: {
-    ...type.caption,
-    color: colors.textMuted,
-    marginTop: spacing.md + 2,
-    marginBottom: spacing.xs,
-  },
-  activeHintStrong: { color: colors.primaryDark, fontWeight: '800' },
+  results: { flex: 1, paddingHorizontal: 16 },
 
-  sectionHeader: {
-    ...type.eyebrow,
-    color: colors.textMuted,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
+  loadingRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 16,
   },
-  suggestion: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md + 2,
-    paddingVertical: spacing.md + 2,
+  loadingText: { color: colors.textMuted, fontSize: 13 },
+
+  sectionLabel: {
+    fontSize: 11, fontWeight: '700', color: colors.textMuted,
+    textTransform: 'uppercase', letterSpacing: 0.8,
+    marginTop: 16, marginBottom: 4,
   },
-  suggestionIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+
+  row: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 12, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: '#f3f5f2',
+  },
+  rowIcon: {
+    width: 38, height: 38, borderRadius: 19,
     backgroundColor: '#f3f5f2',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
-  suggestionTitle: { color: colors.text, fontSize: 16, fontWeight: '600' },
-  suggestionSub: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
+  rowText: { flex: 1 },
+  rowTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
+  rowSub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
 
   empty: {
-    color: colors.textMuted,
-    fontSize: 13,
-    textAlign: 'center',
-    paddingVertical: spacing.lg,
+    color: colors.textMuted, fontSize: 13,
+    textAlign: 'center', paddingVertical: 32,
+  },
+  hint: {
+    alignItems: 'center', gap: 10,
+    paddingTop: 48, paddingHorizontal: 32,
+  },
+  hintText: {
+    color: colors.textMuted, fontSize: 14,
+    textAlign: 'center', lineHeight: 20,
   },
 });
