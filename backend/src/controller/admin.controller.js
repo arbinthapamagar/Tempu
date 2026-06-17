@@ -1451,14 +1451,24 @@ const updateTicketStatus = asyncHandler(async (req, res) => {
 
 const replyToTicket = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
-    const { message } = req.body;
-    if (!message) throw new apiError(400, 'Message is required');
+    const message = (req.body.message || '').trim();
+    const hasFile = !!req.file;
+    if (!message && !hasFile) throw new apiError(400, 'A message or attachment is required');
 
     const ticket = await SupportTicket.findById(req.params.id);
     if (!ticket) throw new apiError(404, 'Ticket not found');
     if (ticket.status === 'closed') throw new apiError(400, 'Cannot reply to a closed ticket');
 
-    ticket.messages.push({ senderId: req.admin._id, senderType: 'admin', message });
+    const entry = { senderId: req.admin._id, senderType: 'admin', message };
+    if (hasFile) {
+        const result = await uploadOnCloudinary(req.file.path);
+        if (!result?.secure_url) throw new apiError(500, 'Failed to upload attachment');
+        entry.attachmentUrl = result.secure_url;
+        entry.attachmentType = (req.file.mimetype || '').startsWith('audio/') ? 'audio' : 'file';
+        entry.attachmentName = req.file.originalname || null;
+    }
+
+    ticket.messages.push(entry);
     if (ticket.status === 'open') ticket.status = 'in_progress';
     await ticket.save();
 
@@ -1477,10 +1487,23 @@ const assignTicket = asyncHandler(async (req, res) => {
     ).populate('assignedTo', 'name');
     if (!ticket) throw new apiError(404, 'Ticket not found');
 
-    // Notify the assignee (unless they assigned it to themselves).
-    if (String(assigneeId) !== String(req.admin._id)) {
-        const ref = String(ticket._id).slice(-8).toUpperCase();
-        const link = `/support/${ticket._id}`;
+    const ref = String(ticket._id).slice(-8).toUpperCase();
+    const link = `/support/${ticket._id}`;
+    const base = (process.env.CLIENT_URL || process.env.CORS_ORIGIN || '').replace(/\/$/, '');
+    const isSelfAssign = String(assigneeId) === String(req.admin._id);
+    const assigneeName = ticket.assignedTo?.name || 'an agent';
+
+    // 1) Notify the assignee — including when they assign it to themselves.
+    if (isSelfAssign) {
+        await AdminNotification.create({
+            adminId: assigneeId,
+            title: 'You took a ticket',
+            body: `You self-assigned ticket #${ref} — "${ticket.subject}".`,
+            type: 'ticket_assigned',
+            link,
+            refId: ticket._id,
+        });
+    } else {
         await AdminNotification.create({
             adminId: assigneeId,
             title: 'Ticket assigned to you',
@@ -1492,7 +1515,6 @@ const assignTicket = asyncHandler(async (req, res) => {
         // Email too (best-effort).
         const assignee = await Admin.findById(assigneeId).select('name email');
         if (assignee?.email) {
-            const base = (process.env.CLIENT_URL || process.env.CORS_ORIGIN || '').replace(/\/$/, '');
             sendEmail({
                 sendTo: assignee.email,
                 subject: `Support ticket #${ref} assigned to you`,
@@ -1505,6 +1527,24 @@ const assignTicket = asyncHandler(async (req, res) => {
                 }),
             }).catch((err) => console.error('Assign email error:', err?.message));
         }
+    }
+
+    // 2) When a moderator does the assigning, keep admins/superadmins in the loop.
+    if (req.admin.role === 'moderator') {
+        const supervisors = await Admin.find({ role: { $in: ['admin', 'superadmin'] } }).select('_id');
+        const notes = supervisors
+            .filter((s) => String(s._id) !== String(assigneeId))
+            .map((s) => ({
+                adminId: s._id,
+                title: 'Ticket assigned by moderator',
+                body: isSelfAssign
+                    ? `${req.admin.name} self-assigned ticket #${ref} — "${ticket.subject}".`
+                    : `${req.admin.name} assigned ticket #${ref} to ${assigneeName} — "${ticket.subject}".`,
+                type: 'ticket_assigned',
+                link,
+                refId: ticket._id,
+            }));
+        if (notes.length) await AdminNotification.insertMany(notes);
     }
 
     return res.status(200).json(new apiResponse(200, ticket, 'Ticket assigned'));

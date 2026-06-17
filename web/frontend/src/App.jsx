@@ -72,7 +72,7 @@ export default function App() {
         <Route path="analytics" element={<Analytics />} />
         <Route path="notifications" element={<Notifications />} />
       </Route>
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

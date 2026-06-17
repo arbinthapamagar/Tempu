@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff, Zap, Mail, Lock } from 'lucide-react'
 import { authApi } from '../api/auth.api'
-import { useAuthStore } from '../store/authStore'
+import { useAuthStore, homePath } from '../store/authStore'
 import toast from 'react-hot-toast'
 
 const schema = z.object({
@@ -30,7 +30,7 @@ export default function Login() {
       const { admin, accessToken } = res.data || res
       setAuth(admin, accessToken)
       toast.success(`Welcome back, ${admin.name}!`)
-      navigate('/dashboard')
+      navigate(homePath(admin))
     } catch (err) {
       toast.error(err?.message || 'Login failed. Check your credentials.')
     }

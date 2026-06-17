@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Send, CheckCircle, Lock, AtSign, Paperclip, Mic, Pencil, Trash2, Phone, Video } from 'lucide-react'
 import CallPanel from './CallPanel'
 import { SupportFolders } from './SupportFolders'
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
 import { Button } from '../../components/ui/Button'
 import { StatusBadge } from '../../components/shared/StatusBadge'
 import { Avatar } from '../../components/ui/Avatar'
@@ -52,6 +53,11 @@ export default function TicketDetail() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [message, setMessage] = useState('')
+  const [attachment, setAttachment] = useState(null)
+  const fileInputRef = useRef(null)
+
+  // Pending assignee id awaiting a moderator's confirmation (null = no prompt).
+  const [assignTarget, setAssignTarget] = useState(null)
 
   // Internal-note composer state
   const [comment, setComment] = useState('')
@@ -82,10 +88,18 @@ export default function TicketDetail() {
   const agents = agentsRes?.data || []
 
   const replyMutation = useMutation({
-    mutationFn: (msg) => supportApi.reply(id, msg),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['ticket', id] }); setMessage(''); toast.success('Reply sent') },
+    mutationFn: () => supportApi.reply(id, { message: message.trim(), attachment }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ticket', id] })
+      setMessage(''); setAttachment(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      toast.success('Reply sent')
+    },
     onError: (err) => toast.error(err?.message || 'Failed to send reply'),
   })
+
+  const canSendReply = !!(message.trim() || attachment)
+  const sendReply = () => { if (canSendReply && !replyMutation.isPending) replyMutation.mutate() }
 
   const updateStatus = useMutation({
     mutationFn: (status) => supportApi.update(id, { status }),
@@ -95,7 +109,12 @@ export default function TicketDetail() {
 
   const assignMutation = useMutation({
     mutationFn: (adminId) => supportApi.assign(id, adminId),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['ticket', id] }); toast.success('Ticket assigned') },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ticket', id] })
+      qc.invalidateQueries({ queryKey: ['admin-my-notifications'] })
+      setAssignTarget(null)
+      toast.success('Ticket assigned')
+    },
     onError: (err) => toast.error(err?.message || 'Failed to assign'),
   })
 
@@ -164,6 +183,20 @@ export default function TicketDetail() {
     if (!comment.trim()) return
     commentMutation.mutate({ body: comment.trim(), mentions: mentionIds })
   }
+
+  // Moderators get a centered confirmation before (re)assigning — an admin is notified.
+  const handleAssign = (assigneeId) => {
+    if (!assigneeId || assigneeId === ticket.assignedTo?._id) return
+    if (admin?.role === 'moderator') {
+      setAssignTarget(assigneeId)
+      return
+    }
+    assignMutation.mutate(assigneeId)
+  }
+
+  const assignTargetLabel = assignTarget
+    ? (assignTarget === admin?._id ? 'yourself' : (agents.find((a) => a._id === assignTarget)?.name || 'this agent'))
+    : ''
 
   const filteredAgents = agents.filter((a) => a.name?.toLowerCase().includes(mentionFilter))
 
@@ -240,6 +273,19 @@ export default function TicketDetail() {
             {/* Reply box */}
             {['open', 'in_progress'].includes(ticket.status) && (
               <div className="mt-4 pt-4 border-t border-gray-50">
+                {attachment && (
+                  <div className="mb-2 inline-flex items-center gap-2 max-w-full px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-lg text-xs text-orange-700">
+                    {attachment.type?.startsWith('audio/') ? <Mic className="h-3 w-3 shrink-0" /> : <Paperclip className="h-3 w-3 shrink-0" />}
+                    <span className="truncate">{attachment.name}</span>
+                    <button
+                      onClick={() => { setAttachment(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                      className="shrink-0 text-orange-500 hover:text-orange-700"
+                      title="Remove attachment"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <textarea
                     value={message}
@@ -248,18 +294,35 @@ export default function TicketDetail() {
                     rows={3}
                     className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 resize-none"
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && e.ctrlKey && message.trim()) {
-                        replyMutation.mutate(message)
+                      if (e.key === 'Enter' && e.ctrlKey) {
+                        e.preventDefault()
+                        sendReply()
                       }
                     }}
                   />
-                  <button
-                    onClick={() => message.trim() && replyMutation.mutate(message)}
-                    disabled={!message.trim() || replyMutation.isPending}
-                    className="self-end px-4 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
-                  >
-                    <Send className="h-4 w-4" />
-                  </button>
+                  <div className="flex flex-col gap-2 self-end">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => setAttachment(e.target.files?.[0] || null)}
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={replyMutation.isPending}
+                      className="px-4 py-2.5 border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                      title="Attach a file"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={sendReply}
+                      disabled={!canSendReply || replyMutation.isPending}
+                      className="px-4 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50"
+                    >
+                      <Send className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">Ctrl+Enter to send · this is sent to the customer</p>
               </div>
@@ -420,7 +483,7 @@ export default function TicketDetail() {
             <h3 className="text-sm font-semibold text-gray-900 mb-3">Assignment</h3>
             <select
               value={ticket.assignedTo?._id || ''}
-              onChange={(e) => e.target.value && assignMutation.mutate(e.target.value)}
+              onChange={(e) => handleAssign(e.target.value)}
               disabled={assignMutation.isPending}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 bg-white"
             >
@@ -476,6 +539,17 @@ export default function TicketDetail() {
 
       <CallPanel ref={callRef} ticketId={id} />
       </div>
+
+      <ConfirmDialog
+        open={!!assignTarget}
+        onClose={() => setAssignTarget(null)}
+        onConfirm={() => assignTarget && assignMutation.mutate(assignTarget)}
+        title="Confirm assignment"
+        message={`Assign this ticket to ${assignTargetLabel}? An admin will be notified of this change.`}
+        confirmLabel="Assign"
+        variant="warning"
+        loading={assignMutation.isPending}
+      />
     </div>
   )
 }

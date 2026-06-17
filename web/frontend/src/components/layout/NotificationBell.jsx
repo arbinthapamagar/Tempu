@@ -13,8 +13,9 @@ export function NotificationBell() {
   const { data } = useQuery({
     queryKey: ['admin-my-notifications'],
     queryFn: () => notificationsApi.mine(),
-    refetchInterval: 20000,
+    refetchInterval: 8000,
     refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
   })
   const items = data?.data?.items || []
   const unread = data?.data?.unread || 0

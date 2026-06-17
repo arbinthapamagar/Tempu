@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { dashboardApi } from '../../api/dashboard.api'
-import { useAuthStore, hasPermission } from '../../store/authStore'
+import { useAuthStore, hasPermission, canSeeDashboard, homePath } from '../../store/authStore'
 
 const navSections = [
   {
@@ -97,20 +97,26 @@ export function Sidebar({ open, onClose }) {
           open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
-        {/* Logo + mobile close */}
+        {/* Logo (→ home) + mobile close */}
         <div className="flex items-center gap-2.5 px-5 py-5 border-b border-gray-200">
-          <div className="bg-orange-500 p-1.5 -rotate-2" style={{ borderRadius: '11px 6px 10px 7px' }}>
-            <Zap className="h-5 w-5 text-white" />
-          </div>
-          <div className="flex-1">
-            <p className="font-display font-extrabold text-gray-900 text-lg leading-none flex items-baseline gap-1.5">
-              Shakti <span className="text-orange-500 font-sans text-sm font-medium">शक्ति</span>
-            </p>
-            <p className="eyebrow mt-1 text-[10px]">Admin Portal</p>
-          </div>
+          <button
+            onClick={() => { navigate(homePath(admin)); onClose?.() }}
+            className="flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-lg -m-1 p-1 hover:bg-orange-50 transition-colors"
+            title="Go to home"
+          >
+            <div className="bg-orange-500 p-1.5 -rotate-2 shrink-0" style={{ borderRadius: '11px 6px 10px 7px' }}>
+              <Zap className="h-5 w-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-display font-extrabold text-gray-900 text-lg leading-none flex items-baseline gap-1.5">
+                Shakti <span className="text-orange-500 font-sans text-sm font-medium">शक्ति</span>
+              </p>
+              <p className="eyebrow mt-1 text-[10px]">Admin Portal</p>
+            </div>
+          </button>
           <button
             onClick={onClose}
-            className="lg:hidden p-1 rounded-md hover:bg-orange-50 text-gray-500"
+            className="lg:hidden p-1 rounded-md hover:bg-orange-50 text-gray-500 shrink-0"
           >
             <X className="h-4 w-4" />
           </button>
@@ -119,9 +125,10 @@ export function Sidebar({ open, onClose }) {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 scrollbar-thin">
           {navSections.map((section) => {
-            const visibleItems = section.items.filter(
-              (item) => !item.permission || hasPermission(admin, item.permission)
-            )
+            const visibleItems = section.items.filter((item) => {
+              if (item.to === '/dashboard' && !canSeeDashboard(admin)) return false
+              return !item.permission || hasPermission(admin, item.permission)
+            })
             if (!visibleItems.length) return null
             return (
               <div key={section.label} className="mb-5">
