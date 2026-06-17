@@ -17,6 +17,7 @@ import {
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
     getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, getSupportAgents, getSupportSettingsAdmin, updateSupportSettings,
     broadcastNotification, getNotificationHistory,
+    getMyAdminNotifications, markMyNotificationRead, markAllMyNotificationsRead,
 } from '../controller/admin.controller.js';
 
 const adminRouter = Router();
@@ -127,5 +128,9 @@ adminRouter.delete('/support/:id/comments/:commentId', deleteTicketComment);
 // Notifications
 adminRouter.post('/notifications/broadcast', broadcastNotification);
 adminRouter.get('/notifications/history', getNotificationHistory);
+// My own notifications (e.g. ticket assigned to me)
+adminRouter.get('/notifications/mine', getMyAdminNotifications);
+adminRouter.patch('/notifications/mine/read-all', markAllMyNotificationsRead);
+adminRouter.patch('/notifications/:id/read', markMyNotificationRead);
 
 export { adminRouter };

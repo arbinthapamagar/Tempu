@@ -11,6 +11,7 @@ import { Pricing, defaultPricing, VEHICLE_TYPES } from '../models/pricing.model.
 import { Emergency } from '../models/emergency.model.js';
 import { SupportTicket } from '../models/supportTicket.model.js';
 import { getSupportSettings } from '../models/supportSettings.model.js';
+import { AdminNotification } from '../models/adminNotification.model.js';
 import { Notification } from '../models/notification.model.js';
 import { apiError } from '../utils/apiError.js';
 import { apiResponse } from '../utils/apiResponse.js';
@@ -1467,15 +1468,65 @@ const replyToTicket = asyncHandler(async (req, res) => {
 const assignTicket = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
     const { adminId } = req.body;
+    const assigneeId = adminId || req.admin._id;
 
     const ticket = await SupportTicket.findByIdAndUpdate(
         req.params.id,
-        { assignedTo: adminId || req.admin._id },
+        { assignedTo: assigneeId },
         { new: true }
     ).populate('assignedTo', 'name');
     if (!ticket) throw new apiError(404, 'Ticket not found');
 
+    // Notify the assignee (unless they assigned it to themselves).
+    if (String(assigneeId) !== String(req.admin._id)) {
+        const ref = String(ticket._id).slice(-8).toUpperCase();
+        const link = `/support/${ticket._id}`;
+        await AdminNotification.create({
+            adminId: assigneeId,
+            title: 'Ticket assigned to you',
+            body: `${req.admin.name} assigned ticket #${ref} — "${ticket.subject}".`,
+            type: 'ticket_assigned',
+            link,
+            refId: ticket._id,
+        });
+        // Email too (best-effort).
+        const assignee = await Admin.findById(assigneeId).select('name email');
+        if (assignee?.email) {
+            const base = (process.env.CLIENT_URL || process.env.CORS_ORIGIN || '').replace(/\/$/, '');
+            sendEmail({
+                sendTo: assignee.email,
+                subject: `Support ticket #${ref} assigned to you`,
+                html: notificationEmailTemplate({
+                    name: assignee.name,
+                    title: `${req.admin.name} assigned a ticket to you`,
+                    body: `Ticket "${ticket.subject}" is now yours.`,
+                    link: base ? `${base}${link}` : null,
+                    linkLabel: 'Open ticket',
+                }),
+            }).catch((err) => console.error('Assign email error:', err?.message));
+        }
+    }
+
     return res.status(200).json(new apiResponse(200, ticket, 'Ticket assigned'));
+});
+
+// ─── Admin's own in-app notifications ─────────────────────────────────────────
+const getMyAdminNotifications = asyncHandler(async (req, res) => {
+    const [items, unread] = await Promise.all([
+        AdminNotification.find({ adminId: req.admin._id }).sort({ createdAt: -1 }).limit(30),
+        AdminNotification.countDocuments({ adminId: req.admin._id, isRead: false }),
+    ]);
+    return res.status(200).json(new apiResponse(200, { items, unread }, 'Notifications fetched'));
+});
+
+const markMyNotificationRead = asyncHandler(async (req, res) => {
+    await AdminNotification.findOneAndUpdate({ _id: req.params.id, adminId: req.admin._id }, { isRead: true });
+    return res.status(200).json(new apiResponse(200, {}, 'Marked read'));
+});
+
+const markAllMyNotificationsRead = asyncHandler(async (req, res) => {
+    await AdminNotification.updateMany({ adminId: req.admin._id, isRead: false }, { isRead: true });
+    return res.status(200).json(new apiResponse(200, {}, 'All marked read'));
 });
 
 // Global support capabilities (one setting applied to ALL tickets/users).
@@ -1728,4 +1779,5 @@ export {
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
     getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, getSupportAgents, getSupportSettingsAdmin, updateSupportSettings,
     broadcastNotification, getNotificationHistory,
+    getMyAdminNotifications, markMyNotificationRead, markAllMyNotificationsRead,
 };
