@@ -7,11 +7,14 @@ import {
     getAnalyticsOverview, getAnalyticsTrips, getAnalyticsUsers, getAnalyticsTopDrivers, getAnalyticsVehicleDistribution,
     getUsers, getUserById, updateUserStatus, getUserTrips, getUserTransactions,
     getDrivers, getDriverById, updateDriverStatus, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
+    grantDriverMoney, getWithdrawals, processWithdrawal,
+    getPricing, updatePricing,
+    getEmergencies, updateEmergency,
     getAllDocuments, verifyDocument, rejectDocument, seedTestDocument,
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
     getTransactions, getTransactionById, getTransactionSummary,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
-    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket,
+    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, getSupportAgents,
     broadcastNotification, getNotificationHistory,
 } from '../controller/admin.controller.js';
 
@@ -62,6 +65,19 @@ adminRouter.patch('/drivers/:id/verify', verifyDriver);
 adminRouter.get('/drivers/:id/documents', getDriverDocuments);
 adminRouter.get('/drivers/:id/trips', getDriverTrips);
 adminRouter.get('/drivers/:id/earnings', getDriverEarnings);
+adminRouter.post('/drivers/:id/grant', grantDriverMoney);
+
+// Withdrawals (driver cashout requests)
+adminRouter.get('/withdrawals', getWithdrawals);
+adminRouter.patch('/withdrawals/:id', processWithdrawal);
+
+// Pricing control
+adminRouter.get('/pricing', getPricing);
+adminRouter.put('/pricing', updatePricing);
+
+// Emergency / SOS alerts
+adminRouter.get('/emergencies', getEmergencies);
+adminRouter.patch('/emergencies/:id', updateEmergency);
 
 // Documents
 adminRouter.get('/documents', getAllDocuments);
@@ -89,6 +105,7 @@ adminRouter.patch('/subscriptions/:id/status', updateSubscriptionStatus);
 adminRouter.patch('/subscriptions/:id/assign-driver', assignDriverToSubscription);
 
 // Support
+adminRouter.get('/support-agents', getSupportAgents);
 adminRouter.get('/support', getSupportTickets);
 adminRouter.get('/support/:id', getSupportTicketById);
 adminRouter.put('/support/:id/status', updateTicketStatus);
@@ -96,6 +113,7 @@ adminRouter.patch('/support/:id', updateTicketStatus);
 adminRouter.post('/support/:id/reply', replyToTicket);
 adminRouter.post('/support/:id/messages', replyToTicket);
 adminRouter.patch('/support/:id/assign', assignTicket);
+adminRouter.post('/support/:id/comments', addTicketComment);
 
 // Notifications
 adminRouter.post('/notifications/broadcast', broadcastNotification);

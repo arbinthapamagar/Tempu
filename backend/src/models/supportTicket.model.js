@@ -43,10 +43,20 @@ const supportTicketSchema = new mongoose.Schema(
                     enum: ['user', 'driver', 'admin'],
                     required: true,
                 },
+                // Optional once an attachment is present (a voice note or file
+                // can stand on its own). Controllers require message OR attachment.
                 message: {
                     type: String,
-                    required: true,
+                    default: '',
                 },
+                // Voice note or document attachment (Cloudinary).
+                attachmentUrl: { type: String, default: null },
+                attachmentType: {
+                    type: String,
+                    enum: ['audio', 'file', null],
+                    default: null,
+                },
+                attachmentName: { type: String, default: null }, // original filename for files
                 createdAt: {
                     type: Date,
                     default: Date.now,
@@ -71,6 +81,33 @@ const supportTicketSchema = new mongoose.Schema(
             ref: 'Admin',
             default: null,
         },
+
+        // Internal collaboration notes between admins/support agents. NOT shown
+        // to the user/driver — distinct from `messages` (the customer thread).
+        comments: [
+            {
+                authorId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'Admin',
+                    required: true,
+                },
+                body: {
+                    type: String,
+                    required: true,
+                },
+                mentions: [
+                    {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: 'Admin',
+                    },
+                ],
+                createdAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+            },
+        ],
+
         resolvedAt: {
             type: Date,
             default: null,

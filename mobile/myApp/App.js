@@ -14,6 +14,7 @@ import ProfileScreen from './screens/ProfileScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import RoleSelectScreen from './screens/RoleSelectScreen';
 import SubscriptionScreen from './screens/SubscriptionScreen';
+import SupportScreen from './screens/SupportScreen';
 import TripsScreen from './screens/TripsScreen';
 import WalletScreen from './screens/WalletScreen';
 import { colors } from './theme/colors';
@@ -168,12 +169,14 @@ function AppShell() {
             {tab === 'home' && <HomeScreen />}
             {tab === 'trips' && <TripsScreen />}
             {tab === 'wallet' && <WalletScreen />}
+            {tab === 'subscribe' && <SubscriptionScreen onBack={() => setTab('home')} />}
             {tab === 'inbox' && <InboxScreen />}
+            {tab === 'support' && <SupportScreen role="passenger" onBack={() => setTab('home')} />}
             {tab === 'account' && (
               <ProfileScreen
                 onBack={() => setTab('home')}
                 onSignOut={signOut}
-                onOpenSubscription={() => setOverlay('subscription')}
+                onOpenSubscription={() => setTab('subscribe')}
                 onSwitchToDriver={() => setMode('driver')}
               />
             )}

@@ -16,6 +16,7 @@ import { apiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendEmail } from '../config/sendEmail.js';
 import { grantEmailTemplate } from '../utils/grantEmailTemplate.js';
+import { notificationEmailTemplate } from '../utils/notificationEmailTemplate.js';
 import jwt from 'jsonwebtoken';
 
 const cookieOptions = {
@@ -1403,6 +1404,64 @@ const assignTicket = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, ticket, 'Ticket assigned'));
 });
 
+// Admins who can be assigned to / mentioned on support tickets. Available to
+// any support-capable admin (unlike the full admin list, which needs manageAdmins).
+const getSupportAgents = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
+    const agents = await Admin.find({ isActive: { $ne: false }, 'permissions.handleSupport': true })
+        .select('name email role')
+        .sort({ name: 1 });
+    return res.status(200).json(new apiResponse(200, agents, 'Support agents fetched'));
+});
+
+// Internal note on a ticket (admin-only), with optional @mentions of other admins.
+const addTicketComment = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
+    const { body } = req.body;
+    if (!body || !body.trim()) throw new apiError(400, 'Comment body is required');
+
+    // Normalise mentions to an array of ids; ignore self-mentions and dupes.
+    const mentions = [...new Set((Array.isArray(req.body.mentions) ? req.body.mentions : [])
+        .map((m) => String(m))
+        .filter((m) => m && m !== String(req.admin._id)))];
+
+    const ticket = await SupportTicket.findById(req.params.id);
+    if (!ticket) throw new apiError(404, 'Ticket not found');
+
+    ticket.comments.push({ authorId: req.admin._id, body: body.trim(), mentions });
+    await ticket.save();
+
+    // Email mentioned admins (best-effort; won't block the response).
+    if (mentions.length) {
+        const mentioned = await Admin.find({ _id: { $in: mentions } }).select('name email');
+        const base = (process.env.CLIENT_URL || process.env.CORS_ORIGIN || '').replace(/\/$/, '');
+        const link = base ? `${base}/support/${ticket._id}` : null;
+        const ref = String(ticket._id).slice(-8).toUpperCase();
+        mentioned.forEach((a) => {
+            if (!a.email) return;
+            sendEmail({
+                sendTo: a.email,
+                subject: `You were mentioned on support ticket #${ref}`,
+                html: notificationEmailTemplate({
+                    name: a.name,
+                    title: `${req.admin.name} mentioned you on a support ticket`,
+                    body: `On "${ticket.subject}": ${body.trim()}`,
+                    link,
+                    linkLabel: 'Open ticket',
+                }),
+            }).catch((err) => console.error('Mention email error:', err?.message));
+        });
+    }
+
+    const populated = await SupportTicket.findById(ticket._id)
+        .populate('userId', 'name phone')
+        .populate('assignedTo', 'name')
+        .populate('comments.authorId', 'name')
+        .populate('comments.mentions', 'name');
+
+    return res.status(200).json(new apiResponse(200, populated, 'Comment added'));
+});
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 
 const broadcastNotification = asyncHandler(async (req, res) => {
@@ -1532,6 +1591,6 @@ export {
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
     getTransactions, getTransactionById, getTransactionSummary,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
-    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket,
+    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, getSupportAgents,
     broadcastNotification, getNotificationHistory,
 };

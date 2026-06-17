@@ -32,7 +32,8 @@ const transactionSchema = new mongoose.Schema(
         'trip_earning',       // driver earns from trip
         'subscription_payment',// subscription fee
         'wallet_topup',       // add money to wallet
-        'wallet_withdrawal',  // driver withdraws
+        'wallet_withdrawal',  // driver withdraws / cashes out
+        'admin_credit',       // admin grants money to a driver
         'platform_fee',       // your 4-5% cut
         'refund',             // refund to rider
       ],
@@ -50,6 +51,7 @@ const transactionSchema = new mongoose.Schema(
     },
 
     gatewayRef: { type: String, default: null }, // khalti/esewa transaction id
+    note: { type: String, default: null },        // e.g. admin grant reason / promotion
   },
   { timestamps: true }
 );

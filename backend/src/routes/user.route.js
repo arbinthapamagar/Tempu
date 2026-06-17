@@ -5,7 +5,7 @@ import { getProfile, updateProfile, uploadAvatar, changePassword, updateFcmToken
 import { updateLocation, getSavedAddresses, addSavedAddress, updateSavedAddress, deleteSavedAddress } from '../controller/users/user.location.controller.js';
 import { getWallet, getTransactions, topUpWallet } from '../controller/users/user.wallet.controller.js';
 import { getNotifications, markAsRead, markAllAsRead, deleteNotification } from '../controller/users/user.notification.controller.js';
-import { getTripHistory, getTripById } from '../controller/users/user.trip.controller.js';
+import { getTripHistory, getTripById, getFareQuote } from '../controller/users/user.trip.controller.js';
 import { createReview, getMyReviews, driverCreateReview } from '../controller/users/user.review.controller.js';
 import {
     getMySubscriptions, createSubscription, getSubscriptionById,
@@ -15,7 +15,9 @@ import { createTicket, getMyTickets, getTicketById, addMessage } from '../contro
 import {
     registerAsDriver, getMyDriverProfile, updateDriverProfile, uploadDriverDocument,
     goOnline, goOffline, updateDriverLocation, getNearbyTrips, getMyEarnings,
+    requestWithdrawal, getMyWithdrawals,
 } from '../controller/users/user.driver.controller.js';
+import { triggerEmergency, getMyEmergencies } from '../controller/users/user.emergency.controller.js';
 import { verifyDriverProfile } from '../middlewares/driver.middleware.js';
 
 const userRouter = Router();
@@ -47,6 +49,7 @@ userRouter.put('/notifications/:id/read', markAsRead);
 userRouter.delete('/notifications/:id', deleteNotification);
 
 // Trips
+userRouter.get('/fare-quote', getFareQuote);
 userRouter.get('/trips', getTripHistory);
 userRouter.get('/trips/:id', getTripById);
 
@@ -69,6 +72,10 @@ userRouter.post('/support', createTicket);
 userRouter.get('/support/:id', getTicketById);
 userRouter.post('/support/:id/messages', addMessage);
 
+// Emergency / SOS
+userRouter.post('/emergency', triggerEmergency);
+userRouter.get('/emergency', getMyEmergencies);
+
 // Driver Profile
 userRouter.post('/driver/register', registerAsDriver);
 userRouter.get('/driver', getMyDriverProfile);
@@ -79,5 +86,7 @@ userRouter.put('/driver/go-offline', goOffline);
 userRouter.put('/driver/location', updateDriverLocation);
 userRouter.get('/driver/nearby-trips', getNearbyTrips);
 userRouter.get('/driver/earnings', getMyEarnings);
+userRouter.post('/driver/withdrawals', verifyDriverProfile, requestWithdrawal);
+userRouter.get('/driver/withdrawals', verifyDriverProfile, getMyWithdrawals);
 
 export { userRouter };
