@@ -10,10 +10,12 @@ import { Withdrawal } from '../models/withdrawal.model.js';
 import { Pricing, defaultPricing, VEHICLE_TYPES } from '../models/pricing.model.js';
 import { Emergency } from '../models/emergency.model.js';
 import { SupportTicket } from '../models/supportTicket.model.js';
+import { getSupportSettings } from '../models/supportSettings.model.js';
 import { Notification } from '../models/notification.model.js';
 import { apiError } from '../utils/apiError.js';
 import { apiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { uploadOnCloudinary, deleteFromCloudinary } from '../utils/cloudinary.js';
 import { sendEmail } from '../config/sendEmail.js';
 import { grantEmailTemplate } from '../utils/grantEmailTemplate.js';
 import { notificationEmailTemplate } from '../utils/notificationEmailTemplate.js';
@@ -118,6 +120,35 @@ const getMe = asyncHandler(async (req, res) => {
 });
 
 // Update your own profile: name, email, phone, and optionally password.
+const uploadMyAvatar = asyncHandler(async (req, res) => {
+    const localFilePath = req.file?.path;
+    if (!localFilePath) throw new apiError(400, 'Avatar file is required');
+
+    const result = await uploadOnCloudinary(localFilePath);
+    if (!result?.secure_url) throw new apiError(500, 'Failed to upload avatar');
+
+    const admin = await Admin.findById(req.admin._id);
+    if (admin.avatarUrl) {
+        const parts = admin.avatarUrl.split('/');
+        await deleteFromCloudinary(parts[parts.length - 1].split('.')[0]);
+    }
+    admin.avatarUrl = result.secure_url;
+    await admin.save();
+
+    return res.status(200).json(new apiResponse(200, { avatarUrl: admin.avatarUrl }, 'Avatar uploaded'));
+});
+
+const deleteMyAvatar = asyncHandler(async (req, res) => {
+    const admin = await Admin.findById(req.admin._id);
+    if (admin.avatarUrl) {
+        const parts = admin.avatarUrl.split('/');
+        await deleteFromCloudinary(parts[parts.length - 1].split('.')[0]);
+        admin.avatarUrl = null;
+        await admin.save();
+    }
+    return res.status(200).json(new apiResponse(200, { avatarUrl: null }, 'Avatar removed'));
+});
+
 const updateMyProfile = asyncHandler(async (req, res) => {
     const { name, email, phone, currentPassword, newPassword } = req.body;
 
@@ -279,6 +310,39 @@ const getDashboardStats = asyncHandler(async (req, res) => {
         activeSubscriptions,
         pendingDrivers,
     }, 'Dashboard stats fetched'));
+});
+
+const NAV_KEYS = ['drivers', 'documents', 'withdrawals', 'support', 'emergencies'];
+
+// Sidebar badge counts: items needing attention that arrived AFTER the admin
+// last viewed that section (i.e. only NEW items). Permission-gated per key.
+const getNavCounts = asyncHandler(async (req, res) => {
+    const p = req.admin.permissions || {};
+    const me = await Admin.findById(req.admin._id).select('navSeen');
+    const seen = me?.navSeen || {};
+    const since = (key) => ({ createdAt: { $gt: seen[key] || new Date(0) } });
+    const zero = Promise.resolve(0);
+
+    const tasks = {
+        drivers: p.manageDrivers ? Driver.countDocuments({ status: 'pending', ...since('drivers') }) : zero,
+        documents: p.verifyDocuments ? Document.countDocuments({ status: 'pending', ...since('documents') }) : zero,
+        withdrawals: p.managePayments ? Withdrawal.countDocuments({ status: 'pending', ...since('withdrawals') }) : zero,
+        support: p.handleSupport ? SupportTicket.countDocuments({ status: { $in: ['open', 'in_progress'] }, ...since('support') }) : zero,
+        emergencies: p.handleSupport ? Emergency.countDocuments({ status: 'active', ...since('emergencies') }) : zero,
+    };
+    const keys = Object.keys(tasks);
+    const values = await Promise.all(keys.map((k) => tasks[k]));
+    const counts = {};
+    keys.forEach((k, i) => { counts[k] = values[i]; });
+    return res.status(200).json(new apiResponse(200, counts, 'Nav counts fetched'));
+});
+
+// Mark a nav section as seen (clears its "new" badge for this admin).
+const markNavSeen = asyncHandler(async (req, res) => {
+    const { key } = req.body;
+    if (!NAV_KEYS.includes(key)) throw new apiError(400, `key must be one of: ${NAV_KEYS.join(', ')}`);
+    await Admin.findByIdAndUpdate(req.admin._id, { [`navSeen.${key}`]: new Date() });
+    return res.status(200).json(new apiResponse(200, { key }, 'Marked seen'));
 });
 
 const getDashboardRecentTrips = asyncHandler(async (req, res) => {
@@ -1349,15 +1413,25 @@ const getSupportTickets = asyncHandler(async (req, res) => {
     );
 });
 
-const getSupportTicketById = asyncHandler(async (req, res) => {
-    if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
-    const ticket = await SupportTicket.findById(req.params.id)
+// Fully-populated ticket. Shared by all support endpoints so they always return
+// the same shape to the admin UI. (Support capabilities are global now — see
+// getSupportSettingsAdmin — not per ticket/user.)
+async function buildTicketPayload(id) {
+    const ticket = await SupportTicket.findById(id)
         .populate('userId', 'name phone')
+        .populate({ path: 'driverId', select: 'userId', populate: { path: 'userId', select: 'name phone' } })
         .populate('assignedTo', 'name')
         .populate('comments.authorId', 'name')
         .populate('comments.mentions', 'name');
-    if (!ticket) throw new apiError(404, 'Ticket not found');
-    return res.status(200).json(new apiResponse(200, ticket, 'Ticket fetched'));
+    if (!ticket) return null;
+    return ticket.toObject();
+}
+
+const getSupportTicketById = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
+    const payload = await buildTicketPayload(req.params.id);
+    if (!payload) throw new apiError(404, 'Ticket not found');
+    return res.status(200).json(new apiResponse(200, payload, 'Ticket fetched'));
 });
 
 const updateTicketStatus = asyncHandler(async (req, res) => {
@@ -1402,6 +1476,26 @@ const assignTicket = asyncHandler(async (req, res) => {
     if (!ticket) throw new apiError(404, 'Ticket not found');
 
     return res.status(200).json(new apiResponse(200, ticket, 'Ticket assigned'));
+});
+
+// Global support capabilities (one setting applied to ALL tickets/users).
+const SUPPORT_PERMISSION_KEYS = ['voiceMessages', 'documents', 'audioCall', 'videoCall'];
+
+const getSupportSettingsAdmin = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
+    const s = await getSupportSettings();
+    return res.status(200).json(new apiResponse(200, s, 'Support settings fetched'));
+});
+
+const updateSupportSettings = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
+    const s = await getSupportSettings();
+    SUPPORT_PERMISSION_KEYS.forEach((k) => {
+        if (typeof req.body[k] === 'boolean') s[k] = req.body[k];
+    });
+    s.updatedBy = req.admin._id;
+    await s.save();
+    return res.status(200).json(new apiResponse(200, s, 'Support settings updated'));
 });
 
 // Admins who can be assigned to / mentioned on support tickets. Available to
@@ -1453,13 +1547,54 @@ const addTicketComment = asyncHandler(async (req, res) => {
         });
     }
 
-    const populated = await SupportTicket.findById(ticket._id)
-        .populate('userId', 'name phone')
-        .populate('assignedTo', 'name')
-        .populate('comments.authorId', 'name')
-        .populate('comments.mentions', 'name');
+    return res.status(200).json(new apiResponse(200, await buildTicketPayload(ticket._id), 'Comment added'));
+});
 
-    return res.status(200).json(new apiResponse(200, populated, 'Comment added'));
+// Edit an internal note. Author-only. Customer-facing `messages` are NOT editable.
+const editTicketComment = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
+    const { body } = req.body;
+    if (!body || !body.trim()) throw new apiError(400, 'Comment body is required');
+
+    const mentions = [...new Set((Array.isArray(req.body.mentions) ? req.body.mentions : [])
+        .map((m) => String(m))
+        .filter((m) => m && m !== String(req.admin._id)))];
+
+    const ticket = await SupportTicket.findById(req.params.id);
+    if (!ticket) throw new apiError(404, 'Ticket not found');
+
+    const comment = ticket.comments.id(req.params.commentId);
+    if (!comment) throw new apiError(404, 'Comment not found');
+    if (String(comment.authorId) !== String(req.admin._id)) {
+        throw new apiError(403, 'You can only edit your own notes');
+    }
+
+    comment.body = body.trim();
+    comment.mentions = mentions;
+    await ticket.save();
+
+    return res.status(200).json(new apiResponse(200, await buildTicketPayload(ticket._id), 'Comment updated'));
+});
+
+// Delete an internal note. Author or superadmin. Customer-facing `messages` are NOT deletable.
+const deleteTicketComment = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
+
+    const ticket = await SupportTicket.findById(req.params.id);
+    if (!ticket) throw new apiError(404, 'Ticket not found');
+
+    const comment = ticket.comments.id(req.params.commentId);
+    if (!comment) throw new apiError(404, 'Comment not found');
+
+    const isAuthor = String(comment.authorId) === String(req.admin._id);
+    if (!isAuthor && req.admin.role !== 'superadmin') {
+        throw new apiError(403, 'You can only delete your own notes');
+    }
+
+    ticket.comments.pull(req.params.commentId);
+    await ticket.save();
+
+    return res.status(200).json(new apiResponse(200, await buildTicketPayload(ticket._id), 'Comment deleted'));
 });
 
 // ─── Notifications ────────────────────────────────────────────────────────────
@@ -1578,9 +1713,9 @@ const seedTestDocument = asyncHandler(async (req, res) => {
 });
 
 export {
-    login, logout, refreshAdminToken, getMe, updateMyProfile,
+    login, logout, refreshAdminToken, getMe, updateMyProfile, uploadMyAvatar, deleteMyAvatar,
     createAdmin, listAdmins, updateAdminPermissions, toggleAdminStatus, deleteAdmin,
-    getDashboardStats, getDashboardRecentTrips,
+    getDashboardStats, getDashboardRecentTrips, getNavCounts, markNavSeen,
     getAnalyticsOverview, getAnalyticsTrips, getAnalyticsUsers, getAnalyticsTopDrivers, getAnalyticsVehicleDistribution,
     getUsers, getUserById, updateUserStatus, getUserTrips, getUserTransactions,
     getDrivers, getDriverById, updateDriverStatus, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
@@ -1591,6 +1726,6 @@ export {
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
     getTransactions, getTransactionById, getTransactionSummary,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
-    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, getSupportAgents,
+    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, getSupportAgents, getSupportSettingsAdmin, updateSupportSettings,
     broadcastNotification, getNotificationHistory,
 };

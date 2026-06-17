@@ -102,6 +102,16 @@ const adminSchema = new mongoose.Schema(
             type: Date,
             default: null,
         },
+
+        // Last time this admin viewed each badged nav section. Sidebar badges
+        // count only items created after these timestamps ("new since seen").
+        navSeen: {
+            drivers: { type: Date, default: null },
+            documents: { type: Date, default: null },
+            withdrawals: { type: Date, default: null },
+            support: { type: Date, default: null },
+            emergencies: { type: Date, default: null },
+        },
     },
     {
         timestamps: true,

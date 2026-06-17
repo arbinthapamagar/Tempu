@@ -56,6 +56,16 @@ const uploadAvatar = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, { avatarUrl: user.avatarUrl }, 'Avatar uploaded'));
 });
 
+const deleteAvatar = asyncHandler(async (req, res) => {
+    if (req.user.avatarUrl) {
+        const parts = req.user.avatarUrl.split('/');
+        const publicId = parts[parts.length - 1].split('.')[0];
+        await deleteFromCloudinary(publicId);
+    }
+    await User.findByIdAndUpdate(req.user._id, { avatarUrl: null });
+    return res.status(200).json(new apiResponse(200, { avatarUrl: null }, 'Avatar removed'));
+});
+
 const changePassword = asyncHandler(async (req, res) => {
     const { currentPassword, newPassword, confirmPassword } = req.body;
     if (!currentPassword || !newPassword) throw new apiError(400, 'Current and new password are required');
@@ -80,4 +90,4 @@ const updateFcmToken = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, {}, 'FCM token updated'));
 });
 
-export { getProfile, updateProfile, uploadAvatar, changePassword, updateFcmToken };
+export { getProfile, updateProfile, uploadAvatar, deleteAvatar, changePassword, updateFcmToken };
