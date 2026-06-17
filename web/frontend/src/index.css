@@ -1,28 +1,196 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ───────────────────────────────────────────────────────────────────────────
+   Shakti admin — "inked workshop ledger"
+   Warm paper + ink, Shakti orange. Cut-paper cards (asymmetric radius + hard
+   offset shadow), grotesque display type, mono for data. Handcrafted, not template.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --paper: #f4eee3;
+  --paper-2: #ece3d4;
+  --surface: #fffcf7;
+  --ink: #241f1a;          /* primary text */
+  --ink-soft: #7b7066;
+  --line: rgba(36, 31, 26, 0.14);
+  --line-strong: rgba(36, 31, 26, 0.22);
+  --divide-soft: rgba(36, 31, 26, 0.07);
+  --accent: #e8590c;
+  --accent-soft: #fbe7d6;
+  --accent-ink: #9a3412;
+  /* warm gray text ramp */
+  --t-800: #2f2922;
+  --t-700: #4a4239;
+  --t-600: #6b6157;
+  --t-400: #a99e90;
+  /* hand-placed shadow: a hard offset, like ink soaked through paper */
+  --craft-shadow: 2px 3px 0 rgba(36, 31, 26, 0.06);
+  --craft-shadow-lift: 3px 5px 0 rgba(36, 31, 26, 0.09);
+  --grain-blend: multiply;
+}
+
+/* Dark — warm charcoal, matched light-ink text (not cold gray). */
+html.dark {
+  --paper: #1a1714;
+  --paper-2: #2e2823;
+  --surface: #241f1a;
+  --ink: #f3ece1;
+  --ink-soft: #b3a899;
+  --line: rgba(246, 240, 230, 0.13);
+  --line-strong: rgba(246, 240, 230, 0.22);
+  --divide-soft: rgba(246, 240, 230, 0.08);
+  --accent: #fb7a3c;
+  --accent-soft: #3a2618;
+  --accent-ink: #fb923c;
+  --t-800: #e6ddd0;
+  --t-700: #cfc5b7;
+  --t-600: #b3a899;
+  --t-400: #8a8073;
+  --craft-shadow: 2px 3px 0 rgba(0, 0, 0, 0.30);
+  --craft-shadow-lift: 3px 5px 0 rgba(0, 0, 0, 0.38);
+  --grain-blend: screen;
+  color-scheme: dark;
+}
+
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* faint paper grain — tactile, not noisy */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.04;
+    mix-blend-mode: var(--grain-blend);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  h1, h2, h3 {
+    font-family: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
+    letter-spacing: -0.015em;
   }
 }
 
-@layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: #fb923c transparent;
+@layer components {
+  /* The signature: cut-paper card. */
+  .card-craft {
+    background-color: var(--surface);
+    border: 1.5px solid var(--line);
+    border-radius: 20px 8px 18px 10px;
+    box-shadow: var(--craft-shadow);
   }
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
+  .card-craft-alt { border-radius: 9px 19px 11px 17px; }
+
+  /* mono "ink stamp" eyebrow / label */
+  .eyebrow {
+    font-family: 'Spline Sans Mono', ui-monospace, monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--accent-ink);
   }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
+  .font-mono-data { font-family: 'Spline Sans Mono', ui-monospace, monospace; }
+
+  /* hand-drawn underline accent (a slightly skewed orange brush mark) */
+  .hand-rule {
+    display: block;
+    height: 6px;
+    width: 2.75rem;
+    background: var(--accent);
+    border-radius: 8px 6px 7px 9px;
+    transform: rotate(-1.2deg);
   }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: #fb923c;
-    border-radius: 9999px;
+
+  /* organic active-nav highlight — an irregular hand-cut blob, not a flat box */
+  .nav-blob {
+    border-radius: 13px 7px 12px 8px;
+    transform: rotate(-0.6deg);
   }
 }
+
+/* ── Global token overrides: re-skin the utility classes the whole app already
+   uses, so every page picks up the warm paper + cut-paper feel without touching
+   each file. Placed after @tailwind utilities so they win by source order. ── */
+.bg-white { background-color: var(--surface); }
+.bg-gray-50 { background-color: var(--paper); }
+.bg-gray-100 { background-color: var(--paper-2); }
+
+.border-gray-100 { border-color: var(--line); }
+.border-gray-200 { border-color: var(--line); }
+.border-gray-300 { border-color: var(--line-strong); }
+
+.divide-gray-50 > :not([hidden]) ~ :not([hidden]) { border-color: var(--divide-soft); }
+.divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--line); }
+
+.shadow-sm { box-shadow: var(--craft-shadow); }
+.shadow-md { box-shadow: var(--craft-shadow-lift); }
+.hover\:shadow-md:hover { box-shadow: var(--craft-shadow-lift); }
+
+/* cards get the cut-paper asymmetric radius; form controls (rounded-lg) stay crisp */
+.rounded-xl { border-radius: 18px 7px 16px 9px; }
+.rounded-2xl { border-radius: 22px 9px 20px 11px; }
+
+/* warm the gray text ramp so nothing reads cold-corporate (flips in dark) */
+.text-gray-900 { color: var(--ink); }
+.text-gray-800 { color: var(--t-800); }
+.text-gray-700 { color: var(--t-700); }
+.text-gray-600 { color: var(--t-600); }
+.text-gray-500 { color: var(--ink-soft); }
+.text-gray-400 { color: var(--t-400); }
+
+/* soft accent tints used for chips/icon blobs — keep them readable on dark */
+html.dark .bg-orange-50 { background-color: var(--accent-soft); }
+html.dark .bg-orange-100 { background-color: #4a2f1a; }
+html.dark .bg-emerald-50 { background-color: #16271d; }
+html.dark .bg-amber-50 { background-color: #2f2410; }
+html.dark .bg-red-50 { background-color: #2f1a1a; }
+html.dark .bg-rose-50 { background-color: #2f1820; }
+
+@layer utilities {
+  /* Flat orange range slider used across the pricing dashboard */
+  .ev-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 9999px;
+    outline: none;
+    cursor: pointer;
+  }
+  .ev-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    background: var(--accent);
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .ev-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #ffffff;
+    border-radius: 9999px;
+    background: var(--accent);
+  }
+
+  .scrollbar-thin { scrollbar-width: thin; scrollbar-color: #d9a06a transparent; }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background-color: #d9a06a; border-radius: 9999px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+/* keep app content above the grain overlay */
+#root { position: relative; z-index: 1; }

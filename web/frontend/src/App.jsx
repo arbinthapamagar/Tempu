@@ -11,9 +11,12 @@ import TripList from './pages/trips/TripList'
 import TripDetail from './pages/trips/TripDetail'
 import SubscriptionList from './pages/subscriptions/SubscriptionList'
 import TransactionList from './pages/transactions/TransactionList'
+import WithdrawalList from './pages/withdrawals/WithdrawalList'
+import PricingControl from './pages/pricing/PricingControl'
 import DocumentQueue from './pages/documents/DocumentQueue'
 import TicketList from './pages/support/TicketList'
 import TicketDetail from './pages/support/TicketDetail'
+import EmergencyList from './pages/emergencies/EmergencyList'
 import SupplierList from './pages/suppliers/SupplierList'
 import AdminList from './pages/admins/AdminList'
 import Analytics from './pages/analytics/Analytics'
@@ -46,9 +49,12 @@ export default function App() {
         <Route path="trips/:id" element={<TripDetail />} />
         <Route path="subscriptions" element={<SubscriptionList />} />
         <Route path="transactions" element={<TransactionList />} />
+        <Route path="withdrawals" element={<WithdrawalList />} />
+        <Route path="pricing" element={<PricingControl />} />
         <Route path="documents" element={<DocumentQueue />} />
         <Route path="support" element={<TicketList />} />
         <Route path="support/:id" element={<TicketDetail />} />
+        <Route path="emergencies" element={<EmergencyList />} />
         <Route path="suppliers" element={<SupplierList />} />
         <Route path="admins" element={<AdminList />} />
         <Route path="analytics" element={<Analytics />} />

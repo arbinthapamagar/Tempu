@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { verifyUserJwt } from '../middlewares/auth.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
-import { getProfile, updateProfile, uploadAvatar, changePassword, updateFcmToken } from '../controller/users/user.profile.controller.js';
+import { getProfile, updateProfile, uploadAvatar, deleteAvatar, changePassword, updateFcmToken } from '../controller/users/user.profile.controller.js';
 import { updateLocation, getSavedAddresses, addSavedAddress, updateSavedAddress, deleteSavedAddress } from '../controller/users/user.location.controller.js';
 import { getWallet, getTransactions, topUpWallet } from '../controller/users/user.wallet.controller.js';
 import { getNotifications, markAsRead, markAllAsRead, deleteNotification } from '../controller/users/user.notification.controller.js';
@@ -11,7 +11,7 @@ import {
     getMySubscriptions, createSubscription, getSubscriptionById,
     cancelSubscription, pauseSubscription, resumeSubscription,
 } from '../controller/users/user.subscription.controller.js';
-import { createTicket, getMyTickets, getTicketById, addMessage } from '../controller/users/user.support.controller.js';
+import { createTicket, getMyTickets, getTicketById, addMessage, getSupportConfig } from '../controller/users/user.support.controller.js';
 import {
     registerAsDriver, getMyDriverProfile, updateDriverProfile, uploadDriverDocument,
     goOnline, goOffline, updateDriverLocation, getNearbyTrips, getMyEarnings,
@@ -27,6 +27,7 @@ userRouter.use(verifyUserJwt);
 userRouter.get('/profile', getProfile);
 userRouter.put('/profile', updateProfile);
 userRouter.post('/profile/avatar', upload.single('avatar'), uploadAvatar);
+userRouter.delete('/profile/avatar', deleteAvatar);
 userRouter.put('/password', changePassword);
 userRouter.put('/fcm-token', updateFcmToken);
 
@@ -67,10 +68,11 @@ userRouter.put('/subscriptions/:id/pause', pauseSubscription);
 userRouter.put('/subscriptions/:id/resume', resumeSubscription);
 
 // Support Tickets
+userRouter.get('/support/settings', getSupportConfig);
 userRouter.get('/support', getMyTickets);
 userRouter.post('/support', createTicket);
 userRouter.get('/support/:id', getTicketById);
-userRouter.post('/support/:id/messages', addMessage);
+userRouter.post('/support/:id/messages', upload.single('attachment'), addMessage);
 
 // Emergency / SOS
 userRouter.post('/emergency', triggerEmergency);

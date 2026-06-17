@@ -47,7 +47,9 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Shakti uses your location to find nearby drivers and set your pickup."
         }
-      ]
+      ],
+      "expo-audio",
+      "expo-font"
     ]
   }
 }

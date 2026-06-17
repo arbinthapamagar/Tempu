@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { verifyAdminJwt } from '../middlewares/admin.middleware.js';
+import { upload } from '../middlewares/multer.middleware.js';
 import {
-    login, logout, refreshAdminToken, getMe, updateMyProfile,
+    login, logout, refreshAdminToken, getMe, updateMyProfile, uploadMyAvatar, deleteMyAvatar,
     createAdmin, listAdmins, updateAdminPermissions, toggleAdminStatus, deleteAdmin,
-    getDashboardStats, getDashboardRecentTrips,
+    getDashboardStats, getDashboardRecentTrips, getNavCounts, markNavSeen,
     getAnalyticsOverview, getAnalyticsTrips, getAnalyticsUsers, getAnalyticsTopDrivers, getAnalyticsVehicleDistribution,
     getUsers, getUserById, updateUserStatus, getUserTrips, getUserTransactions,
     getDrivers, getDriverById, updateDriverStatus, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
@@ -14,7 +15,7 @@ import {
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
     getTransactions, getTransactionById, getTransactionSummary,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
-    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, getSupportAgents,
+    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, getSupportAgents, getSupportSettingsAdmin, updateSupportSettings,
     broadcastNotification, getNotificationHistory,
 } from '../controller/admin.controller.js';
 
@@ -29,6 +30,8 @@ adminRouter.use(verifyAdminJwt);
 adminRouter.post('/logout', logout);
 adminRouter.get('/me', getMe);
 adminRouter.patch('/me', updateMyProfile);
+adminRouter.post('/me/avatar', upload.single('avatar'), uploadMyAvatar);
+adminRouter.delete('/me/avatar', deleteMyAvatar);
 
 // Admin management
 adminRouter.get('/admins', listAdmins);
@@ -39,6 +42,8 @@ adminRouter.delete('/admins/:id', deleteAdmin);
 
 // Dashboard
 adminRouter.get('/dashboard/stats', getDashboardStats);
+adminRouter.get('/nav-counts', getNavCounts);
+adminRouter.patch('/nav-seen', markNavSeen);
 adminRouter.get('/dashboard/recent-trips', getDashboardRecentTrips);
 
 // Analytics
@@ -106,6 +111,8 @@ adminRouter.patch('/subscriptions/:id/assign-driver', assignDriverToSubscription
 
 // Support
 adminRouter.get('/support-agents', getSupportAgents);
+adminRouter.get('/support-settings', getSupportSettingsAdmin);
+adminRouter.patch('/support-settings', updateSupportSettings);
 adminRouter.get('/support', getSupportTickets);
 adminRouter.get('/support/:id', getSupportTicketById);
 adminRouter.put('/support/:id/status', updateTicketStatus);
@@ -114,6 +121,8 @@ adminRouter.post('/support/:id/reply', replyToTicket);
 adminRouter.post('/support/:id/messages', replyToTicket);
 adminRouter.patch('/support/:id/assign', assignTicket);
 adminRouter.post('/support/:id/comments', addTicketComment);
+adminRouter.patch('/support/:id/comments/:commentId', editTicketComment);
+adminRouter.delete('/support/:id/comments/:commentId', deleteTicketComment);
 
 // Notifications
 adminRouter.post('/notifications/broadcast', broadcastNotification);
