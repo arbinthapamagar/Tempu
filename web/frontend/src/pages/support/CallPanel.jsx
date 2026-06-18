@@ -21,7 +21,7 @@ function CallPanel({ ticketId }, ref) {
   const pendingCandidates = useRef([])
   const isCallerRef = useRef(false)
 
-  // ── WebRTC helpers (defined before the hooks that reference them) ────────────
+  // WebRTC helpers, defined before the hooks that use them.
   const endLocal = () => {
     pcRef.current?.close(); pcRef.current = null
     localStreamRef.current?.getTracks().forEach((t) => t.stop())
@@ -121,7 +121,7 @@ function CallPanel({ ticketId }, ref) {
 
   useImperativeHandle(ref, () => ({ start: (m) => startCall(m) }))
 
-  // ── Socket lifecycle ───────────────────────────────────────────────────────
+  // Wire up the call signalling socket and tear it down on unmount.
   useEffect(() => {
     if (!ticketId) return undefined
     const token = localStorage.getItem('shakti_admin_token')

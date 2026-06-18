@@ -30,7 +30,7 @@ const sendEmail = async ({ sendTo, subject, html }) => {
   const tx = getTransporter();
   if (!tx) return null;
 
-  const fromName = process.env.MAIL_FROM_NAME || 'Shakti';
+  const fromName = process.env.MAIL_FROM_NAME || 'Tempu';
   const fromAddress = process.env.GMAIL_USER;
 
   try {

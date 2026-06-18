@@ -1,128 +1,104 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ───────────────────────────────────────────────────────────────────────────
-   Shakti admin — "inked workshop ledger"
-   Warm paper + ink, Shakti orange. Cut-paper cards (asymmetric radius + hard
-   offset shadow), grotesque display type, mono for data. Handcrafted, not template.
-   ─────────────────────────────────────────────────────────────────────────── */
+/* Tempu admin theme: flat and simple. White cards on a light grey page,
+   neutral grey text, one accent colour. No textures or fancy shadows. */
 :root {
-  --paper: #f4eee3;
-  --paper-2: #ece3d4;
-  --surface: #fffcf7;
-  --ink: #241f1a;          /* primary text */
-  --ink-soft: #7b7066;
-  --line: rgba(36, 31, 26, 0.14);
-  --line-strong: rgba(36, 31, 26, 0.22);
-  --divide-soft: rgba(36, 31, 26, 0.07);
-  --accent: #e8590c;
-  --accent-soft: #fbe7d6;
-  --accent-ink: #9a3412;
-  /* warm gray text ramp */
-  --t-800: #2f2922;
-  --t-700: #4a4239;
-  --t-600: #6b6157;
-  --t-400: #a99e90;
-  /* hand-placed shadow: a hard offset, like ink soaked through paper */
-  --craft-shadow: 2px 3px 0 rgba(36, 31, 26, 0.06);
-  --craft-shadow-lift: 3px 5px 0 rgba(36, 31, 26, 0.09);
-  --grain-blend: multiply;
+  --page: #eef0f4;          /* app background — soft cool grey so white cards lift */
+  --surface: #ffffff;       /* cards, panels */
+  --surface-2: #f9fafb;     /* subtle fills, table headers */
+  --ink: #111827;           /* primary text */
+  --line: #e5e7eb;          /* hairline borders */
+  --line-strong: #d1d5db;
+  --divide-soft: #f1f3f5;
+  --accent: #1e3a8a;        /* navy blue */
+  --accent-soft: #dbe4fe;
+  --accent-ink: #172554;
+  /* neutral text ramp */
+  --t-900: #111827;
+  --t-800: #1f2937;
+  --t-700: #374151;
+  --t-600: #4b5563;
+  --t-500: #6b7280;
+  --t-400: #9ca3af;
+  /* flat, soft elevation */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-md: 0 4px 10px -2px rgba(16, 24, 40, 0.08);
 }
 
-/* Dark — warm charcoal, matched light-ink text (not cold gray). */
+/* Dark — neutral slate, not warm. */
 html.dark {
-  --paper: #1a1714;
-  --paper-2: #2e2823;
-  --surface: #241f1a;
-  --ink: #f3ece1;
-  --ink-soft: #b3a899;
-  --line: rgba(246, 240, 230, 0.13);
-  --line-strong: rgba(246, 240, 230, 0.22);
-  --divide-soft: rgba(246, 240, 230, 0.08);
-  --accent: #fb7a3c;
-  --accent-soft: #3a2618;
-  --accent-ink: #fb923c;
-  --t-800: #e6ddd0;
-  --t-700: #cfc5b7;
-  --t-600: #b3a899;
-  --t-400: #8a8073;
-  --craft-shadow: 2px 3px 0 rgba(0, 0, 0, 0.30);
-  --craft-shadow-lift: 3px 5px 0 rgba(0, 0, 0, 0.38);
-  --grain-blend: screen;
+  --page: #0f172a;
+  --surface: #1e293b;
+  --surface-2: #18243a;
+  --ink: #ffffff;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --divide-soft: rgba(255, 255, 255, 0.06);
+  --accent: #3b82f6;
+  --accent-soft: #0c2740;
+  --accent-ink: #60a5fa;
+  --t-900: #ffffff;
+  --t-800: #f4f7fb;
+  --t-700: #e9eef5;
+  --t-600: #d7dee8;
+  --t-500: #cdd6e2;
+  --t-400: #aeb8c6;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 10px -2px rgba(0, 0, 0, 0.45);
   color-scheme: dark;
 }
 
 @layer base {
   body {
-    background-color: var(--paper);
+    background-color: var(--page);
     color: var(--ink);
-    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  /* faint paper grain — tactile, not noisy */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    opacity: 0.04;
-    mix-blend-mode: var(--grain-blend);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
   h1, h2, h3 {
-    font-family: 'Bricolage Grotesque', 'Hanken Grotesk', system-ui, sans-serif;
-    letter-spacing: -0.015em;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.011em;
   }
 }
 
 @layer components {
-  /* The signature: cut-paper card. */
+  /* Plain card. Kept as a class so existing usages stay valid. */
   .card-craft {
     background-color: var(--surface);
-    border: 1.5px solid var(--line);
-    border-radius: 20px 8px 18px 10px;
-    box-shadow: var(--craft-shadow);
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow-sm);
   }
-  .card-craft-alt { border-radius: 9px 19px 11px 17px; }
+  .card-craft-alt { border-radius: 0.75rem; }
 
-  /* mono "ink stamp" eyebrow / label */
+  /* small uppercase caption */
   .eyebrow {
-    font-family: 'Spline Sans Mono', ui-monospace, monospace;
     font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.18em;
-    color: var(--accent-ink);
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    color: var(--t-400);
   }
-  .font-mono-data { font-family: 'Spline Sans Mono', ui-monospace, monospace; }
+  .font-mono-data { font-variant-numeric: tabular-nums; }
 
-  /* hand-drawn underline accent (a slightly skewed orange brush mark) */
-  .hand-rule {
-    display: block;
-    height: 6px;
-    width: 2.75rem;
-    background: var(--accent);
-    border-radius: 8px 6px 7px 9px;
-    transform: rotate(-1.2deg);
-  }
-
-  /* organic active-nav highlight — an irregular hand-cut blob, not a flat box */
-  .nav-blob {
-    border-radius: 13px 7px 12px 8px;
-    transform: rotate(-0.6deg);
-  }
+  /* decorative accents from the old theme — neutralised to keep markup valid */
+  .hand-rule { display: none; }
+  .nav-blob { border-radius: 0.5rem; }
 }
 
-/* ── Global token overrides: re-skin the utility classes the whole app already
-   uses, so every page picks up the warm paper + cut-paper feel without touching
-   each file. Placed after @tailwind utilities so they win by source order. ── */
+/* Re-skin the Tailwind utility classes the app already uses, driven by the
+   tokens above, so every page picks up the theme without editing each file.
+   In light mode these match Tailwind's defaults; in dark mode they flip.
+   They sit after @tailwind utilities on purpose so they win by source order. */
 .bg-white { background-color: var(--surface); }
-.bg-gray-50 { background-color: var(--paper); }
-.bg-gray-100 { background-color: var(--paper-2); }
+.bg-gray-50 { background-color: var(--surface-2); }
+.bg-gray-100 { background-color: var(--page); }
 
+.border-gray-50 { border-color: var(--divide-soft); }
 .border-gray-100 { border-color: var(--line); }
 .border-gray-200 { border-color: var(--line); }
 .border-gray-300 { border-color: var(--line-strong); }
@@ -130,29 +106,91 @@ html.dark {
 .divide-gray-50 > :not([hidden]) ~ :not([hidden]) { border-color: var(--divide-soft); }
 .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--line); }
 
-.shadow-sm { box-shadow: var(--craft-shadow); }
-.shadow-md { box-shadow: var(--craft-shadow-lift); }
-.hover\:shadow-md:hover { box-shadow: var(--craft-shadow-lift); }
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.hover\:shadow-md:hover { box-shadow: var(--shadow-md); }
 
-/* cards get the cut-paper asymmetric radius; form controls (rounded-lg) stay crisp */
-.rounded-xl { border-radius: 18px 7px 16px 9px; }
-.rounded-2xl { border-radius: 22px 9px 20px 11px; }
-
-/* warm the gray text ramp so nothing reads cold-corporate (flips in dark) */
-.text-gray-900 { color: var(--ink); }
+/* neutral text ramp (flips in dark) */
+.text-gray-900 { color: var(--t-900); }
 .text-gray-800 { color: var(--t-800); }
 .text-gray-700 { color: var(--t-700); }
 .text-gray-600 { color: var(--t-600); }
-.text-gray-500 { color: var(--ink-soft); }
+.text-gray-500 { color: var(--t-500); }
 .text-gray-400 { color: var(--t-400); }
 
-/* soft accent tints used for chips/icon blobs — keep them readable on dark */
+/* Accent colour: navy blue. This remaps the orange utility classes the app
+   uses, so the accent changes everywhere from one place. To go back to the
+   orange accent, delete this block and reset the three --accent* tokens. */
+.bg-orange-50 { background-color: #eef2ff; }
+.bg-orange-100 { background-color: #dbe4fe; }
+.bg-orange-500 { background-color: #1e40af; }
+.bg-orange-600 { background-color: #1e3a8a; }
+.bg-orange-50\/40 { background-color: rgb(238 242 255 / 0.4); }
+.bg-orange-50\/50 { background-color: rgb(238 242 255 / 0.5); }
+.bg-orange-50\/60 { background-color: rgb(238 242 255 / 0.6); }
+
+.text-orange-50 { color: #eef2ff; }
+.text-orange-100 { color: #dbe4fe; }
+.text-orange-400 { color: #3b82f6; }
+.text-orange-500 { color: #1e40af; }
+.text-orange-600 { color: #1e3a8a; }
+.text-orange-700 { color: #172554; }
+.text-orange-800 { color: #0f172a; }
+
+.border-orange-100 { border-color: #dbe4fe; }
+.border-orange-200 { border-color: #c7d2fe; }
+.border-orange-300 { border-color: #a5b4fc; }
+.border-orange-400 { border-color: #818cf8; }
+.border-orange-500 { border-color: #3b82f6; }
+.border-orange-600 { border-color: #1e3a8a; }
+
+.from-orange-50 { --tw-gradient-from: #eef2ff var(--tw-gradient-from-position); --tw-gradient-to: rgb(238 242 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.to-orange-100 { --tw-gradient-to: #dbe4fe var(--tw-gradient-to-position); }
+
+.hover\:bg-orange-50:hover { background-color: #eef2ff; }
+.hover\:bg-orange-100:hover { background-color: #dbe4fe; }
+.hover\:bg-orange-600:hover { background-color: #172554; }
+.hover\:bg-orange-700:hover { background-color: #172554; }
+.hover\:bg-orange-50\/60:hover { background-color: rgb(238 242 255 / 0.6); }
+.hover\:text-orange-600:hover { color: #1e3a8a; }
+.hover\:text-orange-700:hover { color: #172554; }
+.hover\:border-orange-200:hover { border-color: #c7d2fe; }
+.hover\:border-orange-300:hover { border-color: #a5b4fc; }
+.hover\:border-orange-400:hover { border-color: #818cf8; }
+.group:hover .group-hover\:text-orange-700 { color: #172554; }
+
+.focus\:ring-orange-400:focus { --tw-ring-color: #93c5fd; }
+.focus\:ring-orange-500:focus { --tw-ring-color: #3b82f6; }
+.focus\:border-orange-400:focus { border-color: #93c5fd; }
+.focus\:border-orange-500:focus { border-color: #3b82f6; }
+
+/* soft accent tints used for chips/icon blobs — keep readable on dark */
 html.dark .bg-orange-50 { background-color: var(--accent-soft); }
-html.dark .bg-orange-100 { background-color: #4a2f1a; }
-html.dark .bg-emerald-50 { background-color: #16271d; }
-html.dark .bg-amber-50 { background-color: #2f2410; }
-html.dark .bg-red-50 { background-color: #2f1a1a; }
-html.dark .bg-rose-50 { background-color: #2f1820; }
+html.dark .bg-orange-100 { background-color: #11314f; }
+
+/* Dark mode: navy is too dark on the slate page, so accents/hovers go invisible.
+   Brighten the accent (text, solid fills, hovers, borders) in dark only. */
+html.dark .bg-orange-500 { background-color: #3b82f6; }
+html.dark .bg-orange-600 { background-color: #2563eb; }
+html.dark .text-orange-400 { color: #93c5fd; }
+html.dark .text-orange-500 { color: #60a5fa; }
+html.dark .text-orange-600 { color: #93c5fd; }
+html.dark .text-orange-700 { color: #bfdbfe; }
+html.dark .text-orange-800 { color: #dbeafe; }
+html.dark .border-orange-200 { border-color: #1e3a8a; }
+html.dark .border-orange-300 { border-color: #2563eb; }
+html.dark .border-orange-500 { border-color: #3b82f6; }
+html.dark .border-orange-600 { border-color: #2563eb; }
+html.dark .hover\:bg-orange-50:hover { background-color: #16273f; }
+html.dark .hover\:bg-orange-100:hover { background-color: #1b3354; }
+html.dark .hover\:bg-orange-600:hover { background-color: #1d4ed8; }
+html.dark .hover\:bg-orange-700:hover { background-color: #1d4ed8; }
+html.dark .hover\:text-orange-600:hover { color: #93c5fd; }
+html.dark .hover\:text-orange-700:hover { color: #bfdbfe; }
+html.dark .bg-emerald-50 { background-color: #14271d; }
+html.dark .bg-amber-50 { background-color: #2a2410; }
+html.dark .bg-red-50 { background-color: #2a1818; }
+html.dark .bg-rose-50 { background-color: #2a1820; }
 
 @layer utilities {
   /* Flat orange range slider used across the pricing dashboard */
@@ -182,15 +220,14 @@ html.dark .bg-rose-50 { background-color: #2f1820; }
     background: var(--accent);
   }
 
-  .scrollbar-thin { scrollbar-width: thin; scrollbar-color: #d9a06a transparent; }
+  .scrollbar-thin { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
   .scrollbar-thin::-webkit-scrollbar { width: 6px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { background-color: #d9a06a; border-radius: 9999px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 9999px; }
 
   @media (prefers-reduced-motion: reduce) {
     * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
 }
 
-/* keep app content above the grain overlay */
 #root { position: relative; z-index: 1; }

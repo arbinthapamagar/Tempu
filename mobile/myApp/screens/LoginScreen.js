@@ -60,7 +60,7 @@ export default function LoginScreen({ onGoToRegister }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.brand}>Shakti</Text>
+          <Text style={styles.brand}>Tempu</Text>
           <Text style={styles.welcome}>Welcome back</Text>
           <Text style={styles.subtitle}>
             Sign in with your phone number to continue.

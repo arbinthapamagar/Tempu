@@ -50,7 +50,7 @@ const userRegister = asyncHandler(async (req, res) => {
     if (email) {
         await sendEmail({
             sendTo: email,
-            subject: 'Verify your account - Shakti',
+            subject: 'Verify your account - Tempu',
             html: verifyEmailTemplate({ name, otp: otpCode }),
         });
     }
@@ -193,7 +193,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
     if (user.email) {
         await sendEmail({
             sendTo: user.email,
-            subject: 'Password Reset - Shakti',
+            subject: 'Password Reset - Tempu',
             html: forgetPasswordTemplate({ name: user.name, otp: otpCode }),
         });
     }
@@ -270,7 +270,7 @@ const resendOtp = asyncHandler(async (req, res) => {
     if (user.email) {
         await sendEmail({
             sendTo: user.email,
-            subject: 'New OTP - Shakti',
+            subject: 'New OTP - Tempu',
             html: verifyEmailTemplate({ name: user.name, otp: otpCode }),
         });
     }

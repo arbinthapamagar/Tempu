@@ -104,12 +104,12 @@ export function Sidebar({ open, onClose }) {
             className="flex items-center gap-2.5 flex-1 min-w-0 text-left rounded-lg -m-1 p-1 hover:bg-orange-50 transition-colors"
             title="Go to home"
           >
-            <div className="bg-orange-500 p-1.5 -rotate-2 shrink-0" style={{ borderRadius: '11px 6px 10px 7px' }}>
+            <div className="bg-orange-500 p-1.5 rounded-lg shrink-0">
               <Zap className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <p className="font-display font-extrabold text-gray-900 text-lg leading-none flex items-baseline gap-1.5">
-                Shakti <span className="text-orange-500 font-sans text-sm font-medium">शक्ति</span>
+              <p className="font-semibold text-gray-900 text-lg leading-none flex items-baseline gap-1.5">
+                Tempu <span className="text-orange-500 text-sm font-medium">टेम्पू</span>
               </p>
               <p className="eyebrow mt-1 text-[10px]">Admin Portal</p>
             </div>
@@ -144,21 +144,21 @@ export function Sidebar({ open, onClose }) {
                     onClick={onClose}
                     className={({ isActive }) =>
                       cn(
-                        'flex items-center gap-3 mx-2.5 px-3 py-2.5 text-sm font-medium transition-colors group',
+                        'flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-sm transition-colors group',
                         isActive
-                          ? 'bg-orange-500 text-white nav-blob shadow-[2px_3px_0_rgba(154,52,18,0.25)]'
-                          : 'text-gray-700 hover:bg-orange-50 hover:text-orange-600 rounded-lg'
+                          ? 'text-orange-600 font-semibold'
+                          : 'text-gray-700 font-medium hover:text-gray-900'
                       )
                     }
                   >
                     {({ isActive }) => (
                       <>
-                        <item.icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-white' : 'text-gray-400 group-hover:text-orange-600')} />
+                        <item.icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-orange-600' : 'text-gray-400 group-hover:text-gray-600')} />
                         <span className="flex-1">{item.label}</span>
                         {count > 0 && (
                           <span className={cn(
                             'min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold flex items-center justify-center',
-                            isActive ? 'bg-white text-orange-600' : 'bg-red-500 text-white'
+                            isActive ? 'bg-orange-500 text-white' : 'bg-red-500 text-white'
                           )}>
                             {count > 99 ? '99+' : count}
                           </span>

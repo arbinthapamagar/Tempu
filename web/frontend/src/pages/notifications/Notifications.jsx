@@ -35,13 +35,13 @@ const TYPE_OPTIONS = [
 const QUICK_TEMPLATES = [
   {
     title: 'Platform Maintenance',
-    body: 'Shakti will be undergoing scheduled maintenance on Sunday from 2:00 AM - 4:00 AM. Services may be temporarily unavailable.',
+    body: 'Tempu will be undergoing scheduled maintenance on Sunday from 2:00 AM - 4:00 AM. Services may be temporarily unavailable.',
     target: 'all',
     type: 'general',
   },
   {
     title: 'New Feature Available',
-    body: 'We have launched exciting new features on the Shakti app. Update your app to enjoy the latest improvements!',
+    body: 'We have launched exciting new features on the Tempu app. Update your app to enjoy the latest improvements!',
     target: 'users',
     type: 'general',
   },
@@ -53,7 +53,7 @@ const QUICK_TEMPLATES = [
   },
   {
     title: 'Document Expiry Reminder',
-    body: 'Your driver documents are expiring soon. Please update them to continue providing rides on Shakti.',
+    body: 'Your driver documents are expiring soon. Please update them to continue providing rides on Tempu.',
     target: 'drivers',
     type: 'document_verified',
   },
@@ -138,7 +138,7 @@ export default function Notifications() {
                     <div>
                       <p className="text-white font-semibold text-sm">{watch('title') || 'Notification Title'}</p>
                       <p className="text-gray-300 text-xs mt-0.5 leading-relaxed">{watch('body') || 'Your notification message will appear here...'}</p>
-                      <p className="text-gray-500 text-xs mt-2">Just now · Shakti</p>
+                      <p className="text-gray-500 text-xs mt-2">Just now · Tempu</p>
                     </div>
                   </div>
                 </div>

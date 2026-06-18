@@ -97,7 +97,7 @@ export default function OtpScreen({ phone, onSuccess, onBack }) {
         </Pressable>
 
         <View style={styles.header}>
-          <Text style={styles.brand}>Shakti</Text>
+          <Text style={styles.brand}>Tempu</Text>
           <Text style={styles.title}>Verify your number</Text>
           <Text style={styles.subtitle}>
             Enter the 6-digit code sent{phone ? ` to ${phone}` : ''}.

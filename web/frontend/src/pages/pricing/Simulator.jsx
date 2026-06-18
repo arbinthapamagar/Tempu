@@ -77,7 +77,7 @@ export function Simulator({ config, activeSlotIndex, lockedCityName }) {
 
   const summaryText = () =>
     [
-      `Shakti EV Fare Estimate`,
+      `Tempu EV Fare Estimate`,
       `${city?.name} · ${VEHICLE_META[vehicleKey].label}`,
       `${pickup} → ${drop} (${distance} km)`,
       `Time slot: ${slot?.name || '—'} (×${slot?.multiplier ?? 1})`,

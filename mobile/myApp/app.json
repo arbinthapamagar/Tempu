@@ -18,7 +18,7 @@
         "googleMapsApiKey": "YOUR_IOS_GOOGLE_MAPS_API_KEY"
       },
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Shakti uses your location to find nearby drivers and set your pickup."
+        "NSLocationWhenInUseUsageDescription": "Tempu uses your location to find nearby drivers and set your pickup."
       }
     },
     "android": {
@@ -45,7 +45,7 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Shakti uses your location to find nearby drivers and set your pickup."
+          "locationAlwaysAndWhenInUsePermission": "Tempu uses your location to find nearby drivers and set your pickup."
         }
       ],
       "expo-audio",

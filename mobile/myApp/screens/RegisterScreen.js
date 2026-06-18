@@ -81,7 +81,7 @@ export default function RegisterScreen({ onGoToLogin, onRegistered }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.brand}>Shakti</Text>
+          <Text style={styles.brand}>Tempu</Text>
           <Text style={styles.title}>Create your account</Text>
           <Text style={styles.subtitle}>
             It only takes a minute. Your phone number will be used to sign in.

@@ -15,7 +15,7 @@ dbConnect()
         initSignaling(server);
 
         server.listen(port, () => {
-            console.log(`Shakti backend running on port ${port}`);
+            console.log(`Tempu backend running on port ${port}`);
         });
     })
     .catch((error) => {

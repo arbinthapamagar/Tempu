@@ -43,7 +43,7 @@ export default function Login() {
           <div className="bg-orange-600 rounded-2xl p-3 mb-4 shadow-lg shadow-orange-500/30">
             <Zap className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Shakti Admin</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Tempu Admin</h1>
           <p className="text-gray-500 text-sm mt-1">Sign in to manage your platform</p>
         </div>
 
@@ -57,7 +57,7 @@ export default function Login() {
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                 <input
                   type="email"
-                  placeholder="admin@shakti.com"
+                  placeholder="admin@tempu.com"
                   className={`w-full pl-9 pr-3 py-2.5 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
                     errors.email ? 'border-red-500' : 'border-gray-300'
                   }`}
@@ -107,7 +107,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-slate-500 text-xs mt-6">
-          © 2025 Shakti Platform. All rights reserved.
+          © 2025 Tempu Platform. All rights reserved.
         </p>
       </div>
     </div>

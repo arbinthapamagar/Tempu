@@ -96,7 +96,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
   const triggerSOS = () => {
     Alert.alert(
       'Send emergency alert?',
-      'This immediately shares your live location with the Shakti safety team.',
+      'This immediately shares your live location with the Tempu safety team.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -611,7 +611,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
           <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
 
-        <Text style={styles.footer}>Shakti, Kathmandu</Text>
+        <Text style={styles.footer}>Tempu, Kathmandu</Text>
       </ScrollView>
 
       <ProfileModal
@@ -1061,7 +1061,7 @@ function ContactSupport({ close }) {
       </Pressable>
       <Pressable style={styles.contactRow}>
         <Ionicons name="mail" size={20} color="#5c6fff" />
-        <Text style={styles.contactLabel}>support@shakti.com</Text>
+        <Text style={styles.contactLabel}>support@tempu.com</Text>
       </Pressable>
       <Pressable style={styles.contactRow}>
         <Ionicons name="chatbubbles" size={20} color="#c98a2a" />

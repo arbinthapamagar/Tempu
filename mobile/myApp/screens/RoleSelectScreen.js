@@ -13,9 +13,9 @@ export default function RoleSelectScreen({ onPassenger, onDriver, onSignIn }) {
       <View style={styles.inner}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.brand}>Shakti</Text>
+          <Text style={styles.brand}>Tempu</Text>
           <Text style={styles.title}>Get started</Text>
-          <Text style={styles.subtitle}>How would you like to use Shakti?</Text>
+          <Text style={styles.subtitle}>How would you like to use Tempu?</Text>
         </View>
 
         {/* Role cards */}

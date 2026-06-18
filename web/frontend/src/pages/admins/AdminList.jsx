@@ -615,7 +615,7 @@ function CreateAdminForm({ onSubmit, loading, onCancel }) {
             <Input label="Full Name" placeholder="John Doe" error={errors.name?.message} {...register('name')} />
             <Input label="Phone" placeholder="9800000000" error={errors.phone?.message} {...register('phone')} />
           </div>
-          <Input label="Email" type="email" placeholder="admin@shakti.com" error={errors.email?.message} {...register('email')} />
+          <Input label="Email" type="email" placeholder="admin@tempu.com" error={errors.email?.message} {...register('email')} />
           <Input label="Password" type="password" placeholder="Min 6 characters" error={errors.password?.message} {...register('password')} />
 
           <div className="space-y-1">

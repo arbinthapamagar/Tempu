@@ -868,7 +868,7 @@ const grantDriverMoney = asyncHandler(async (req, res) => {
     if (driver.userId?.email) {
         sendEmail({
             sendTo: driver.userId.email,
-            subject: 'Funds added to your Shakti wallet',
+            subject: 'Funds added to your Tempu wallet',
             html: grantEmailTemplate({ name: driver.userId.name, amount: parsedAmount, note: trimmedNote }),
         }).catch((err) => console.error('Grant email error:', err?.message));
     }

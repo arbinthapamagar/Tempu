@@ -14,8 +14,8 @@ import TransactionList from './pages/transactions/TransactionList'
 import WithdrawalList from './pages/withdrawals/WithdrawalList'
 import PricingControl from './pages/pricing/PricingControl'
 import DocumentQueue from './pages/documents/DocumentQueue'
-import TicketList from './pages/support/TicketList'
-import TicketDetail from './pages/support/TicketDetail'
+import SupportInbox, { EmptyConversation } from './pages/support/SupportInbox'
+import TicketChat from './pages/support/TicketChat'
 import EmergencyList from './pages/emergencies/EmergencyList'
 import SupplierList from './pages/suppliers/SupplierList'
 import AdminList from './pages/admins/AdminList'
@@ -64,8 +64,10 @@ export default function App() {
         <Route path="withdrawals" element={<WithdrawalList />} />
         <Route path="pricing" element={<PricingControl />} />
         <Route path="documents" element={<DocumentQueue />} />
-        <Route path="support" element={<TicketList />} />
-        <Route path="support/:id" element={<TicketDetail />} />
+        <Route path="support" element={<SupportInbox />}>
+          <Route index element={<EmptyConversation />} />
+          <Route path=":id" element={<TicketChat />} />
+        </Route>
         <Route path="emergencies" element={<EmergencyList />} />
         <Route path="suppliers" element={<SupplierList />} />
         <Route path="admins" element={<AdminList />} />

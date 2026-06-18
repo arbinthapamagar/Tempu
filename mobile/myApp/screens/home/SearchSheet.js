@@ -31,7 +31,7 @@ async function searchPlaces(query) {
     `&viewbox=${KTM_VIEWBOX}&bounded=0` +
     `&accept-language=en`;
   const res = await fetch(url, {
-    headers: { 'User-Agent': 'ShaktiApp/1.0 (ride-sharing Nepal)' },
+    headers: { 'User-Agent': 'TempuApp/1.0 (ride-sharing Nepal)' },
   });
   const data = await res.json();
   return data.sort((a, b) => {

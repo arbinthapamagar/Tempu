@@ -311,7 +311,7 @@ export const NOTIFICATIONS = [
     _id: 'n3',
     type: 'payment',
     title: 'Payment received',
-    body: 'Rs 1,000 added to your Shakti wallet.',
+    body: 'Rs 1,000 added to your Tempu wallet.',
     isRead: true,
     createdAt: '2026-05-11T19:02:00.000Z',
   },
@@ -326,7 +326,7 @@ export const NOTIFICATIONS = [
   {
     _id: 'n5',
     type: 'general',
-    title: 'Welcome to Shakti',
+    title: 'Welcome to Tempu',
     body: 'Bid your fare, ride your way.',
     isRead: true,
     createdAt: '2026-04-30T10:00:00.000Z',

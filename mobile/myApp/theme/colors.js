@@ -1,7 +1,7 @@
 import { resolveScheme } from './themeStore';
 
 // "Inked workshop ledger" — warm paper + ink in light; warm charcoal in dark.
-// Shakti orange throughout. Text colors are tuned for contrast in each scheme.
+// Tempu orange throughout. Text colors are tuned for contrast in each scheme.
 const lightColors = {
   primary: '#ea580c',
   primaryDark: '#c2410c',

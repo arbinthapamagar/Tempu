@@ -164,7 +164,7 @@ export default function DriverVehicleScreen({ onSuccess, onBack }) {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.brand}>Shakti</Text>
+          <Text style={styles.brand}>Tempu</Text>
           <View style={styles.steps}>
             <View style={[styles.stepDot, step >= 1 && styles.stepDotActive]} />
             <View style={[styles.stepLine, step >= 2 && styles.stepLineFill]} />

@@ -1,17 +1,17 @@
 import { cn } from '../../utils/cn'
 
-// Hand-stamped buttons: a hard offset shadow that "presses in" on click.
+// Flat, professional buttons — solid fill, subtle hover, no offset shadows.
 const variants = {
-  primary: 'bg-orange-600 text-white hover:bg-orange-700 focus:ring-orange-400 shadow-[2px_2px_0_rgba(154,52,18,0.30)] hover:shadow-[1px_1px_0_rgba(154,52,18,0.30)] active:translate-x-px active:translate-y-px active:shadow-none',
+  primary: 'bg-orange-600 text-white hover:bg-orange-700 focus:ring-orange-400',
   secondary: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-gray-400',
-  danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-[2px_2px_0_rgba(127,29,29,0.28)] active:translate-x-px active:translate-y-px active:shadow-none',
+  danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
   ghost: 'text-gray-600 hover:bg-gray-100 focus:ring-gray-400',
-  success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 shadow-[2px_2px_0_rgba(6,78,59,0.25)] active:translate-x-px active:translate-y-px active:shadow-none',
+  success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500',
   warning: 'bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-400',
 }
 
 const sizes = {
-  xs: 'px-2.5 py-1.5 text-xs rounded',
+  xs: 'px-2.5 py-1.5 text-xs rounded-md',
   sm: 'px-3 py-2 text-sm rounded-lg',
   md: 'px-4 py-2 text-sm rounded-lg',
   lg: 'px-6 py-3 text-base rounded-lg',
