@@ -1,7 +1,9 @@
+import { Link } from 'react-router-dom'
 import { cn } from '../../utils/cn'
 
 // Flat stat tile: white card, soft icon chip, neutral caption, bold figure.
-export function StatsCard({ title, value, subtitle, icon: Icon, trend, color = 'accent', loading }) {
+// Pass `to` to make the whole tile a link to the related page.
+export function StatsCard({ title, value, subtitle, icon: Icon, trend, color = 'accent', loading, to }) {
   const colorMap = {
     indigo: { bg: 'bg-orange-50', icon: 'text-orange-600' },
     accent: { bg: 'bg-orange-50', icon: 'text-orange-600' },
@@ -15,8 +17,17 @@ export function StatsCard({ title, value, subtitle, icon: Icon, trend, color = '
   }
   const c = colorMap[color] || colorMap.accent
 
+  const Wrapper = to ? Link : 'div'
+  const wrapperProps = to ? { to } : {}
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 transition-colors hover:border-gray-300">
+    <Wrapper
+      {...wrapperProps}
+      className={cn(
+        'block bg-white rounded-xl border border-gray-200 shadow-sm p-4 transition-colors',
+        to ? 'hover:border-orange-400 hover:shadow-md cursor-pointer' : 'hover:border-gray-300'
+      )}
+    >
       <div className="flex items-center gap-2.5 mb-2.5">
         {Icon && (
           <div className={cn('shrink-0 p-2 rounded-lg grid place-items-center', c.bg)}>
@@ -35,6 +46,6 @@ export function StatsCard({ title, value, subtitle, icon: Icon, trend, color = '
           {subtitle}
         </p>
       )}
-    </div>
+    </Wrapper>
   )
 }
