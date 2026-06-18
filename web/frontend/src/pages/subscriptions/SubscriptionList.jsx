@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Eye, Pause, Play } from 'lucide-react'
+import { Eye, Pause, Play } from '@/components/ui/icons'
 import { DataTable } from '../../components/shared/DataTable'
 import { Pagination } from '../../components/shared/Pagination'
 import { StatusBadge } from '../../components/shared/StatusBadge'

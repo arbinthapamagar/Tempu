@@ -1,4 +1,4 @@
-import { Search, X, ChevronDown } from 'lucide-react'
+import { Search, X, ChevronDown } from '@/components/ui/icons'
 import { cn } from '../../utils/cn'
 
 // Right-aligned filter row that sits at the top of a table card: dropdown

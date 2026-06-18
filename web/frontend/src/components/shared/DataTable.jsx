@@ -1,4 +1,4 @@
-import { ChevronsUpDown } from 'lucide-react'
+import { ChevronsUpDown } from '@/components/ui/icons'
 import { TableSpinner } from '../ui/Spinner'
 import { EmptyState } from './EmptyState'
 import { cn } from '../../utils/cn'

@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
-import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff } from 'lucide-react'
+import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff } from '@/components/ui/icons'
 import { ICE_SERVERS, SOCKET_URL } from '../../utils/webrtc'
 
 // In-app WebRTC call for a support ticket (agent side). The agent can start a

@@ -60,6 +60,14 @@ const adminSchema = new mongoose.Schema(
                 type: Boolean,
                 default: false,
             },
+            editDocuments: {
+                type: Boolean,
+                default: false,
+            },
+            deleteDocuments: {
+                type: Boolean,
+                default: false,
+            },
             handleSupport: {
                 type: Boolean,
                 default: false,
@@ -124,10 +132,10 @@ adminSchema.index({ isActive: 1 });
 adminSchema.pre('save', async function () {
     if (this.isModified('role')) {
         const ROLE_PERMISSIONS = {
-            superadmin: { manageUsers: true, manageDrivers: true, manageTrips: true, managePayments: true, verifyDocuments: true, handleSupport: true, manageAdmins: true, viewAnalytics: true, manageSubscriptions: true, manageSuppliers: true },
-            admin:      { manageUsers: true, manageDrivers: true, manageTrips: true, managePayments: true, verifyDocuments: true, handleSupport: true, manageAdmins: false, viewAnalytics: true, manageSubscriptions: true, manageSuppliers: true },
-            headmaster: { manageUsers: true, manageDrivers: true, manageTrips: true, managePayments: false, verifyDocuments: true, handleSupport: true, manageAdmins: false, viewAnalytics: true, manageSubscriptions: true, manageSuppliers: true },
-            moderator:  { manageUsers: true, manageDrivers: true, manageTrips: false, managePayments: false, verifyDocuments: true, handleSupport: true, manageAdmins: false, viewAnalytics: false, manageSubscriptions: false, manageSuppliers: false },
+            superadmin: { manageUsers: true, manageDrivers: true, manageTrips: true, managePayments: true, verifyDocuments: true, editDocuments: true, deleteDocuments: true, handleSupport: true, manageAdmins: true, viewAnalytics: true, manageSubscriptions: true, manageSuppliers: true },
+            admin:      { manageUsers: true, manageDrivers: true, manageTrips: true, managePayments: true, verifyDocuments: true, editDocuments: true, deleteDocuments: true, handleSupport: true, manageAdmins: false, viewAnalytics: true, manageSubscriptions: true, manageSuppliers: true },
+            headmaster: { manageUsers: true, manageDrivers: true, manageTrips: true, managePayments: false, verifyDocuments: true, editDocuments: true, deleteDocuments: false, handleSupport: true, manageAdmins: false, viewAnalytics: true, manageSubscriptions: true, manageSuppliers: true },
+            moderator:  { manageUsers: true, manageDrivers: true, manageTrips: false, managePayments: false, verifyDocuments: true, editDocuments: false, deleteDocuments: false, handleSupport: true, manageAdmins: false, viewAnalytics: false, manageSubscriptions: false, manageSuppliers: false },
         };
         if (ROLE_PERMISSIONS[this.role]) this.permissions = ROLE_PERMISSIONS[this.role];
     }

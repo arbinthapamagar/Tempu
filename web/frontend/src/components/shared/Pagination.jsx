@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from '@/components/ui/icons'
 import { cn } from '../../utils/cn'
 
 export function Pagination({ page, totalPages, total, limit, onPageChange }) {

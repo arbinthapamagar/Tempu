@@ -1,26 +1,36 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle, XCircle, Eye, FileText } from 'lucide-react'
+import { CheckCircle, XCircle, Eye, FileText, Pencil, Trash2 } from '@/components/ui/icons'
 import { Tabs } from '../../components/ui/Tabs'
 import { Modal } from '../../components/ui/Modal'
 import { Button } from '../../components/ui/Button'
 import { Textarea } from '../../components/ui/Input'
 import { DataTable } from '../../components/shared/DataTable'
 import { DocumentLightbox } from '../../components/shared/DocumentLightbox'
+import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
 import { StatusBadge } from '../../components/shared/StatusBadge'
 import { PageHeader } from '../../components/shared/PageHeader'
 import { Avatar } from '../../components/ui/Avatar'
 import { documentsApi } from '../../api/documents.api'
+import { useAuthStore } from '../../store/authStore'
 import { formatDate, formatRelative } from '../../utils/format'
-import { isPdf, docTypeLabel } from '../../utils/documents'
+import { isPdf, docTypeLabel, DOC_TYPE_LABELS } from '../../utils/documents'
 import toast from 'react-hot-toast'
 
 export default function DocumentQueue() {
   const qc = useQueryClient()
+  const admin = useAuthStore((s) => s.admin)
+  const isSuper = admin?.role === 'superadmin'
+  const canEdit = isSuper || !!admin?.permissions?.editDocuments
+  const canDelete = isSuper || !!admin?.permissions?.deleteDocuments
   const [tab, setTab] = useState('pending')
   const [lightbox, setLightbox] = useState(null)
   const [rejectDoc, setRejectDoc] = useState(null)
   const [rejectReason, setRejectReason] = useState('')
+  const [editDoc, setEditDoc] = useState(null)
+  const [editType, setEditType] = useState('')
+  const [editExpiry, setEditExpiry] = useState('')
+  const [deleteDoc, setDeleteDoc] = useState(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['documents', tab],
@@ -43,6 +53,32 @@ export default function DocumentQueue() {
     },
     onError: (err) => toast.error(err?.message || 'Failed'),
   })
+
+  const updateDoc = useMutation({
+    mutationFn: ({ id, data }) => documentsApi.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['documents'] })
+      toast.success('Document updated')
+      setEditDoc(null)
+    },
+    onError: (err) => toast.error(err?.message || 'Failed to update'),
+  })
+
+  const removeDoc = useMutation({
+    mutationFn: (id) => documentsApi.remove(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['documents'] })
+      toast.success('Document deleted')
+      setDeleteDoc(null)
+    },
+    onError: (err) => toast.error(err?.message || 'Failed to delete'),
+  })
+
+  const openEdit = (row) => {
+    setEditType(row.type || '')
+    setEditExpiry(row.expiresAt ? row.expiresAt.slice(0, 10) : '')
+    setEditDoc(row)
+  }
 
   const docs = data?.data?.documents || data?.data || []
 
@@ -137,6 +173,24 @@ export default function DocumentQueue() {
               </button>
             </>
           )}
+          {canEdit && (
+            <button
+              onClick={(e) => { e.stopPropagation(); openEdit(row) }}
+              className="p-1.5 hover:bg-blue-50 rounded text-gray-400 hover:text-blue-600"
+              title="Edit"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setDeleteDoc(row) }}
+              className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-600"
+              title="Delete"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
       ),
     },
@@ -175,6 +229,56 @@ export default function DocumentQueue() {
             </Button>
           </div>
         )}
+      />
+
+      {/* Edit document modal (type + expiry) */}
+      <Modal open={!!editDoc} onClose={() => setEditDoc(null)} title="Edit Document" size="sm">
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Document Type</label>
+            <select
+              value={editType}
+              onChange={(e) => setEditType(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:border-orange-500"
+            >
+              {Object.entries(DOC_TYPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+            <input
+              type="date"
+              value={editExpiry}
+              onChange={(e) => setEditExpiry(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:border-orange-500"
+            />
+          </div>
+          <div className="flex gap-3 pt-1">
+            <Button variant="secondary" className="flex-1" onClick={() => setEditDoc(null)}>Cancel</Button>
+            <Button
+              variant="primary"
+              className="flex-1"
+              loading={updateDoc.isPending}
+              onClick={() => updateDoc.mutate({ id: editDoc._id, data: { type: editType, expiresAt: editExpiry || null } })}
+            >
+              Save
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete confirm */}
+      <ConfirmDialog
+        open={!!deleteDoc}
+        onClose={() => setDeleteDoc(null)}
+        onConfirm={() => deleteDoc && removeDoc.mutate(deleteDoc._id)}
+        title="Delete document"
+        message={`Permanently delete this ${docTypeLabel(deleteDoc?.type)}? This cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        loading={removeDoc.isPending}
       />
 
       {/* Reject reason modal */}

@@ -1,28 +1,38 @@
 import { cn } from '../../utils/cn'
 
-// Flat status pills — soft tint, rounded, readable.
-// `solidGreen` / `solidRose` are the ShipOS-style solid count badges.
-const variants = {
-  default: 'bg-gray-100 text-gray-600 border-gray-200',
-  primary: 'bg-orange-50 text-orange-700 border-orange-200',
-  success: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  warning: 'bg-amber-50 text-amber-700 border-amber-200',
-  danger: 'bg-red-50 text-red-700 border-red-200',
-  info: 'bg-blue-50 text-blue-700 border-blue-200',
-  purple: 'bg-violet-50 text-violet-700 border-violet-200',
+// Status badges are plain coloured text (no background, no border) everywhere.
+const soft = {
+  default: 'text-gray-500',
+  primary: 'text-orange-600',
+  success: 'text-emerald-600',
+  warning: 'text-amber-600',
+  danger: 'text-red-600',
+  info: 'text-blue-600',
+  purple: 'text-violet-600',
+}
+
+// Solid count pills (ShipOS table) keep their filled background.
+const solid = {
   solidGreen: 'bg-green-500 text-white border-green-500',
   solidRose: 'bg-rose-500 text-white border-rose-500',
 }
 
 export function Badge({ children, variant = 'default', className }) {
+  if (solid[variant]) {
+    return (
+      <span
+        className={cn(
+          'inline-flex items-center justify-center border rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap',
+          solid[variant],
+          className
+        )}
+      >
+        {children}
+      </span>
+    )
+  }
   return (
-    <span
-      className={cn(
-        'inline-flex items-center justify-center border rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap',
-        variants[variant],
-        className
-      )}
-    >
+    <span className={cn('inline-flex items-center text-xs font-semibold whitespace-nowrap', soft[variant] || soft.default, className)}>
       {children}
     </span>
   )

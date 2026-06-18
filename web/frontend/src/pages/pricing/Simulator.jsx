@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, Copy, Clock, CloudRain, Leaf, BatteryCharging, Timer, GitCompare, History } from 'lucide-react'
+import { ChevronDown, Copy, Clock, CloudRain, Leaf, BatteryCharging, Timer, GitCompare, History } from '@/components/ui/icons'
 import { Card } from './Slider'
 import { FareBreakdown } from './FareBreakdown'
 import {

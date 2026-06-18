@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Download, DollarSign, TrendingUp, Clock, AlertCircle } from 'lucide-react'
+import { Download, DollarSign, TrendingUp, Clock, AlertCircle } from '@/components/ui/icons'
 import { DataTable } from '../../components/shared/DataTable'
 import { Pagination } from '../../components/shared/Pagination'
 import { StatusBadge } from '../../components/shared/StatusBadge'

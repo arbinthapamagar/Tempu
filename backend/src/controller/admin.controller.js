@@ -48,6 +48,21 @@ function getPeriodStart(period) {
     return d;
 }
 
+// Resolve an analytics date window from the query: either an explicit custom
+// range (?start=YYYY-MM-DD&end=YYYY-MM-DD) or a named period (week/month/year).
+// Returns the match object + whether to group by month (long ranges).
+function getAnalyticsRange(query) {
+    const { period = 'month', start, end } = query;
+    if (start && end) {
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        endDate.setHours(23, 59, 59, 999);
+        const days = (endDate - startDate) / 86400000;
+        return { match: { $gte: startDate, $lte: endDate }, groupByMonth: days > 92 };
+    }
+    return { match: { $gte: getPeriodStart(period) }, groupByMonth: period === 'year' };
+}
+
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -374,8 +389,7 @@ const getDashboardRecentTrips = asyncHandler(async (req, res) => {
 const getAnalyticsOverview = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.viewAnalytics) throw new apiError(403, 'Insufficient permissions');
 
-    const { period = 'month' } = req.query;
-    const startDate = getPeriodStart(period);
+    const { match: dateMatch } = getAnalyticsRange(req.query);
 
     const [
         totalTrips,
@@ -386,14 +400,14 @@ const getAnalyticsOverview = asyncHandler(async (req, res) => {
         activeDrivers,
         revenueResult,
     ] = await Promise.all([
-        Trip.countDocuments({ createdAt: { $gte: startDate } }),
-        Trip.countDocuments({ status: 'completed', createdAt: { $gte: startDate } }),
-        Trip.countDocuments({ status: 'cancelled', createdAt: { $gte: startDate } }),
-        User.countDocuments({ createdAt: { $gte: startDate } }),
+        Trip.countDocuments({ createdAt: dateMatch }),
+        Trip.countDocuments({ status: 'completed', createdAt: dateMatch }),
+        Trip.countDocuments({ status: 'cancelled', createdAt: dateMatch }),
+        User.countDocuments({ createdAt: dateMatch }),
         User.countDocuments({ accountStatus: 'active' }),
         Driver.countDocuments({ status: 'approved' }),
         Transaction.aggregate([
-            { $match: { type: 'platform_fee', status: 'completed', createdAt: { $gte: startDate } } },
+            { $match: { type: 'platform_fee', status: 'completed', createdAt: dateMatch } },
             { $group: { _id: null, total: { $sum: '$amount' } } },
         ]),
     ]);
@@ -412,9 +426,7 @@ const getAnalyticsOverview = asyncHandler(async (req, res) => {
 const getAnalyticsTrips = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.viewAnalytics) throw new apiError(403, 'Insufficient permissions');
 
-    const { period = 'month' } = req.query;
-    const startDate = getPeriodStart(period);
-    const groupByMonth = period === 'year';
+    const { match: dateMatch, groupByMonth } = getAnalyticsRange(req.query);
 
     const groupId = groupByMonth
         ? { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } }
@@ -422,7 +434,7 @@ const getAnalyticsTrips = asyncHandler(async (req, res) => {
 
     const [tripsData, revenueData] = await Promise.all([
         Trip.aggregate([
-            { $match: { createdAt: { $gte: startDate } } },
+            { $match: { createdAt: dateMatch } },
             {
                 $group: {
                     _id: groupId,
@@ -434,7 +446,7 @@ const getAnalyticsTrips = asyncHandler(async (req, res) => {
             { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } },
         ]),
         Transaction.aggregate([
-            { $match: { type: 'platform_fee', status: 'completed', createdAt: { $gte: startDate } } },
+            { $match: { type: 'platform_fee', status: 'completed', createdAt: dateMatch } },
             {
                 $group: {
                     _id: groupByMonth
@@ -477,9 +489,7 @@ const getAnalyticsTrips = asyncHandler(async (req, res) => {
 const getAnalyticsUsers = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.viewAnalytics) throw new apiError(403, 'Insufficient permissions');
 
-    const { period = 'month' } = req.query;
-    const startDate = getPeriodStart(period);
-    const groupByMonth = period === 'year';
+    const { match: dateMatch, groupByMonth } = getAnalyticsRange(req.query);
 
     const groupId = groupByMonth
         ? { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } }
@@ -487,12 +497,12 @@ const getAnalyticsUsers = asyncHandler(async (req, res) => {
 
     const [usersData, driversData] = await Promise.all([
         User.aggregate([
-            { $match: { createdAt: { $gte: startDate } } },
+            { $match: { createdAt: dateMatch } },
             { $group: { _id: groupId, users: { $sum: 1 } } },
             { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } },
         ]),
         Driver.aggregate([
-            { $match: { createdAt: { $gte: startDate } } },
+            { $match: { createdAt: dateMatch } },
             { $group: { _id: groupId, drivers: { $sum: 1 } } },
             { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } },
         ]),
@@ -1165,6 +1175,32 @@ const rejectDocument = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, document, 'Document rejected'));
 });
 
+// Edit a document's type and/or expiry date. Gated by the editDocuments permission.
+const updateDocument = asyncHandler(async (req, res) => {
+    if (req.admin.role !== 'superadmin' && !req.admin.permissions.editDocuments) throw new apiError(403, 'Insufficient permissions');
+
+    const updates = {};
+    if (req.body.type !== undefined) updates.type = req.body.type;
+    if (req.body.expiresAt !== undefined) updates.expiresAt = req.body.expiresAt || null;
+    if (!Object.keys(updates).length) throw new apiError(400, 'Nothing to update');
+
+    const document = await Document.findByIdAndUpdate(req.params.id, updates, { new: true })
+        .populate({ path: 'driverId', select: 'vehicleType vehiclePlate userId', populate: { path: 'userId', select: 'name phone' } });
+    if (!document) throw new apiError(404, 'Document not found');
+
+    return res.status(200).json(new apiResponse(200, document, 'Document updated'));
+});
+
+// Permanently delete a document. Gated by the deleteDocuments permission.
+const deleteDocument = asyncHandler(async (req, res) => {
+    if (req.admin.role !== 'superadmin' && !req.admin.permissions.deleteDocuments) throw new apiError(403, 'Insufficient permissions');
+
+    const document = await Document.findByIdAndDelete(req.params.id);
+    if (!document) throw new apiError(404, 'Document not found');
+
+    return res.status(200).json(new apiResponse(200, { _id: req.params.id }, 'Document deleted'));
+});
+
 // ─── Trips ────────────────────────────────────────────────────────────────────
 
 const getTrips = asyncHandler(async (req, res) => {
@@ -1813,7 +1849,7 @@ export {
     grantDriverMoney, getWithdrawals, processWithdrawal,
     getPricing, updatePricing,
     getEmergencies, updateEmergency,
-    getAllDocuments, verifyDocument, rejectDocument, seedTestDocument,
+    getAllDocuments, verifyDocument, rejectDocument, updateDocument, deleteDocument, seedTestDocument,
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
     getTransactions, getTransactionById, getTransactionSummary,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,

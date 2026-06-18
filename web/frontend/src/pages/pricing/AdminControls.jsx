@@ -1,4 +1,4 @@
-import { Zap, CloudRain, Clock, Ruler, BatteryCharging } from 'lucide-react'
+import { Zap, CloudRain, Clock, Ruler, BatteryCharging } from '@/components/ui/icons'
 import { Card, Slider, Toggle, Field } from './Slider'
 import { VEHICLE_KEYS, VEHICLE_META, getActiveSlot, currentHour } from '../../utils/fareCalc'
 

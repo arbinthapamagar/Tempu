@@ -1,5 +1,5 @@
 import { cn } from '../../utils/cn'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown } from '@/components/ui/icons'
 
 export function Select({ label, error, options = [], placeholder, className, ...props }) {
   return (

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MapPin, Plus, Trash2, Check, Pencil } from 'lucide-react'
+import { MapPin, Plus, Trash2, Check, Pencil } from '@/components/ui/icons'
 import { Card, Slider, Toggle, Field } from './Slider'
 import { Simulator } from './Simulator'
 import { VEHICLE_KEYS, VEHICLE_META } from '../../utils/fareCalc'

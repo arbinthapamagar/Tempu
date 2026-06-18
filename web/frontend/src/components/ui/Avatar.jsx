@@ -13,15 +13,8 @@ export function Avatar({ src, name, size = 'md', className }) {
     ? name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
     : '?'
 
-  const colors = [
-    'bg-red-100 text-red-600',
-    'bg-orange-100 text-orange-600',
-    'bg-green-100 text-green-600',
-    'bg-orange-100 text-orange-600',
-    'bg-amber-100 text-amber-600',
-    'bg-orange-100 text-orange-600',
-  ]
-  const color = colors[(name?.charCodeAt(0) || 0) % colors.length]
+  // Default avatar is always light green with green initials.
+  const color = 'bg-green-100 text-green-700'
 
   if (src) {
     return (

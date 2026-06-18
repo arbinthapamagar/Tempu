@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Send, CheckCircle, Lock, AtSign, Paperclip, Mic, Pencil, Trash2,
   Phone, Video, CornerUpLeft, MessageSquare, Info, X,
-} from 'lucide-react'
+} from '@/components/ui/icons'
 import CallPanel from './CallPanel'
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
 import { Button } from '../../components/ui/Button'
