@@ -1,5 +1,5 @@
-import { useNavigate, useLocation } from 'react-router-dom'
-import { LogOut, User, Menu, Sun, Moon, Monitor } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { LogOut, Menu, Sun, Moon, Monitor, ChevronDown } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { useThemeStore } from '../../store/themeStore'
 import { NotificationBell } from './NotificationBell'
@@ -9,31 +9,11 @@ import toast from 'react-hot-toast'
 const NEXT_MODE = { system: 'light', light: 'dark', dark: 'system' }
 const MODE_ICON = { system: Monitor, light: Sun, dark: Moon }
 
-const TITLES = {
-  '/dashboard': 'Dashboard',
-  '/users': 'User Management',
-  '/drivers': 'Driver Management',
-  '/trips': 'Trip Management',
-  '/subscriptions': 'Subscriptions',
-  '/transactions': 'Transactions',
-  '/documents': 'Document Verification',
-  '/support': 'Support Tickets',
-  '/suppliers': 'Supplier Management',
-  '/admins': 'Admin Users',
-  '/analytics': 'Analytics',
-  '/notifications': 'Notifications',
-}
-
 export function Header({ onMenuClick }) {
   const navigate = useNavigate()
-  const location = useLocation()
   const { admin, logout } = useAuthStore()
   const { mode, setMode } = useThemeStore()
   const ThemeIcon = MODE_ICON[mode] || Monitor
-
-  const title = Object.entries(TITLES).find(([path]) =>
-    location.pathname.startsWith(path)
-  )?.[1] || 'Admin'
 
   const handleLogout = async () => {
     try {
@@ -45,51 +25,51 @@ export function Header({ onMenuClick }) {
   }
 
   return (
-    <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-4 sm:px-6 fixed top-0 right-0 left-0 lg:left-60 z-20 shadow-sm">
-      <div className="flex items-center gap-3">
-        {/* Hamburger — only on mobile */}
-        <button
-          onClick={onMenuClick}
-          className="lg:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-          aria-label="Open menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-        <h1 className="font-display text-lg font-bold text-gray-900">{title}</h1>
-      </div>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setMode(NEXT_MODE[mode])}
-          className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-          title={`Theme: ${mode} — click for ${NEXT_MODE[mode]}`}
-          aria-label="Toggle theme"
-        >
-          <ThemeIcon className="h-5 w-5" />
-        </button>
-        <NotificationBell />
-        <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
-          <button
-            onClick={() => navigate('/profile')}
-            className="flex items-center gap-2 rounded-lg p-1 hover:bg-orange-50 transition-colors"
-            title="View my profile"
-          >
-            <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
-              <User className="h-4 w-4 text-orange-500" />
-            </div>
-            <div className="hidden sm:block text-left">
-              <p className="text-sm font-medium text-gray-700 leading-tight">{admin?.name}</p>
-              <p className="text-xs text-gray-400 capitalize">{admin?.role}</p>
-            </div>
-          </button>
-          <button
-            onClick={handleLogout}
-            className="p-2 rounded-lg hover:bg-red-50 text-gray-500 hover:text-red-600 transition-colors ml-1"
-            title="Logout"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+    <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-end gap-3 px-4 sm:px-6 fixed top-0 right-0 left-0 lg:left-60 z-20">
+      {/* Hamburger — only on mobile, pushed to the left */}
+      <button
+        onClick={onMenuClick}
+        className="lg:hidden mr-auto p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+        aria-label="Open menu"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
+      {/* Language (display only for now) */}
+      <span className="flex items-center gap-1 text-[13px] font-medium text-gray-700 select-none">
+        EN <ChevronDown className="h-3 w-3" />
+      </span>
+
+      {/* Theme toggle */}
+      <button
+        onClick={() => setMode(NEXT_MODE[mode])}
+        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+        title={`Theme: ${mode} — click for ${NEXT_MODE[mode]}`}
+        aria-label="Toggle theme"
+      >
+        <ThemeIcon className="h-[18px] w-[18px]" />
+      </button>
+
+      {/* Notifications */}
+      <NotificationBell />
+
+      {/* Avatar → profile */}
+      <button
+        onClick={() => navigate('/profile')}
+        className="h-7 w-7 rounded-full bg-orange-500 flex items-center justify-center text-xs font-bold text-white shrink-0"
+        title={admin?.name || 'Profile'}
+      >
+        {admin?.name?.charAt(0)?.toUpperCase() || 'A'}
+      </button>
+
+      {/* Logout */}
+      <button
+        onClick={handleLogout}
+        className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+        title="Logout"
+      >
+        <LogOut className="h-[18px] w-[18px]" />
+      </button>
     </header>
   )
 }

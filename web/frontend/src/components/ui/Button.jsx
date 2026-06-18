@@ -8,6 +8,9 @@ const variants = {
   ghost: 'text-gray-600 hover:bg-gray-100 focus:ring-gray-400',
   success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500',
   warning: 'bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-400',
+  // ShipOS-style outline buttons (white fill, coloured border + text)
+  outline: 'bg-white text-orange-600 border-[1.5px] border-orange-500 hover:bg-orange-50 focus:ring-orange-400',
+  outlineDanger: 'bg-white text-rose-500 border-[1.5px] border-rose-500 hover:bg-rose-50 focus:ring-rose-400',
 }
 
 const sizes = {
