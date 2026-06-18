@@ -14,9 +14,9 @@
   --line: #e5e7eb;          /* hairline borders */
   --line-strong: #d1d5db;
   --divide-soft: #f1f3f5;
-  --accent: #1e3a8a;        /* navy blue */
-  --accent-soft: #dbe4fe;
-  --accent-ink: #172554;
+  --accent: #f97316;        /* orange (ShipOS) */
+  --accent-soft: #fff3ee;
+  --accent-ink: #c2410c;
   /* neutral text ramp */
   --t-900: #111827;
   --t-800: #1f2937;
@@ -38,9 +38,9 @@ html.dark {
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.16);
   --divide-soft: rgba(255, 255, 255, 0.06);
-  --accent: #3b82f6;
-  --accent-soft: #0c2740;
-  --accent-ink: #60a5fa;
+  --accent: #fb923c;
+  --accent-soft: #2a1a10;
+  --accent-ink: #fdba74;
   --t-900: #ffffff;
   --t-800: #f4f7fb;
   --t-700: #e9eef5;
@@ -118,75 +118,9 @@ html.dark {
 .text-gray-500 { color: var(--t-500); }
 .text-gray-400 { color: var(--t-400); }
 
-/* Accent colour: navy blue. This remaps the orange utility classes the app
-   uses, so the accent changes everywhere from one place. To go back to the
-   orange accent, delete this block and reset the three --accent* tokens. */
-.bg-orange-50 { background-color: #eef2ff; }
-.bg-orange-100 { background-color: #dbe4fe; }
-.bg-orange-500 { background-color: #1e40af; }
-.bg-orange-600 { background-color: #1e3a8a; }
-.bg-orange-50\/40 { background-color: rgb(238 242 255 / 0.4); }
-.bg-orange-50\/50 { background-color: rgb(238 242 255 / 0.5); }
-.bg-orange-50\/60 { background-color: rgb(238 242 255 / 0.6); }
-
-.text-orange-50 { color: #eef2ff; }
-.text-orange-100 { color: #dbe4fe; }
-.text-orange-400 { color: #3b82f6; }
-.text-orange-500 { color: #1e40af; }
-.text-orange-600 { color: #1e3a8a; }
-.text-orange-700 { color: #172554; }
-.text-orange-800 { color: #0f172a; }
-
-.border-orange-100 { border-color: #dbe4fe; }
-.border-orange-200 { border-color: #c7d2fe; }
-.border-orange-300 { border-color: #a5b4fc; }
-.border-orange-400 { border-color: #818cf8; }
-.border-orange-500 { border-color: #3b82f6; }
-.border-orange-600 { border-color: #1e3a8a; }
-
-.from-orange-50 { --tw-gradient-from: #eef2ff var(--tw-gradient-from-position); --tw-gradient-to: rgb(238 242 255 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
-.to-orange-100 { --tw-gradient-to: #dbe4fe var(--tw-gradient-to-position); }
-
-.hover\:bg-orange-50:hover { background-color: #eef2ff; }
-.hover\:bg-orange-100:hover { background-color: #dbe4fe; }
-.hover\:bg-orange-600:hover { background-color: #172554; }
-.hover\:bg-orange-700:hover { background-color: #172554; }
-.hover\:bg-orange-50\/60:hover { background-color: rgb(238 242 255 / 0.6); }
-.hover\:text-orange-600:hover { color: #1e3a8a; }
-.hover\:text-orange-700:hover { color: #172554; }
-.hover\:border-orange-200:hover { border-color: #c7d2fe; }
-.hover\:border-orange-300:hover { border-color: #a5b4fc; }
-.hover\:border-orange-400:hover { border-color: #818cf8; }
-.group:hover .group-hover\:text-orange-700 { color: #172554; }
-
-.focus\:ring-orange-400:focus { --tw-ring-color: #93c5fd; }
-.focus\:ring-orange-500:focus { --tw-ring-color: #3b82f6; }
-.focus\:border-orange-400:focus { border-color: #93c5fd; }
-.focus\:border-orange-500:focus { border-color: #3b82f6; }
-
 /* soft accent tints used for chips/icon blobs — keep readable on dark */
 html.dark .bg-orange-50 { background-color: var(--accent-soft); }
-html.dark .bg-orange-100 { background-color: #11314f; }
-
-/* Dark mode: navy is too dark on the slate page, so accents/hovers go invisible.
-   Brighten the accent (text, solid fills, hovers, borders) in dark only. */
-html.dark .bg-orange-500 { background-color: #3b82f6; }
-html.dark .bg-orange-600 { background-color: #2563eb; }
-html.dark .text-orange-400 { color: #93c5fd; }
-html.dark .text-orange-500 { color: #60a5fa; }
-html.dark .text-orange-600 { color: #93c5fd; }
-html.dark .text-orange-700 { color: #bfdbfe; }
-html.dark .text-orange-800 { color: #dbeafe; }
-html.dark .border-orange-200 { border-color: #1e3a8a; }
-html.dark .border-orange-300 { border-color: #2563eb; }
-html.dark .border-orange-500 { border-color: #3b82f6; }
-html.dark .border-orange-600 { border-color: #2563eb; }
-html.dark .hover\:bg-orange-50:hover { background-color: #16273f; }
-html.dark .hover\:bg-orange-100:hover { background-color: #1b3354; }
-html.dark .hover\:bg-orange-600:hover { background-color: #1d4ed8; }
-html.dark .hover\:bg-orange-700:hover { background-color: #1d4ed8; }
-html.dark .hover\:text-orange-600:hover { color: #93c5fd; }
-html.dark .hover\:text-orange-700:hover { color: #bfdbfe; }
+html.dark .bg-orange-100 { background-color: #3a2517; }
 html.dark .bg-emerald-50 { background-color: #14271d; }
 html.dark .bg-amber-50 { background-color: #2a2410; }
 html.dark .bg-red-50 { background-color: #2a1818; }
