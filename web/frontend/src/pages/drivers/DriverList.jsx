@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, XCircle, Pause, Play, Eye } from 'lucide-react'
 import { DataTable } from '../../components/shared/DataTable'
 import { Pagination } from '../../components/shared/Pagination'
@@ -29,7 +29,9 @@ export default function DriverList() {
   const [statusFilter, setStatusFilter] = useState('')
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('')
   const [confirmAction, setConfirmAction] = useState(null)
-  const [activeTab, setActiveTab] = useState('')
+  // Seed the tab from a ?status= link (e.g. the dashboard "Pending Drivers" card).
+  const [searchParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useState(searchParams.get('status') || '')
 
   const { data, isLoading } = useQuery({
     queryKey: ['drivers', page, search, statusFilter || activeTab, vehicleTypeFilter],
