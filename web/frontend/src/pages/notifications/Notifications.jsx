@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation } from '@tanstack/react-query'
-import { Send, Users, Car, Bell, Megaphone } from 'lucide-react'
+import { Send, Users, Car, Bell, Megaphone } from '@/components/ui/icons'
 import { Input, Textarea } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
@@ -132,9 +132,7 @@ export default function Notifications() {
                 <p className="text-xs text-gray-400 mb-3 font-medium uppercase tracking-wide">Preview</p>
                 <div className="bg-slate-800 rounded-xl p-4 shadow-lg max-w-sm">
                   <div className="flex items-start gap-3">
-                    <div className="bg-orange-600 rounded-lg p-2 shrink-0">
-                      <TargetIcon className="h-4 w-4 text-white" />
-                    </div>
+                    <TargetIcon className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-white font-semibold text-sm">{watch('title') || 'Notification Title'}</p>
                       <p className="text-gray-300 text-xs mt-0.5 leading-relaxed">{watch('body') || 'Your notification message will appear here...'}</p>
@@ -163,9 +161,7 @@ export default function Notifications() {
               <div className="space-y-3">
                 {sent.map((n, i) => (
                   <div key={i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="bg-orange-100 rounded-lg p-1.5 shrink-0">
-                      <Bell className="h-4 w-4 text-orange-600" />
-                    </div>
+                    <Bell className="h-5 w-5 text-orange-600 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">{n.title}</p>
                       <p className="text-xs text-gray-500 truncate">{n.body}</p>

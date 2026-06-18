@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, CheckCircle, XCircle, Star, Car, FileText, TrendingUp, Eye, Wallet } from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, Star, Car, FileText, TrendingUp, Eye, Wallet } from '@/components/ui/icons'
 import { Tabs } from '../../components/ui/Tabs'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'

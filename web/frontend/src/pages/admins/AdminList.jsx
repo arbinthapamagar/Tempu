@@ -5,7 +5,7 @@ import {
   Users, Car, Navigation, CreditCard, FileText, MessageSquare,
   ShieldCheck, BarChart2, Repeat, Building2, CheckCircle, XCircle, Info,
   Mail, Phone, Calendar, Clock, Eye
-} from 'lucide-react'
+} from '@/components/ui/icons'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -73,6 +73,22 @@ const PERMISSIONS = [
     color: 'amber',
     description: 'Review and verify driver uploaded documents',
     allows: ['View document queue', 'Approve documents', 'Reject documents', 'View document history'],
+  },
+  {
+    key: 'editDocuments',
+    label: 'Edit Documents',
+    icon: FileText,
+    color: 'blue',
+    description: 'Edit a document’s type and expiry date',
+    allows: ['Edit document type', 'Edit expiry date'],
+  },
+  {
+    key: 'deleteDocuments',
+    label: 'Delete Documents',
+    icon: FileText,
+    color: 'red',
+    description: 'Permanently delete uploaded documents',
+    allows: ['Delete documents'],
   },
   {
     key: 'handleSupport',

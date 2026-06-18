@@ -4,9 +4,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        // Inter across the whole console — Claude-UI-style clean sans.
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        // Roboto — the ShipOS / NobleUI theme font.
+        sans: ['Roboto', 'Segoe UI', 'system-ui', 'sans-serif'],
+        display: ['Roboto', 'Segoe UI', 'system-ui', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       colors: {

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Save, ChevronRight, ArrowLeft, Plus, ChevronDown, MapPin } from 'lucide-react'
+import { Save, ChevronRight, ArrowLeft, Plus, ChevronDown, MapPin } from '@/components/ui/icons'
 import { PageHeader } from '../../components/shared/PageHeader'
 import { TableSpinner } from '../../components/ui/Spinner'
 import { Button } from '../../components/ui/Button'

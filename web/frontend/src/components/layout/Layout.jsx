@@ -21,7 +21,7 @@ export default function Layout() {
       {/* Main content — shifted right on desktop */}
       <div className="lg:pl-60">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="pt-14 min-h-screen">
+        <main className="pt-20 min-h-screen">
           <div className="p-3 sm:p-5 mx-auto w-full max-w-[1600px]">
             <Outlet />
           </div>

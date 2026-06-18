@@ -4,7 +4,7 @@ import { NavLink, Outlet, useParams, useSearchParams } from 'react-router-dom'
 import {
   Inbox, Mail, Clock, CheckCircle2, Archive, UserCheck, UserX,
   Search, Mic, Paperclip, Phone, Video, MessageSquare,
-} from 'lucide-react'
+} from '@/components/ui/icons'
 import { cn } from '../../utils/cn'
 import { Avatar } from '../../components/ui/Avatar'
 import { supportApi } from '../../api/support.api'
@@ -250,7 +250,7 @@ function ConversationList() {
 
 export default function SupportInbox() {
   return (
-    <div className="h-[calc(100vh-7rem)] min-h-[480px] flex border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+    <div className="h-[calc(100vh-9rem)] min-h-[480px] flex border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
       <FolderRail />
       <ConversationList />
       <Outlet />

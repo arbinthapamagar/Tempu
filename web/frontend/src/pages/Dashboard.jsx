@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   Users, Car, Navigation, DollarSign, Clock, MessageSquare,
   Repeat, FileText, TrendingUp,
-} from 'lucide-react'
+} from '@/components/ui/icons'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
@@ -227,19 +227,17 @@ export default function Dashboard() {
           <h3 className="text-sm font-semibold text-gray-900 mb-4">Quick Actions</h3>
           <div className="space-y-2">
             {[
-              { to: '/documents', icon: FileText, label: 'Review Documents', desc: stats.pendingDocuments ? `${stats.pendingDocuments} pending` : 'Check queue', color: 'text-amber-600 bg-amber-50' },
-              { to: '/drivers?status=pending', icon: Car, label: 'Approve Drivers', desc: stats.pendingDrivers ? `${stats.pendingDrivers} waiting` : 'Check queue', color: 'text-orange-600 bg-orange-50' },
-              { to: '/support?status=open', icon: MessageSquare, label: 'Support Tickets', desc: stats.openTickets ? `${stats.openTickets} open` : 'All clear', color: 'text-rose-600 bg-rose-50' },
-              { to: '/analytics', icon: TrendingUp, label: 'View Analytics', desc: 'Insights & reports', color: 'text-orange-600 bg-orange-50' },
+              { to: '/documents', icon: FileText, label: 'Review Documents', desc: stats.pendingDocuments ? `${stats.pendingDocuments} pending` : 'Check queue', color: 'text-amber-600' },
+              { to: '/drivers?status=pending', icon: Car, label: 'Approve Drivers', desc: stats.pendingDrivers ? `${stats.pendingDrivers} waiting` : 'Check queue', color: 'text-orange-600' },
+              { to: '/support?status=open', icon: MessageSquare, label: 'Support Tickets', desc: stats.openTickets ? `${stats.openTickets} open` : 'All clear', color: 'text-rose-600' },
+              { to: '/analytics', icon: TrendingUp, label: 'View Analytics', desc: 'Insights & reports', color: 'text-orange-600' },
             ].map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
               >
-                <div className={`rounded-lg p-2 shrink-0 ${item.color}`}>
-                  <item.icon className="h-4 w-4" />
-                </div>
+                <item.icon className={`h-5 w-5 shrink-0 ${item.color}`} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{item.label}</p>
                   <p className="text-xs text-gray-400">{item.desc}</p>

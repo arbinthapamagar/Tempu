@@ -29,11 +29,7 @@ export function StatsCard({ title, value, subtitle, icon: Icon, trend, color = '
       )}
     >
       <div className="flex items-center gap-2.5 mb-2.5">
-        {Icon && (
-          <div className={cn('shrink-0 p-2 rounded-lg grid place-items-center', c.bg)}>
-            <Icon className={cn('h-4 w-4', c.icon)} />
-          </div>
-        )}
+        {Icon && <Icon className={cn('h-5 w-5 shrink-0', c.icon)} />}
         <p className="eyebrow truncate flex-1">{title}</p>
       </div>
       {loading ? (

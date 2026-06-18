@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  LineChart, Line, BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell,
+  BarChart, Bar, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
-import { TrendingUp, Users, Car, DollarSign, Navigation } from 'lucide-react'
+import { TrendingUp, Users, Car, DollarSign, Navigation } from '@/components/ui/icons'
 import { StatsCard } from '../../components/shared/StatsCard'
 import { PageHeader } from '../../components/shared/PageHeader'
 import { analyticsApi } from '../../api/analytics.api'
@@ -14,26 +14,46 @@ const PERIODS = [
   { value: 'week', label: '7 Days' },
   { value: 'month', label: '30 Days' },
   { value: 'year', label: '12 Months' },
+  { value: 'custom', label: 'Custom' },
 ]
 
 export default function Analytics() {
   const [period, setPeriod] = useState('month')
+  const [start, setStart] = useState('')
+  const [end, setEnd] = useState('')
+
+  const todayStr = () => new Date().toISOString().slice(0, 10)
+  const daysAgoStr = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10) }
+
+  // Switching to Custom pre-fills the last 30 days so data loads right away;
+  // the user then adjusts the dates to refilter.
+  const selectPeriod = (v) => {
+    if (v === 'custom' && (!start || !end)) { setStart(daysAgoStr(30)); setEnd(todayStr()) }
+    setPeriod(v)
+  }
+
+  // Use the custom range when both dates are set; otherwise fall back to a period
+  // so the charts always show something (never blank).
+  const useCustom = period === 'custom' && Boolean(start) && Boolean(end)
+  const fallbackPeriod = period === 'custom' ? 'month' : period
+  const filter = useCustom ? { start, end } : { period: fallbackPeriod }
+  const filterKey = useCustom ? `custom:${start}:${end}` : fallbackPeriod
 
   const { data: overviewRes, isLoading: overviewLoading } = useQuery({
-    queryKey: ['analytics-overview', period],
-    queryFn: () => analyticsApi.overview(period),
+    queryKey: ['analytics-overview', filterKey],
+    queryFn: () => analyticsApi.overview(filter),
     staleTime: 60_000,
   })
 
   const { data: tripsRes, isLoading: tripsLoading } = useQuery({
-    queryKey: ['analytics-trips', period],
-    queryFn: () => analyticsApi.trips(period),
+    queryKey: ['analytics-trips', filterKey],
+    queryFn: () => analyticsApi.trips(filter),
     staleTime: 60_000,
   })
 
   const { data: usersRes, isLoading: usersLoading } = useQuery({
-    queryKey: ['analytics-users', period],
-    queryFn: () => analyticsApi.users(period),
+    queryKey: ['analytics-users', filterKey],
+    queryFn: () => analyticsApi.users(filter),
     staleTime: 60_000,
   })
 
@@ -55,23 +75,39 @@ export default function Analytics() {
       <PageHeader
         title="Analytics"
         description="Platform-wide insights and performance metrics"
-        actions={
-          <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-            {PERIODS.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => setPeriod(p.value)}
-                className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
-                  period === p.value ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        }
       />
 
+      {/* Period dropdown + (when custom) date range — on its own row so nothing is hidden */}
+      <div className="flex flex-wrap items-center justify-end gap-2 mb-5">
+        <select
+          value={period}
+          onChange={(e) => selectPeriod(e.target.value)}
+          className="px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:border-orange-500 cursor-pointer"
+        >
+          {PERIODS.map((p) => (
+            <option key={p.value} value={p.value}>{p.label}</option>
+          ))}
+        </select>
+        {period === 'custom' && (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={start}
+              max={end || undefined}
+              onChange={(e) => setStart(e.target.value)}
+              className="px-2.5 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:border-orange-500"
+            />
+            <span className="text-gray-400 text-sm">to</span>
+            <input
+              type="date"
+              value={end}
+              min={start || undefined}
+              onChange={(e) => setEnd(e.target.value)}
+              className="px-2.5 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:border-orange-500"
+            />
+          </div>
+        )}
+      </div>
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-3 mb-6">
         <StatsCard
@@ -124,8 +160,8 @@ export default function Analytics() {
             <AreaChart data={tripsData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
               <defs>
                 <linearGradient id="colorTrips" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
@@ -138,7 +174,7 @@ export default function Analytics() {
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
               <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={(v, name) => [name === 'revenue' ? formatCurrency(v) : v, name === 'revenue' ? 'Revenue' : 'Trips']} />
               <Legend />
-              <Area yAxisId="left" type="monotone" dataKey="trips" stroke="#6366f1" fill="url(#colorTrips)" strokeWidth={2} name="trips" />
+              <Area yAxisId="left" type="monotone" dataKey="trips" stroke="#f97316" fill="url(#colorTrips)" strokeWidth={2} name="trips" />
               <Area yAxisId="right" type="monotone" dataKey="revenue" stroke="#10b981" fill="url(#colorRevenue)" strokeWidth={2} name="revenue" />
             </AreaChart>
           </ResponsiveContainer>
@@ -155,15 +191,15 @@ export default function Analytics() {
           {usersLoading ? (
             <div className="h-52 flex items-center justify-center text-sm text-gray-400">Loading...</div>
           ) : usersData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={210}>
-              <BarChart data={usersData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={usersData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }} barGap={4} barCategoryGap="30%">
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
                 <Legend />
-                <Bar dataKey="users" fill="#6366f1" radius={[4, 4, 0, 0]} name="Users" />
-                <Bar dataKey="drivers" fill="#10b981" radius={[4, 4, 0, 0]} name="Drivers" />
+                <Bar dataKey="users" fill="#f97316" radius={[3, 3, 0, 0]} name="Users" maxBarSize={18} />
+                <Bar dataKey="drivers" fill="#10b981" radius={[3, 3, 0, 0]} name="Drivers" maxBarSize={18} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -178,15 +214,15 @@ export default function Analytics() {
           {tripsLoading ? (
             <div className="h-52 flex items-center justify-center text-sm text-gray-400">Loading...</div>
           ) : tripsData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={210}>
-              <BarChart data={tripsData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={tripsData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }} barCategoryGap="30%">
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
                 <Legend />
-                <Bar dataKey="completed" fill="#10b981" radius={[4, 4, 0, 0]} name="Completed" stackId="a" />
-                <Bar dataKey="cancelled" fill="#ef4444" radius={[4, 4, 0, 0]} name="Cancelled" stackId="a" />
+                <Bar dataKey="completed" fill="#10b981" radius={[0, 0, 0, 0]} name="Completed" stackId="a" maxBarSize={22} />
+                <Bar dataKey="cancelled" fill="#ef4444" radius={[3, 3, 0, 0]} name="Cancelled" stackId="a" maxBarSize={22} />
               </BarChart>
             </ResponsiveContainer>
           ) : (

@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, MapPin, User, Car, CreditCard, Clock, Navigation } from 'lucide-react'
+import { ArrowLeft, MapPin, User, Car, CreditCard, Clock, Navigation } from '@/components/ui/icons'
 import { StatusBadge } from '../../components/shared/StatusBadge'
 import { Avatar } from '../../components/ui/Avatar'
 import { TableSpinner } from '../../components/ui/Spinner'

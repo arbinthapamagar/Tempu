@@ -1,4 +1,4 @@
-import { Inbox } from 'lucide-react'
+import { Inbox } from '@/components/ui/icons'
 
 export function EmptyState({ title = 'No data found', description, icon: Icon = Inbox, action }) {
   return (

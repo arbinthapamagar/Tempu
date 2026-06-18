@@ -11,7 +11,7 @@ import {
     grantDriverMoney, getWithdrawals, processWithdrawal,
     getPricing, updatePricing,
     getEmergencies, updateEmergency,
-    getAllDocuments, verifyDocument, rejectDocument, seedTestDocument,
+    getAllDocuments, verifyDocument, rejectDocument, updateDocument, deleteDocument, seedTestDocument,
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
     getTransactions, getTransactionById, getTransactionSummary,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
@@ -92,6 +92,8 @@ adminRouter.put('/documents/:id/verify', verifyDocument);
 adminRouter.patch('/documents/:id/verify', verifyDocument);
 adminRouter.put('/documents/:id/reject', rejectDocument);
 adminRouter.patch('/documents/:id/reject', rejectDocument);
+adminRouter.patch('/documents/:id', updateDocument);
+adminRouter.delete('/documents/:id', deleteDocument);
 
 // Trips
 adminRouter.get('/trips', getTrips);
