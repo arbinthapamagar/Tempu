@@ -8,6 +8,7 @@ import {
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts'
 import { StatsCard } from '../components/shared/StatsCard'
+import { PageHeader } from '../components/shared/PageHeader'
 import { DataTable } from '../components/shared/DataTable'
 import { StatusBadge } from '../components/shared/StatusBadge'
 import { dashboardApi } from '../api/dashboard.api'
@@ -50,14 +51,14 @@ export default function Dashboard() {
   const tripsChartData = tripsChartRes?.data || tripsChartRes || []
 
   const statCards = [
-    { title: 'Total Users', value: stats.totalUsers?.toLocaleString() ?? '—', icon: Users, color: 'indigo', subtitle: 'Registered passengers' },
-    { title: 'Active Drivers', value: stats.activeDrivers?.toLocaleString() ?? '—', icon: Car, color: 'emerald', subtitle: 'Online & approved' },
-    { title: "Today's Trips", value: stats.tripsToday?.toLocaleString() ?? '—', icon: Navigation, color: 'blue', subtitle: 'Across all vehicle types' },
-    { title: "Today's Revenue", value: stats.revenueToday != null ? formatCurrency(stats.revenueToday) : '—', icon: DollarSign, color: 'purple', subtitle: 'Platform earnings' },
-    { title: 'Pending Documents', value: stats.pendingDocuments?.toLocaleString() ?? '—', icon: FileText, color: 'amber', subtitle: 'Awaiting verification' },
-    { title: 'Open Tickets', value: stats.openTickets?.toLocaleString() ?? '—', icon: MessageSquare, color: 'rose', subtitle: 'Support requests' },
-    { title: 'Subscriptions', value: stats.activeSubscriptions?.toLocaleString() ?? '—', icon: Repeat, color: 'teal', subtitle: 'Active plans' },
-    { title: 'Pending Drivers', value: stats.pendingDrivers?.toLocaleString() ?? '—', icon: Clock, color: 'red', subtitle: 'Awaiting approval' },
+    { title: 'Total Users', value: stats.totalUsers?.toLocaleString() ?? '—', icon: Users, color: 'indigo', subtitle: 'Registered passengers', to: '/users' },
+    { title: 'Active Drivers', value: stats.activeDrivers?.toLocaleString() ?? '—', icon: Car, color: 'emerald', subtitle: 'Online & approved', to: '/drivers?status=approved' },
+    { title: "Today's Trips", value: stats.tripsToday?.toLocaleString() ?? '—', icon: Navigation, color: 'blue', subtitle: 'Across all vehicle types', to: '/trips' },
+    { title: "Today's Revenue", value: stats.revenueToday != null ? formatCurrency(stats.revenueToday) : '—', icon: DollarSign, color: 'purple', subtitle: 'Platform earnings', to: '/transactions' },
+    { title: 'Pending Documents', value: stats.pendingDocuments?.toLocaleString() ?? '—', icon: FileText, color: 'amber', subtitle: 'Awaiting verification', to: '/documents' },
+    { title: 'Open Tickets', value: stats.openTickets?.toLocaleString() ?? '—', icon: MessageSquare, color: 'rose', subtitle: 'Support requests', to: '/support?status=open' },
+    { title: 'Subscriptions', value: stats.activeSubscriptions?.toLocaleString() ?? '—', icon: Repeat, color: 'teal', subtitle: 'Active plans', to: '/subscriptions' },
+    { title: 'Pending Drivers', value: stats.pendingDrivers?.toLocaleString() ?? '—', icon: Clock, color: 'red', subtitle: 'Awaiting approval', to: '/drivers?status=pending' },
   ]
 
   const tripColumns = [
@@ -95,16 +96,18 @@ export default function Dashboard() {
   }))
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
+      <PageHeader title="Dashboard" description="Overview of platform activity" />
+
       {/* Stats grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {statCards.map((card, i) => (
-          <StatsCard key={card.title} {...card} index={i} loading={statsLoading} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {statCards.map((card) => (
+          <StatsCard key={card.title} {...card} loading={statsLoading} />
         ))}
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Weekly trips line chart */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 p-4 sm:p-4 shadow-sm">
           <div className="flex items-center justify-between mb-4">
@@ -125,7 +128,7 @@ export default function Dashboard() {
                   contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }}
                   formatter={(val, name) => [name === 'revenue' ? formatCurrency(val) : val, name === 'revenue' ? 'Revenue' : 'Trips']}
                 />
-                <Line yAxisId="trips" type="monotone" dataKey="trips" stroke="#6366f1" strokeWidth={2} dot={false} />
+                <Line yAxisId="trips" type="monotone" dataKey="trips" stroke="#f97316" strokeWidth={2} dot={false} />
                 <Line yAxisId="revenue" type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} dot={false} strokeDasharray="4 2" />
               </LineChart>
             </ResponsiveContainer>
@@ -198,14 +201,14 @@ export default function Dashboard() {
                 contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 12 }}
                 formatter={(val) => [formatCurrency(val), 'Revenue']}
               />
-              <Bar dataKey="revenue" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="revenue" fill="#f97316" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       )}
 
       {/* Recent trips + Quick actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-gray-50">
             <h3 className="text-sm font-semibold text-gray-900">Recent Trips</h3>
