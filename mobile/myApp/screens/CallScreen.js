@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
 import { io } from 'socket.io-client';
 
 // react-native-webrtc is a native module; guard the import so the app doesn't
@@ -39,7 +39,11 @@ function CallScreen({ ticketId }, ref) {
   const pendingCandidates = useRef([]);
   const isCallerRef = useRef(false);
 
+  const startRing = () => { Vibration.vibrate([0, 1000, 1500], true); };
+  const stopRing = () => { Vibration.cancel(); };
+
   const endLocal = () => {
+    stopRing();
     pcRef.current?.close(); pcRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
@@ -62,14 +66,27 @@ function CallScreen({ ticketId }, ref) {
   };
 
   const getMedia = async (m) => {
-    const stream = await mediaDevices.getUserMedia({ audio: true, video: m === 'video' ? { facingMode: 'user' } : false });
+    const video = m === 'video'
+      ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }
+      : false;
+    const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+    const stream = await mediaDevices.getUserMedia({ audio, video });
     localStreamRef.current = stream;
     setLocalUrl(stream.toURL());
     setMicOn(true); setCamOn(m === 'video');
     return stream;
   };
 
-  const attachTracks = (pc, stream) => stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+  const attachTracks = (pc, stream) => {
+    stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+    pc.getSenders().forEach((s) => {
+      if (s.track?.kind === 'video') {
+        const params = s.getParameters();
+        params.encodings = [{ maxBitrate: 2_500_000, maxFramerate: 30 }];
+        s.setParameters(params).catch(() => {});
+      }
+    });
+  };
 
   const flushCandidates = async () => {
     const pc = pcRef.current;
@@ -115,6 +132,7 @@ function CallScreen({ ticketId }, ref) {
     }
     try {
       setMedia(m); setStatus('calling'); isCallerRef.current = true;
+      startRing();
       const stream = await getMedia(m);
       attachTracks(newPeer(), stream);
       socketRef.current?.emit('call:invite', { room: ticketId, media: m });
@@ -126,6 +144,7 @@ function CallScreen({ ticketId }, ref) {
 
   const acceptCall = async () => {
     isCallerRef.current = false;
+    stopRing();
     await getMedia(media);
     socketRef.current?.emit('call:accept', { room: ticketId });
     setStatus('connected');
@@ -152,8 +171,8 @@ function CallScreen({ ticketId }, ref) {
     socketRef.current = socket;
 
     socket.on('connect', () => socket.emit('call:join', { room: ticketId }));
-    socket.on('call:incoming', ({ media: m }) => { setMedia(m || 'video'); setStatus('incoming'); });
-    socket.on('call:accepted', () => { if (isCallerRef.current) createOffer(); });
+    socket.on('call:incoming', ({ media: m }) => { setMedia(m || 'video'); setStatus('incoming'); startRing(); });
+    socket.on('call:accepted', () => { stopRing(); if (isCallerRef.current) createOffer(); });
     socket.on('call:rejected', () => endLocal());
     socket.on('call:ended', () => endLocal());
     socket.on('call:signal', ({ data }) => handleSignal(data));

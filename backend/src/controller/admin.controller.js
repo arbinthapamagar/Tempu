@@ -287,7 +287,7 @@ const deleteAdmin = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, {}, 'Admin deleted'));
 });
 
-// ─── Dashboard ────────────────────────────────────────────────────────────────
+// Dashboard 
 
 const getDashboardStats = asyncHandler(async (req, res) => {
     const today = new Date();
@@ -384,7 +384,7 @@ const getDashboardRecentTrips = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, formatted, 'Recent trips fetched'));
 });
 
-// ─── Analytics ────────────────────────────────────────────────────────────────
+// Analytics
 
 const getAnalyticsOverview = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.viewAnalytics) throw new apiError(403, 'Insufficient permissions');

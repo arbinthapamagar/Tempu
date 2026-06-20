@@ -1,49 +1,29 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Gmail SMTP transport. Uses a Google "App Password" (not the normal account
-// password) — generate one at https://myaccount.google.com/apppasswords with
-// 2-Step Verification enabled, then set GMAIL_USER + GMAIL_APP_PASSWORD in .env.
-let transporter = null;
+if (!process.env.RESEND_API) {
+  console.log('Provide RESEND_API in side the .env file');
+}
 
-const getTransporter = () => {
-  if (transporter) return transporter;
-
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
-  if (!user || !pass) {
-    console.warn('GMAIL_USER / GMAIL_APP_PASSWORD not set — emails will not be sent');
-    return null;
-  }
-
-  transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user, pass },
-  });
-  return transporter;
-};
+const resend = new Resend(process.env.RESEND_API);
 
 const sendEmail = async ({ sendTo, subject, html }) => {
-  if (!sendTo) return null;
-
-  const tx = getTransporter();
-  if (!tx) return null;
-
-  const fromName = process.env.MAIL_FROM_NAME || 'Tempu';
-  const fromAddress = process.env.GMAIL_USER;
-
   try {
-    const info = await tx.sendMail({
-      from: `${fromName} <${fromAddress}>`,
+    const { data, error } = await resend.emails.send({
+      from: 'Shakti <onboarding@resend.dev>',
       to: sendTo,
-      subject,
-      html,
+      subject: subject,
+      html: html,
     });
-    return info;
+
+    if (error) {
+      return console.error({ error });
+    }
+
+    return data;
   } catch (error) {
-    console.error('sendEmail error:', error.message);
-    return null;
+    console.log(error);
   }
 };
 

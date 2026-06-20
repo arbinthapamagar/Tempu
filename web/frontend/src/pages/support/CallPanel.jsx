@@ -20,9 +20,37 @@ function CallPanel({ ticketId }, ref) {
   const remoteVideoRef = useRef(null)
   const pendingCandidates = useRef([])
   const isCallerRef = useRef(false)
+  const ringRef = useRef(null)
+
+  const startRing = () => {
+    if (ringRef.current) return
+    const Ctx = window.AudioContext || window.webkitAudioContext
+    if (!Ctx) return
+    const ctx = new Ctx()
+    const gain = ctx.createGain()
+    gain.gain.value = 0.15
+    gain.connect(ctx.destination)
+    const tick = () => {
+      const osc1 = ctx.createOscillator(); const osc2 = ctx.createOscillator()
+      osc1.frequency.value = 440; osc2.frequency.value = 480
+      osc1.connect(gain); osc2.connect(gain)
+      osc1.start(); osc2.start()
+      osc1.stop(ctx.currentTime + 1); osc2.stop(ctx.currentTime + 1)
+    }
+    tick()
+    const interval = setInterval(tick, 2000)
+    ringRef.current = { ctx, interval }
+  }
+  const stopRing = () => {
+    if (!ringRef.current) return
+    clearInterval(ringRef.current.interval)
+    ringRef.current.ctx.close().catch(() => {})
+    ringRef.current = null
+  }
 
   // WebRTC helpers, defined before the hooks that use them.
   const endLocal = () => {
+    stopRing()
     pcRef.current?.close(); pcRef.current = null
     localStreamRef.current?.getTracks().forEach((t) => t.stop())
     localStreamRef.current = null
@@ -45,14 +73,27 @@ function CallPanel({ ticketId }, ref) {
   }
 
   const getMedia = async (m) => {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: m === 'video' })
+    const videoConstraints = m === 'video'
+      ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }
+      : false
+    const audioConstraints = { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: videoConstraints })
     localStreamRef.current = stream
     if (localVideoRef.current) localVideoRef.current.srcObject = stream
     setMicOn(true); setCamOn(m === 'video')
     return stream
   }
 
-  const attachTracks = (pc, stream) => stream.getTracks().forEach((t) => pc.addTrack(t, stream))
+  const attachTracks = (pc, stream) => {
+    stream.getTracks().forEach((t) => pc.addTrack(t, stream))
+    pc.getSenders().forEach((s) => {
+      if (s.track?.kind === 'video') {
+        const params = s.getParameters()
+        params.encodings = [{ maxBitrate: 2_500_000, maxFramerate: 30 }]
+        s.setParameters(params).catch(() => {})
+      }
+    })
+  }
 
   const flushCandidates = async () => {
     const pc = pcRef.current
@@ -93,6 +134,7 @@ function CallPanel({ ticketId }, ref) {
 
   const startCall = async (m) => {
     setMedia(m); setStatus('calling'); isCallerRef.current = true
+    startRing()
     const stream = await getMedia(m)
     attachTracks(newPeer(), stream)
     socketRef.current?.emit('call:invite', { room: ticketId, media: m })
@@ -101,6 +143,7 @@ function CallPanel({ ticketId }, ref) {
 
   const acceptCall = async () => {
     isCallerRef.current = false
+    stopRing()
     await getMedia(media)
     socketRef.current?.emit('call:accept', { room: ticketId })
     setStatus('connected')
@@ -129,8 +172,8 @@ function CallPanel({ ticketId }, ref) {
     socketRef.current = socket
 
     socket.on('connect', () => socket.emit('call:join', { room: ticketId }))
-    socket.on('call:incoming', ({ media: m }) => { setMedia(m || 'video'); setStatus('incoming') })
-    socket.on('call:accepted', () => { if (isCallerRef.current) createOffer() })
+    socket.on('call:incoming', ({ media: m }) => { setMedia(m || 'video'); setStatus('incoming'); startRing() })
+    socket.on('call:accepted', () => { stopRing(); if (isCallerRef.current) createOffer() })
     socket.on('call:rejected', () => endLocal())
     socket.on('call:ended', () => endLocal())
     socket.on('call:signal', ({ data }) => handleSignal(data))
