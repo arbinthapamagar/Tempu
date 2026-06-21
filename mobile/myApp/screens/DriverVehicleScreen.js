@@ -180,7 +180,7 @@ export default function DriverVehicleScreen({ onSuccess, onBack }) {
           </Text>
         </View>
 
-        {/* ── STEP 1 ── */}
+        {/* STEP 1 */}
         {step === 1 && (
           <View style={styles.form}>
             <View style={styles.field}>
@@ -301,7 +301,7 @@ export default function DriverVehicleScreen({ onSuccess, onBack }) {
           </View>
         )}
 
-        {/* ── STEP 2 ── */}
+        {/* STEP 2 */}
         {step === 2 && (
           <View style={styles.form}>
             <View style={styles.infoBox}>

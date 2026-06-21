@@ -56,7 +56,7 @@ notificationSchema.index({ userId: 1 });
 notificationSchema.index({ driverId: 1 });
 notificationSchema.index({ isRead: 1 });
 
-// ── Email-on-notification ────────────────────────────────────────────────────
+// Email-on-notification
 // Every newly created notification is also emailed to the recipient with a
 // deep link back into the app. Best-effort path per notification type.
 const LINK_PATH_BY_TYPE = {

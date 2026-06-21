@@ -65,7 +65,7 @@ function Dashboard({ initial }) {
     save.mutate(next) // persist immediately so it survives a refresh
   }
 
-  // ── City detail view ──────────────────────────────────────────────────────
+  // City detail view
   if (selected != null && cities[selected]) {
     const city = cities[selected]
     return (
@@ -102,7 +102,7 @@ function Dashboard({ initial }) {
     )
   }
 
-  // ── City list view ────────────────────────────────────────────────────────
+  // City list view
   return (
     <div>
       <PageHeader

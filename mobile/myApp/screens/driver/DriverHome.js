@@ -22,7 +22,7 @@ function money(n) {
   return `NPR ${Number(n || 0).toLocaleString()}`;
 }
 
-// ── A single ride request card with a Bid action ────────────────────────────
+// A single ride request card with a Bid action
 function RequestCard({ trip, alreadyBid, onBid }) {
   return (
     <View style={styles.card}>
@@ -56,7 +56,7 @@ function RequestCard({ trip, alreadyBid, onBid }) {
   );
 }
 
-// ── Bid entry modal ─────────────────────────────────────────────────────────
+// Bid entry modal
 function BidModal({ trip, onClose, onSubmit }) {
   const [amount, setAmount] = useState(String(trip?.offeredPrice ?? ''));
   const [message, setMessage] = useState('');
@@ -118,7 +118,7 @@ function BidModal({ trip, onClose, onSubmit }) {
   );
 }
 
-// ── Active trip: drive it to completion ─────────────────────────────────────
+// Active trip: drive it to completion
 function ActiveTrip({ trip, advancing, onAdvance, onFinish }) {
   const completed = trip.status === 'completed';
   const phone = trip.userId?.phone;
