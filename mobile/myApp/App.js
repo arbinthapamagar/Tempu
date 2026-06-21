@@ -73,7 +73,7 @@ function AppShell() {
     );
   }
 
-  // ── Driver onboarding (user is logged in but completing driver setup) ──────
+  // Driver onboarding (user is logged in but completing driver setup)
   if (user && authScreen === 'driver-vehicle') {
     return (
       <SafeAreaView style={styles.root}>
@@ -95,7 +95,7 @@ function AppShell() {
     );
   }
 
-  // ── Not authenticated ─────────────────────────────────────────────────────
+  // Not authenticated
   if (!user) {
     return (
       <SafeAreaView style={styles.root}>
@@ -145,7 +145,7 @@ function AppShell() {
     setMode('passenger');
   };
 
-  // ── Driver mode ────────────────────────────────────────────────────────────
+  // Driver mode
   if (effectiveMode === 'driver') {
     return (
       <SafeAreaView style={styles.root}>
@@ -159,7 +159,7 @@ function AppShell() {
     );
   }
 
-  // ── Passenger app ─────────────────────────────────────────────────────────
+  // Passenger app
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle={STATUS_BAR_STYLE} backgroundColor={colors.background} />

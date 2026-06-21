@@ -1,11 +1,9 @@
 import mongoose from 'mongoose';
 
-// ─────────────────────────────────────────────────────────────────────────────
 // EV dynamic-pricing configuration (single global document, key: 'global').
 // The admin panel reads/writes this whole object; the passenger fare simulator
 // and analytics are computed client-side from it. See utils/fareCalc on the
 // frontend for the exact formula.
-// ─────────────────────────────────────────────────────────────────────────────
 
 // Booking vehicle types — these match the trip/driver `vehicleType` enum so the
 // pricing config maps 1:1 to what riders actually book.
@@ -113,7 +111,7 @@ const pricingSchema = new mongoose.Schema(
 
 export const Pricing = mongoose.model('Pricing', pricingSchema);
 
-// ─── Seed defaults ──────────────────────────────────────────────────────────
+// Seed defaults
 const CITY_LANDMARKS = {
   Kathmandu: ['Thamel', 'Boudha', 'Koteshwor', 'Ratnapark', 'Baneshwor', 'Balaju', 'Kalanki', 'Gongabu'],
   Lalitpur: ['Pulchowk', 'Jawalakhel', 'Satdobato', 'Kumaripati', 'Lagankhel'],

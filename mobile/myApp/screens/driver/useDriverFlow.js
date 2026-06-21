@@ -43,7 +43,7 @@ export default function useDriverFlow(initialOnline = false) {
   const coordsRef = useRef(null);
   const watchRef = useRef(null);
 
-  // ── Location: acquire + watch + push to backend while online ──────────────
+  // Location: acquire + watch + push to backend while online
   useEffect(() => {
     if (!online) {
       watchRef.current?.remove?.();
@@ -83,7 +83,7 @@ export default function useDriverFlow(initialOnline = false) {
     };
   }, [online]);
 
-  // ── Poll nearby trips while online and not already driving ────────────────
+  // Poll nearby trips while online and not already driving
   useEffect(() => {
     if (!online || activeTripId) {
       setNearbyTrips([]);
@@ -114,7 +114,7 @@ export default function useDriverFlow(initialOnline = false) {
     };
   }, [online, activeTripId, coords]);
 
-  // ── Detect an accepted bid → promote it to the active trip ────────────────
+  // Detect an accepted bid → promote it to the active trip
   useEffect(() => {
     if (activeTripId) return;
     let stop = false;
@@ -136,7 +136,7 @@ export default function useDriverFlow(initialOnline = false) {
     };
   }, [activeTripId]);
 
-  // ── Drive the active trip: poll its status until terminal ─────────────────
+  // Drive the active trip: poll its status until terminal
   useEffect(() => {
     if (!activeTripId) {
       setActiveTrip(null);

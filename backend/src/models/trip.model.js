@@ -146,7 +146,7 @@ const tripSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// ─── Indexes ──────────────────────────────────────────
+// Indexes
 tripSchema.index({ userId: 1 });
 tripSchema.index({ driverId: 1 });
 tripSchema.index({ status: 1 });
