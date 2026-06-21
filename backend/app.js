@@ -38,7 +38,7 @@ app.use(express.static('public'));
 // using the cookieparser for the data reciving from the cookie and make it in the format of the javascript object
 app.use(cookieParser());
 
-//routes import here **************************
+// routes import here
 import { adminRouter } from './routes/admin.route.js';
 
 // route decleration

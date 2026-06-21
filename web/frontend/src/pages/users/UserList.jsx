@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Users, UserX, Eye, Ban, CheckCircle } from '@/components/ui/icons'
+import { Users, UserX, Eye, Ban, CheckCircle, Bell, Send, X } from '@/components/ui/icons'
+import { SendNotificationModal } from '../../components/shared/SendNotificationModal'
 import { DataTable } from '../../components/shared/DataTable'
 import { Pagination } from '../../components/shared/Pagination'
 import { StatusBadge } from '../../components/shared/StatusBadge'
@@ -27,18 +28,31 @@ const STATUS_OPTIONS = [
   { value: 'banned', label: 'Banned' },
 ]
 
+const RATING_OPTIONS = [
+  { value: '4.5', label: '4.5★ & up' },
+  { value: '4', label: '4★ & up' },
+  { value: '3', label: '3★ & up' },
+  { value: 'lt3', label: 'Below 3★' },
+]
+
+// Translate the rating filter value into backend min/max params.
+const ratingToParams = (v) => (v === 'lt3' ? { maxRating: 3 } : v ? { minRating: v } : {})
+
 export default function UserList() {
   const qc = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [userTypeFilter, setUserTypeFilter] = useState('')
+  const [ratingFilter, setRatingFilter] = useState('')
   const [selectedUser, setSelectedUser] = useState(null)
   const [confirmAction, setConfirmAction] = useState(null) // { user, action }
+  const [selected, setSelected] = useState([]) // [{ id, label }] for notifications
+  const [notify, setNotify] = useState(null)   // { recipients: [{id,label}] }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['users', page, search, statusFilter, userTypeFilter],
-    queryFn: () => usersApi.list({ page, limit: 20, search, status: statusFilter, userType: userTypeFilter }),
+    queryKey: ['users', page, search, statusFilter, userTypeFilter, ratingFilter],
+    queryFn: () => usersApi.list({ page, limit: 20, search, status: statusFilter, userType: userTypeFilter, ...ratingToParams(ratingFilter) }),
     keepPreviousData: true,
   })
 
@@ -54,6 +68,30 @@ export default function UserList() {
 
   const users = data?.data?.users || data?.data || []
   const pagination = data?.pagination || { total: 0, pages: 1, page: 1, limit: 20 }
+
+  const selectedIds = useMemo(() => new Set(selected.map((s) => s.id)), [selected])
+  const labelOf = (u) => u.name || u.phone || 'User'
+  const toggleRow = (u) =>
+    setSelected((prev) => prev.some((s) => s.id === u._id)
+      ? prev.filter((s) => s.id !== u._id)
+      : [...prev, { id: u._id, label: labelOf(u) }])
+  const toggleAllOnPage = () => {
+    const pageIds = new Set(users.map((u) => u._id))
+    const allSelected = users.every((u) => selectedIds.has(u._id))
+    setSelected((prev) => allSelected
+      ? prev.filter((s) => !pageIds.has(s.id))
+      : [...prev.filter((s) => !pageIds.has(s.id)), ...users.map((u) => ({ id: u._id, label: labelOf(u) }))])
+  }
+  const selectAllMatching = async () => {
+    try {
+      const res = await usersApi.list({ page: 1, limit: Math.max(pagination.total, 1), search, status: statusFilter, userType: userTypeFilter, ...ratingToParams(ratingFilter) })
+      const all = res?.data?.users || res?.data || []
+      setSelected(all.map((u) => ({ id: u._id, label: labelOf(u) })))
+      toast.success(`Selected all ${all.length} matching users`)
+    } catch {
+      toast.error('Could not select all')
+    }
+  }
 
   const columns = [
     {
@@ -119,6 +157,13 @@ export default function UserList() {
           >
             <Eye className="h-4 w-4" />
           </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setNotify({ recipients: [{ id: row._id, label: labelOf(row) }] }) }}
+            className="p-1.5 hover:bg-gray-100 rounded text-gray-400 hover:text-orange-600"
+            title="Send notification"
+          >
+            <Bell className="h-4 w-4" />
+          </button>
           {row.accountStatus === 'active' && (
             <button
               onClick={(e) => { e.stopPropagation(); setConfirmAction({ user: row, action: 'suspended' }) }}
@@ -177,9 +222,35 @@ export default function UserList() {
                 onChange: (v) => { setUserTypeFilter(v); setPage(1) },
                 options: USER_TYPE_OPTIONS,
               },
+              {
+                placeholder: 'All Ratings',
+                value: ratingFilter,
+                onChange: (v) => { setRatingFilter(v); setPage(1) },
+                options: RATING_OPTIONS,
+              },
             ]}
           />
         </div>
+
+        {/* Bulk selection bar */}
+        {selected.length > 0 && (
+          <div className="flex items-center gap-3 px-5 py-2.5 border-b border-gray-50 bg-orange-50/40">
+            <span className="text-sm font-medium text-gray-700">{selected.length} selected</span>
+            {selected.length < pagination.total && (
+              <button onClick={selectAllMatching} className="text-xs font-medium text-orange-600 hover:text-orange-700">
+                Select all {pagination.total} matching
+              </button>
+            )}
+            <button onClick={() => setSelected([])} className="text-xs text-gray-400 hover:text-red-600 flex items-center gap-1">
+              <X className="h-3 w-3" /> Clear
+            </button>
+            <div className="ml-auto">
+              <Button size="sm" icon={Send} onClick={() => setNotify({ recipients: selected })}>
+                Send notification
+              </Button>
+            </div>
+          </div>
+        )}
 
         <DataTable
           columns={columns}
@@ -188,6 +259,10 @@ export default function UserList() {
           emptyTitle="No users found"
           emptyDesc="No users match your filters"
           onRowClick={setSelectedUser}
+          selectable
+          selectedIds={selectedIds}
+          onToggleRow={toggleRow}
+          onToggleAll={toggleAllOnPage}
         />
 
         {pagination.total > 0 && (
@@ -221,6 +296,15 @@ export default function UserList() {
         message={`Are you sure you want to ${confirmAction?.action === 'active' ? 'activate' : confirmAction?.action === 'suspended' ? 'suspend' : 'ban'} ${confirmAction?.user?.name}?`}
         confirmLabel={confirmAction?.action === 'active' ? 'Activate' : confirmAction?.action === 'suspended' ? 'Suspend' : 'Ban'}
         variant={confirmAction?.action === 'active' ? 'success' : 'danger'}
+      />
+
+      {/* Send notification */}
+      <SendNotificationModal
+        open={!!notify}
+        onClose={() => setNotify(null)}
+        recipientType="users"
+        recipients={notify?.recipients || []}
+        onSent={() => setSelected([])}
       />
     </div>
   )

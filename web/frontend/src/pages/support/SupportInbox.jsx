@@ -91,7 +91,7 @@ function FolderRail() {
       to={to}
       className={cn(
         'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
-        isActive ? 'bg-orange-50 text-orange-600 font-semibold' : 'text-gray-700 font-medium hover:bg-gray-50'
+        isActive ? 'text-orange-600 font-semibold' : 'text-gray-700 font-medium hover:bg-gray-50'
       )}
     >
       <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-orange-600' : 'text-gray-400')} />
@@ -200,7 +200,7 @@ function ConversationList() {
             key={t}
             onClick={() => setTab(t)}
             className={cn('text-xs px-2.5 py-1 rounded-md capitalize font-medium',
-              tab === t ? 'bg-orange-50 text-orange-600' : 'text-gray-500 hover:text-gray-700')}
+              tab === t ? 'text-orange-600' : 'text-gray-500 hover:text-gray-700')}
           >
             {t}
           </button>
@@ -223,8 +223,8 @@ function ConversationList() {
                 key={t._id}
                 to={`/support/${t._id}${status ? `?status=${status}` : view ? `?view=${view}` : ''}`}
                 className={cn(
-                  'flex gap-2.5 px-3 py-2.5 border-b border-gray-100 cursor-pointer',
-                  isActive ? 'bg-orange-50' : 'hover:bg-gray-50'
+                  'flex gap-2.5 px-3 py-2.5 border-b border-gray-100 cursor-pointer border-l-2',
+                  isActive ? 'border-l-orange-500' : 'border-l-transparent'
                 )}
               >
                 <Avatar name={person?.name} size="sm" />

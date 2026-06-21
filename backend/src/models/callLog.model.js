@@ -34,7 +34,7 @@ const callLogSchema = new mongoose.Schema(
         },
         duration: { type: Number, default: 0 }, // in seconds
 
-        // ─── Auto delete after 7 days ─────────────────────
+        // Auto delete after 7 days
         expireAt: {
             type: Date,
             default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),

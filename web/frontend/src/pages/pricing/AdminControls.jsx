@@ -57,7 +57,7 @@ export function AdminControls({ config, setConfig, activeSlotIndex, setActiveSlo
         right={<button onClick={useCurrentTime} className="text-xs font-medium px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100">Use current time</button>}>
         <div className="space-y-3">
           {config.timeSlots?.map((s, i) => (
-            <div key={i} className={`rounded-lg border p-3 ${i === activeSlotIndex ? 'border-orange-400 bg-orange-50/50' : 'border-gray-100'}`}>
+            <div key={i} className={`rounded-lg border p-3 ${i === activeSlotIndex ? 'border-orange-400' : 'border-gray-100'}`}>
               <div className="flex items-center gap-2 mb-2">
                 <input value={s.name} onChange={(e) => patchSlot(i, { name: e.target.value })}
                   className="flex-1 text-sm font-medium text-gray-800 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-orange-400 focus:outline-none" />

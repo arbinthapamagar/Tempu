@@ -65,7 +65,7 @@ function getAnalyticsRange(query) {
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+//  Auth 
 
 const login = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
@@ -287,7 +287,7 @@ const deleteAdmin = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, {}, 'Admin deleted'));
 });
 
-// ─── Dashboard ────────────────────────────────────────────────────────────────
+// Dashboard 
 
 const getDashboardStats = asyncHandler(async (req, res) => {
     const today = new Date();
@@ -384,7 +384,7 @@ const getDashboardRecentTrips = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, formatted, 'Recent trips fetched'));
 });
 
-// ─── Analytics ────────────────────────────────────────────────────────────────
+// Analytics
 
 const getAnalyticsOverview = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.viewAnalytics) throw new apiError(403, 'Insufficient permissions');
@@ -597,6 +597,13 @@ const getUsers = asyncHandler(async (req, res) => {
     const filter = {};
     if (status) filter.accountStatus = status;
     if (role) filter.role = role;
+    const minRating = parseFloat(req.query.minRating);
+    const maxRating = parseFloat(req.query.maxRating);
+    if (!Number.isNaN(minRating) || !Number.isNaN(maxRating)) {
+        filter['rating.average'] = {};
+        if (!Number.isNaN(minRating)) filter['rating.average'].$gte = minRating;
+        if (!Number.isNaN(maxRating)) filter['rating.average'].$lt = maxRating;
+    }
     if (search) {
         filter.$or = [
             { name: { $regex: escapeRegex(search), $options: 'i' } },
@@ -693,6 +700,13 @@ const getDrivers = asyncHandler(async (req, res) => {
     const filter = {};
     if (status) filter.status = status;
     if (vehicleType) filter.vehicleType = vehicleType;
+    const minRating = parseFloat(req.query.minRating);
+    const maxRating = parseFloat(req.query.maxRating);
+    if (!Number.isNaN(minRating) || !Number.isNaN(maxRating)) {
+        filter.rating = {};
+        if (!Number.isNaN(minRating)) filter.rating.$gte = minRating;
+        if (!Number.isNaN(maxRating)) filter.rating.$lt = maxRating;
+    }
 
     let query = Driver.find(filter)
         .sort({ createdAt: -1 })
@@ -1726,34 +1740,99 @@ const deleteTicketComment = asyncHandler(async (req, res) => {
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 
+// Send a notification to a group audience AND/OR a specific bulk-selected set of
+// users, drivers and admins. Body:
+//   { title, body, type,
+//     target?: 'all'|'users'|'drivers',     // optional group broadcast (back-compat)
+//     userIds?: [], driverIds?: [], adminIds?: [] }   // specific recipients
+// Users/drivers get in-app Notification docs; admins get AdminNotification docs.
 const broadcastNotification = asyncHandler(async (req, res) => {
     const { title, body, type = 'general' } = req.body;
-    // Frontend sends `target`; older clients send `targetType`. Accept either.
-    const audience = req.body.target || req.body.targetType || 'all';
     if (!title || !body) throw new apiError(400, 'Title and body are required');
+
+    // `target`/`targetType` = optional group broadcast. null/'none' = specific-only.
+    const audience = req.body.target || req.body.targetType || null;
+    const pickIds = (v) => (Array.isArray(v) ? v.filter(Boolean).map(String) : []);
+    const reqUserIds = pickIds(req.body.userIds);
+    const reqDriverIds = pickIds(req.body.driverIds);
+    const reqAdminIds = pickIds(req.body.adminIds);
 
     const VALID_TYPES = ['trip_request','bid_received','bid_accepted','driver_arriving','trip_started','trip_completed','trip_cancelled','subscription_alert','document_verified','document_rejected','account_approved','account_suspended','account_rejected','payment','general'];
     const safeType = VALID_TYPES.includes(type) ? type : 'general';
 
-    let userIds = [];
+    const userIdSet = new Set(reqUserIds);     // -> Notification { userId }
+    const driverIdSet = new Set(reqDriverIds); // -> Notification { driverId }
+    const adminIdSet = new Set(reqAdminIds);   // -> AdminNotification { adminId }
+
     if (audience === 'all' || audience === 'users') {
         const users = await User.find({ accountStatus: 'active' }).select('_id');
-        userIds = userIds.concat(users.map(u => u._id));
+        users.forEach(u => userIdSet.add(u._id.toString()));
     }
     if (audience === 'all' || audience === 'drivers') {
-        const drivers = await Driver.find({ status: 'approved' }).select('userId');
-        userIds = userIds.concat(drivers.map(d => d.userId));
+        const drivers = await Driver.find({ status: 'approved' }).select('_id');
+        drivers.forEach(d => driverIdSet.add(d._id.toString()));
     }
 
-    const uniqueIds = [...new Set(userIds.map(id => id.toString()))];
-    if (uniqueIds.length === 0) {
-        return res.status(200).json(new apiResponse(200, { sent: 0 }, 'No recipients found'));
+    const userDocs = [...userIdSet].map(userId => ({ userId, title, body, type: safeType }));
+    const driverDocs = [...driverIdSet].map(driverId => ({ driverId, title, body, type: safeType }));
+    const adminDocs = [...adminIdSet].map(adminId => ({ adminId, title, body, type: safeType }));
+
+    if (!userDocs.length && !driverDocs.length && !adminDocs.length) {
+        return res.status(200).json(new apiResponse(200, { sent: 0 }, 'No recipients selected'));
     }
 
-    const notifications = uniqueIds.map(userId => ({ userId, title, body, type: safeType }));
-    await Notification.insertMany(notifications, { ordered: false });
+    // insertMany is bulk + skips the per-doc email hook (in-app only — no email blast).
+    await Promise.all([
+        userDocs.length ? Notification.insertMany(userDocs, { ordered: false }) : null,
+        driverDocs.length ? Notification.insertMany(driverDocs, { ordered: false }) : null,
+        adminDocs.length ? AdminNotification.insertMany(adminDocs, { ordered: false }) : null,
+    ]);
 
-    return res.status(200).json(new apiResponse(200, { sent: uniqueIds.length }, 'Notification broadcast sent'));
+    const breakdown = { users: userDocs.length, drivers: driverDocs.length, admins: adminDocs.length };
+    const sent = breakdown.users + breakdown.drivers + breakdown.admins;
+    return res.status(200).json(new apiResponse(200, { sent, ...breakdown }, `Notification sent to ${sent} recipient(s)`));
+});
+
+// Searchable recipient list for the notification composer's pickers.
+// GET /admin/notifications/recipients?type=users|drivers|admins&search=&limit=
+const getNotificationRecipients = asyncHandler(async (req, res) => {
+    const { type, search = '' } = req.query;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const term = String(search).trim();
+    const rx = term ? new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') : null;
+
+    let data = [];
+    if (type === 'users') {
+        const filter = rx ? { $or: [{ name: rx }, { phone: rx }, { email: rx }] } : {};
+        const users = await User.find(filter).select('name phone email').sort({ createdAt: -1 }).limit(limit);
+        data = users.map(u => ({ id: u._id, label: u.name || u.phone || 'User', sub: u.phone || u.email || '' }));
+    } else if (type === 'drivers') {
+        // Driver names live on the populated User, so when searching we scan a wider
+        // set and filter in memory; otherwise just take the most recent `limit`.
+        const drivers = await Driver.find({})
+            .select('userId vehicleType vehiclePlate status')
+            .populate({ path: 'userId', select: 'name phone email' })
+            .sort({ createdAt: -1 })
+            .limit(rx ? 500 : limit);
+        let mapped = drivers
+            .filter(d => d.userId)
+            .map(d => ({
+                id: d._id,
+                label: d.userId.name || d.userId.phone || 'Driver',
+                sub: [d.vehiclePlate || d.vehicleType, d.userId.phone].filter(Boolean).join(' · '),
+                _hay: `${d.userId.name || ''} ${d.userId.phone || ''} ${d.vehiclePlate || ''}`,
+            }));
+        if (rx) mapped = mapped.filter(m => rx.test(m._hay));
+        data = mapped.slice(0, limit).map(({ _hay, ...m }) => m);
+    } else if (type === 'admins') {
+        const filter = rx ? { $or: [{ name: rx }, { email: rx }] } : {};
+        const admins = await Admin.find(filter).select('name email role').sort({ createdAt: -1 }).limit(limit);
+        data = admins.map(a => ({ id: a._id, label: a.name || a.email || 'Admin', sub: [a.role, a.email].filter(Boolean).join(' · ') }));
+    } else {
+        throw new apiError(400, 'Invalid recipient type (use users|drivers|admins)');
+    }
+
+    return res.status(200).json(new apiResponse(200, data, 'Recipients fetched'));
 });
 
 const getNotificationHistory = asyncHandler(async (req, res) => {
@@ -1854,6 +1933,6 @@ export {
     getTransactions, getTransactionById, getTransactionSummary,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
     getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, getSupportAgents, getSupportSettingsAdmin, updateSupportSettings,
-    broadcastNotification, getNotificationHistory,
+    broadcastNotification, getNotificationHistory, getNotificationRecipients,
     getMyAdminNotifications, markMyNotificationRead, markAllMyNotificationsRead,
 };

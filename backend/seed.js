@@ -29,6 +29,10 @@ const seed = async () => {
     }
   }
 
+  // Mobile demo users
+  const mobileUsers = [
+    { name: 'Demo User', email: 'demo@gmail.com', phone: '9800000000', password: 'password' },
+  ];
 
   for (const u of mobileUsers) {
     const exists = await User.findOne({ $or: [{ phone: u.phone }, { email: u.email }] });
@@ -41,8 +45,8 @@ const seed = async () => {
   }
 
   console.log('\nSeed complete!');
-  console.log('Admin panel:  arbin.matat@gmail.com / Arbeen@1');
-  console.log('Mobile login: phone=9818856764, password=password');
+  console.log('Admin panel:  arbinbabuthapamagar2002@gmail.com / Arbeen@1');
+  console.log('Mobile login: phone=9800000000 (email=demo@gmail.com), password=password');
   process.exit(0);
 };
 
