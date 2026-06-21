@@ -644,7 +644,7 @@ function CreateAdminForm({ onSubmit, loading, onCancel }) {
                 <label
                   key={r.value}
                   className={`flex items-start gap-3 p-3 border-2 rounded-xl cursor-pointer transition-all ${
-                    selectedRole === r.value ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-gray-300'
+                    selectedRole === r.value ? 'border-orange-500' : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <input type="radio" value={r.value} className="mt-0.5" {...register('role')} onChange={handleRoleChange} />

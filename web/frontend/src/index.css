@@ -7,7 +7,7 @@
 /* Tempu admin theme: flat and simple. White cards on a light grey page,
    neutral grey text, one accent colour. No textures or fancy shadows. */
 :root {
-  --page: #f9fafb;          /* NobleUI body background */
+  --page: #ffffff;          /* pure white body background */
   --surface: #ffffff;       /* cards, panels */
   --surface-2: #f9fafb;     /* subtle fills, table headers */
   --ink: #212a3a;           /* NobleUI dark heading text */
@@ -170,11 +170,12 @@ html.dark .bg-emerald-50 { background-color: #14271d; }
 html.dark .bg-amber-50 { background-color: #2a2410; }
 html.dark .bg-red-50 { background-color: #2a1818; }
 html.dark .bg-rose-50 { background-color: #2a1820; }
-/* In dark mode, grey hover fills (nav, table rows, icon buttons) flashed to the
-   light grey value. Disable them so hovering shows no background, just the pointer. */
-html.dark .sidebar-link:hover { background-color: transparent; }
-html.dark .hover\:bg-gray-50:hover { background-color: transparent; }
-html.dark .hover\:bg-gray-100:hover { background-color: transparent; }
+/* Grey hover fills (nav, table rows, icon buttons) are disabled in BOTH light and
+   dark so hovering shows no background fill anywhere in the admin — just the pointer.
+   Active/selected state is indicated by orange text/border instead of a fill. */
+.sidebar-link:hover { background-color: transparent; }
+.hover\:bg-gray-50:hover { background-color: transparent; }
+.hover\:bg-gray-100:hover { background-color: transparent; }
 
 html.dark .bg-blue-50 { background-color: #14233a; }
 html.dark .bg-violet-50 { background-color: #241a3a; }
