@@ -120,13 +120,18 @@ html.dark {
 
 /* Accent = NobleUI golden orange (#f19e00). Remaps the orange utility classes
    the app uses so the accent matches the ShipOS theme from one place. */
-.bg-orange-50 { background-color: #fef6e6; }
-.bg-orange-100 { background-color: #fce8bf; }
+/* Soft colour tints are flat (no fill) everywhere — icon blobs and badges show
+   just the coloured icon/text. Solid -500/-600 (buttons, status dots) stay. */
+.bg-orange-50 { background-color: transparent; }
+.bg-orange-100 { background-color: transparent; }
 .bg-orange-500 { background-color: #f19e00; }
 .bg-orange-600 { background-color: #f19e00; }
-.bg-orange-50\/40 { background-color: rgb(254 246 230 / 0.4); }
-.bg-orange-50\/50 { background-color: rgb(254 246 230 / 0.5); }
-.bg-orange-50\/60 { background-color: rgb(254 246 230 / 0.6); }
+.bg-orange-50\/40, .bg-orange-50\/50, .bg-orange-50\/60 { background-color: transparent; }
+/* other coloured soft tints used for icon blobs / status chips → flat */
+.bg-emerald-50, .bg-amber-50, .bg-red-50, .bg-rose-50,
+.bg-blue-50, .bg-violet-50, .bg-teal-50, .bg-sky-50, .bg-indigo-50,
+.bg-emerald-100, .bg-amber-100, .bg-red-100, .bg-rose-100,
+.bg-blue-100, .bg-violet-100, .bg-teal-100 { background-color: transparent; }
 
 .text-orange-50 { color: #fef6e6; }
 .text-orange-100 { color: #fce8bf; }
@@ -146,11 +151,24 @@ html.dark {
 .from-orange-50 { --tw-gradient-from: #fef6e6 var(--tw-gradient-from-position); --tw-gradient-to: rgb(254 246 230 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
 .to-orange-100 { --tw-gradient-to: #fce8bf var(--tw-gradient-to-position); }
 
-.hover\:bg-orange-50:hover { background-color: #fef6e6; }
-.hover\:bg-orange-100:hover { background-color: #fce8bf; }
+/* Soft hover fills do nothing — hovering nav/rows/icons shows only the pointer.
+   `html` prefix raises specificity so these beat Tailwind's later-emitted
+   `:hover` utilities (which otherwise paint a near-white grey in dark mode). */
+html .hover\:bg-orange-50:hover,
+html .hover\:bg-orange-100:hover,
+html .hover\:bg-orange-50\/60:hover,
+html .hover\:bg-emerald-50:hover,
+html .hover\:bg-amber-50:hover,
+html .hover\:bg-red-50:hover,
+html .hover\:bg-rose-50:hover,
+html .hover\:bg-blue-50:hover,
+html .hover\:bg-gray-50:hover,
+html .hover\:bg-gray-100:hover,
+html .hover\:bg-gray-200:hover,
+html .hover\:bg-white\/30:hover { background-color: transparent; }
+/* solid button hovers (darken) stay */
 .hover\:bg-orange-600:hover { background-color: #cc8500; }
 .hover\:bg-orange-700:hover { background-color: #cc8500; }
-.hover\:bg-orange-50\/60:hover { background-color: rgb(254 246 230 / 0.6); }
 .hover\:text-orange-600:hover { color: #cc8500; }
 .hover\:text-orange-700:hover { color: #a36a00; }
 .hover\:border-orange-200:hover { border-color: #f9d98a; }
@@ -163,23 +181,21 @@ html.dark {
 .focus\:border-orange-400:focus { border-color: #f6b32d; }
 .focus\:border-orange-500:focus { border-color: #f19e00; }
 
-/* soft accent tints used for chips/icon blobs — keep readable on dark */
-html.dark .bg-orange-50 { background-color: var(--accent-soft); }
-html.dark .bg-orange-100 { background-color: #3a2517; }
-html.dark .bg-emerald-50 { background-color: #14271d; }
-html.dark .bg-amber-50 { background-color: #2a2410; }
-html.dark .bg-red-50 { background-color: #2a1818; }
-html.dark .bg-rose-50 { background-color: #2a1820; }
+/* Icon-blob / chip tints are flat (transparent) in dark too — just the coloured icon. */
+html.dark .bg-orange-50,
+html.dark .bg-orange-100,
+html.dark .bg-emerald-50,
+html.dark .bg-amber-50,
+html.dark .bg-red-50,
+html.dark .bg-rose-50 { background-color: transparent; }
 /* Grey hover fills (nav, table rows, icon buttons) are disabled in BOTH light and
    dark so hovering shows no background fill anywhere in the admin — just the pointer.
    Active/selected state is indicated by orange text/border instead of a fill. */
-.sidebar-link:hover { background-color: transparent; }
-.hover\:bg-gray-50:hover { background-color: transparent; }
-.hover\:bg-gray-100:hover { background-color: transparent; }
+html .sidebar-link:hover { background-color: transparent; }
 
-html.dark .bg-blue-50 { background-color: #14233a; }
-html.dark .bg-violet-50 { background-color: #241a3a; }
-html.dark .bg-teal-50 { background-color: #112a28; }
+html.dark .bg-blue-50,
+html.dark .bg-violet-50,
+html.dark .bg-teal-50 { background-color: transparent; }
 
 @layer utilities {
   /* Flat orange range slider used across the pricing dashboard */

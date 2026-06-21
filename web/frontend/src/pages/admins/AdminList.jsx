@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Plus, Edit, Trash2, ToggleLeft, ToggleRight, Shield,
   Users, Car, Navigation, CreditCard, FileText, MessageSquare,
   ShieldCheck, BarChart2, Repeat, Building2, CheckCircle, XCircle, Info,
-  Mail, Phone, Calendar, Clock, Eye
+  Mail, Phone, Calendar, Clock, Eye, Bell, Send, X
 } from '@/components/ui/icons'
+import { SendNotificationModal } from '../../components/shared/SendNotificationModal'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -169,6 +170,8 @@ export default function AdminList() {
   const [deleteAdmin, setDeleteAdmin] = useState(null)
   const [viewAdmin, setViewAdmin] = useState(null)
   const [editProfile, setEditProfile] = useState(false)
+  const [selected, setSelected] = useState([]) // [{ id, label }]
+  const [notify, setNotify] = useState(null)   // { recipients }
 
   const profileMutation = useMutation({
     mutationFn: authApi.updateProfile,
@@ -212,6 +215,17 @@ export default function AdminList() {
   })
 
   const admins = data?.data || []
+
+  const selectedIds = useMemo(() => new Set(selected.map((s) => s.id)), [selected])
+  const labelOf = (a) => a.name || a.email || 'Admin'
+  const toggleRow = (a) =>
+    setSelected((prev) => prev.some((s) => s.id === a._id)
+      ? prev.filter((s) => s.id !== a._id)
+      : [...prev, { id: a._id, label: labelOf(a) }])
+  const toggleAllOnPage = () => {
+    const allSelected = admins.length > 0 && admins.every((a) => selectedIds.has(a._id))
+    setSelected(allSelected ? [] : admins.map((a) => ({ id: a._id, label: labelOf(a) })))
+  }
 
   const columns = [
     {
@@ -281,11 +295,21 @@ export default function AdminList() {
             <Eye className="h-4 w-4" />
           </button>
         )
+        const notifyBtn = (
+          <button
+            onClick={(e) => { e.stopPropagation(); setNotify({ recipients: [{ id, label: labelOf(row) }] }) }}
+            className="p-1.5 hover:bg-orange-50 rounded text-gray-400 hover:text-orange-600"
+            title="Send notification"
+          >
+            <Bell className="h-4 w-4" />
+          </button>
+        )
         if (row._id === currentAdmin?._id) return <div className="flex items-center gap-1">{viewBtn}<span className="text-xs text-orange-500 font-medium">You</span></div>
-        if (row.role === 'superadmin') return <div className="flex items-center gap-1">{viewBtn}</div>
+        if (row.role === 'superadmin') return <div className="flex items-center gap-1">{viewBtn}{notifyBtn}</div>
         return (
           <div className="flex items-center gap-1">
             {viewBtn}
+            {notifyBtn}
             <button
               onClick={(e) => { e.stopPropagation(); setEditAdmin(row) }}
               className="p-1.5 hover:bg-orange-50 rounded text-gray-400 hover:text-orange-600"
@@ -365,6 +389,19 @@ export default function AdminList() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+        {selected.length > 0 && (
+          <div className="flex items-center gap-3 px-5 py-2.5 border-b border-gray-50 bg-orange-50/40">
+            <span className="text-sm font-medium text-gray-700">{selected.length} selected</span>
+            <button onClick={() => setSelected([])} className="text-xs text-gray-400 hover:text-red-600 flex items-center gap-1">
+              <X className="h-3 w-3" /> Clear
+            </button>
+            <div className="ml-auto">
+              <Button size="sm" icon={Send} onClick={() => setNotify({ recipients: selected })}>
+                Send notification
+              </Button>
+            </div>
+          </div>
+        )}
         <DataTable
           columns={columns}
           data={admins}
@@ -372,6 +409,10 @@ export default function AdminList() {
           onRowClick={setViewAdmin}
           emptyTitle="No admins found"
           emptyDesc="Create your first admin account"
+          selectable
+          selectedIds={selectedIds}
+          onToggleRow={toggleRow}
+          onToggleAll={toggleAllOnPage}
         />
       </div>
 
@@ -432,6 +473,14 @@ export default function AdminList() {
         message={`Are you sure you want to delete ${deleteAdmin?.name}? This action cannot be undone.`}
         confirmLabel="Delete"
         variant="danger"
+      />
+
+      <SendNotificationModal
+        open={!!notify}
+        onClose={() => setNotify(null)}
+        recipientType="admins"
+        recipients={notify?.recipients || []}
+        onSent={() => setSelected([])}
       />
     </div>
   )

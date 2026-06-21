@@ -16,7 +16,7 @@ import {
     getTransactions, getTransactionById, getTransactionSummary,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
     getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, getSupportAgents, getSupportSettingsAdmin, updateSupportSettings,
-    broadcastNotification, getNotificationHistory,
+    broadcastNotification, getNotificationHistory, getNotificationRecipients,
     getMyAdminNotifications, markMyNotificationRead, markAllMyNotificationsRead,
 } from '../controller/admin.controller.js';
 
@@ -130,6 +130,7 @@ adminRouter.delete('/support/:id/comments/:commentId', deleteTicketComment);
 // Notifications
 adminRouter.post('/notifications/broadcast', broadcastNotification);
 adminRouter.get('/notifications/history', getNotificationHistory);
+adminRouter.get('/notifications/recipients', getNotificationRecipients);
 // My own notifications (e.g. ticket assigned to me)
 adminRouter.get('/notifications/mine', getMyAdminNotifications);
 adminRouter.patch('/notifications/mine/read-all', markAllMyNotificationsRead);
