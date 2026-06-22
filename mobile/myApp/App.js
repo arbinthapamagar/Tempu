@@ -23,8 +23,8 @@ import TripsScreen from './screens/TripsScreen';
 import WalletScreen from './screens/WalletScreen';
 import { colors, isDark } from './theme/colors';
 
-// App is a true-black theme now, so the status bar always needs light icons.
-const STATUS_BAR_STYLE = 'light-content';
+// App is a white (Uber-style light) theme, so the status bar needs dark icons.
+const STATUS_BAR_STYLE = 'dark-content';
 
 // authScreen values:
 // 'role-select' | 'login' | 'register' | 'otp' — unauthenticated

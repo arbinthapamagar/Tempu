@@ -15,6 +15,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { CallIcon } from '../components/Icons';
 import { userApi } from '../api/user.api';
 import { colors } from '../theme/colors';
+import { radius, spacing, type, shadow } from '../theme';
 
 const NOTIFICATION_META = {
   trip_request: { lib: 'ion', name: 'car', color: colors.primary, bg: colors.primarySoft },
@@ -95,6 +96,7 @@ export default function InboxScreen() {
     <View style={styles.root}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Inbox</Text>
+        <Text style={styles.headerSubtitle}>Your alerts and trip updates</Text>
       </View>
 
       <View style={styles.tabs}>
@@ -125,7 +127,13 @@ export default function InboxScreen() {
           loading ? (
             <ActivityIndicator color={colors.primary} style={{ marginTop: 32 }} />
           ) : notifications.length === 0 ? (
-            <Text style={styles.empty}>No notifications yet.</Text>
+            <View style={styles.emptyWrap}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="notifications-off-outline" size={26} color={colors.textFaint} />
+              </View>
+              <Text style={styles.emptyTitle}>No notifications yet</Text>
+              <Text style={styles.empty}>Your trip alerts and updates will appear here.</Text>
+            </View>
           ) : (
             notifications.map((n) => {
               const meta = NOTIFICATION_META[n.type] || NOTIFICATION_META.general;
@@ -135,12 +143,13 @@ export default function InboxScreen() {
                   onPress={() => !n.isRead && markRead(n._id)}
                   style={[styles.notifRow, !n.isRead && styles.notifUnread]}
                 >
+                  {!n.isRead && <View style={styles.notifUnreadBar} />}
                   <View style={[styles.notifIcon, { backgroundColor: meta.bg }]}>
                     <NotificationIcon type={n.type} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={styles.notifTopRow}>
-                      <Text style={styles.notifTitle}>{n.title}</Text>
+                      <Text style={styles.notifTitle} numberOfLines={1}>{n.title}</Text>
                       <Text style={styles.notifTime}>{timeAgo(n.createdAt)}</Text>
                     </View>
                     <Text style={styles.notifBody}>{n.body}</Text>
@@ -153,7 +162,13 @@ export default function InboxScreen() {
         )}
 
         {tab === 'messages' && (
-          <Text style={styles.empty}>In-trip chat available during active rides.</Text>
+          <View style={styles.emptyWrap}>
+            <View style={styles.emptyIcon}>
+              <Ionicons name="chatbubble-ellipses-outline" size={26} color={colors.textFaint} />
+            </View>
+            <Text style={styles.emptyTitle}>No messages</Text>
+            <Text style={styles.empty}>In-trip chat available during active rides.</Text>
+          </View>
         )}
       </ScrollView>
     </View>
@@ -162,33 +177,73 @@ export default function InboxScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  header: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
-  headerTitle: { color: colors.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
+  header: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.xs },
+  headerTitle: { ...type.display, color: colors.text },
+  headerSubtitle: { ...type.body, color: colors.textMuted, marginTop: spacing.xs },
 
-  tabs: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingVertical: 12 },
-  tab: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.surfaceMuted },
-  tabActive: { backgroundColor: colors.primary },
-  tabText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  tabs: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
+  tab: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  tabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  tabText: { ...type.caption, color: colors.textMuted },
   tabTextActive: { color: '#ffffff' },
 
-  scroll: { paddingHorizontal: 20, paddingBottom: 28 },
-  empty: { color: colors.textMuted, textAlign: 'center', marginTop: 36, fontSize: 14 },
+  scroll: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl + spacing.xs },
+
+  emptyWrap: { alignItems: 'center', marginTop: spacing.xxxl + spacing.lg, paddingHorizontal: spacing.xl },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  emptyTitle: { ...type.h3, color: colors.text, marginBottom: spacing.xs },
+  empty: { ...type.body, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
 
   notifRow: {
     flexDirection: 'row',
-    gap: 12,
-    padding: 14,
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.lg,
+    paddingRight: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: 10,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+    ...shadow.card,
   },
-  notifUnread: { backgroundColor: colors.primarySoft, borderColor: colors.border },
-  notifIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  notifUnreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, marginLeft: 4 },
-  notifTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  notifTitle: { color: colors.text, fontSize: 14, fontWeight: '700' },
-  notifTime: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
-  notifBody: { color: colors.textMuted, fontSize: 13, marginTop: 4, lineHeight: 18 },
+  notifUnread: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
+  notifUnreadBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: colors.primary,
+  },
+  notifIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notifUnreadDot: { width: 8, height: 8, borderRadius: radius.pill, backgroundColor: colors.primary, marginLeft: spacing.xs },
+  notifTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
+  notifTitle: { ...type.bodyBold, color: colors.text, flex: 1 },
+  notifTime: { ...type.micro, color: colors.textFaint },
+  notifBody: { ...type.body, color: colors.textMuted, marginTop: spacing.xs, lineHeight: 18 },
 });

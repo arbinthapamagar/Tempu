@@ -28,7 +28,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { userApi } from '../api/user.api';
 import { colors } from '../theme/colors';
-import { type } from '../theme';
+import { type, radius, spacing } from '../theme';
 import { getThemeMode, setThemeMode } from '../theme/themeStore';
 import { reloadApp } from '../theme/reload';
 
@@ -308,27 +308,26 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
           )}
         </View>
 
-        <View style={styles.statsRow}>
+        <View style={styles.statsGrid}>
           <Stat
-            icon={<StarIcon size={16} color="#f5b400" />}
+            icon={<StarIcon size={18} color={colors.warn} />}
             value={(user?.rating?.average ?? 0).toFixed(2)}
             label={`${user?.rating?.total ?? 0} ratings`}
           />
-          <View style={styles.statsDivider} />
           <Stat
-            icon={
-              <Ionicons name="navigate" size={14} color={colors.primary} />
-            }
-            value={0}
+            icon={<Ionicons name="navigate" size={16} color={colors.primary} />}
+            value={isDriver ? String(driverProfile?.totalRides ?? 0) : '0'}
             label="Trips"
           />
-          <View style={styles.statsDivider} />
           <Stat
-            icon={
-              <Ionicons name="calendar" size={14} color="#5c6fff" />
-            }
-            value={formatDate(user?.createdAt).split(' ')[2]}
-            label="Member"
+            icon={<Ionicons name="wallet" size={16} color={colors.primary} />}
+            value={`Rs ${profile.walletBalance.toLocaleString()}`}
+            label="Wallet"
+          />
+          <Stat
+            icon={<Ionicons name="calendar" size={16} color={colors.textMuted} />}
+            value={formatDate(user?.createdAt).split(' ')[2] || '—'}
+            label="Member since"
           />
         </View>
 
@@ -577,10 +576,6 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
               <Text style={styles.sosBtnText}>{sosBusy ? 'Sending…' : 'Emergency SOS'}</Text>
             </Pressable>
           </View>
-        </Section>
-
-        <Section title="Appearance">
-          <ThemePicker />
         </Section>
 
         <Section title="Security & support">
@@ -1228,10 +1223,12 @@ function LinkRow({ label, last, onPress, badge }) {
 
 function Stat({ value, label, icon }) {
   return (
-    <View style={styles.stat}>
+    <View style={styles.statCard}>
       {icon ? <View style={styles.statIcon}>{icon}</View> : null}
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
+      <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
     </View>
   );
 }
@@ -1295,12 +1292,12 @@ const styles = StyleSheet.create({
 
   hero: {
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 28,
-    paddingBottom: 24,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxxl,
+    paddingBottom: spacing.xxl,
     marginHorizontal: 16,
-    marginTop: 4,
-    borderRadius: 24,
+    marginTop: spacing.xs,
+    borderRadius: radius.xxl,
     backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1325,25 +1322,25 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     backgroundColor: 'rgba(251, 122, 60, 0.08)',
   },
-  avatarWrap: { position: 'relative', marginBottom: 14 },
+  avatarWrap: { position: 'relative', marginBottom: spacing.lg },
   avatarRing: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 116,
+    height: 116,
+    borderRadius: 58,
     backgroundColor: colors.surface,
-    padding: 4,
+    padding: 5,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: colors.primary,
-    shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 14,
+    elevation: 8,
   },
   avatar: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
+    width: 106,
+    height: 106,
+    borderRadius: 53,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1352,7 +1349,7 @@ const styles = StyleSheet.create({
   avatarImage: { width: '100%', height: '100%' },
   avatarText: {
     color: '#ffffff',
-    fontSize: 32,
+    fontSize: 38,
     fontWeight: '800',
     letterSpacing: -1,
   },
@@ -1384,9 +1381,9 @@ const styles = StyleSheet.create({
   },
   name: {
     color: colors.text,
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '800',
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
   },
   heroSub: {
     color: colors.textMuted,
@@ -1472,34 +1469,46 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
 
-  statsRow: {
-    marginTop: 14,
+  statsGrid: {
+    marginTop: spacing.lg,
     marginHorizontal: 16,
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  statCard: {
+    width: '47%',
+    flexGrow: 1,
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 20,
-    paddingVertical: 16,
+    borderRadius: radius.xxl,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.sm,
   },
-  stat: { flex: 1, alignItems: 'center' },
-  statIcon: { marginBottom: 4 },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
   statValue: {
-    color: colors.text,
-    fontSize: 17,
+    color: colors.primary,
+    fontSize: 20,
     fontWeight: '800',
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   statLabel: {
     color: colors.textMuted,
     fontSize: 11,
-    marginTop: 2,
+    marginTop: 3,
     fontWeight: '600',
-  },
-  statsDivider: {
-    width: 1,
-    backgroundColor: colors.border,
-    marginVertical: 6,
+    letterSpacing: 0.2,
   },
 
   section: {
@@ -1524,7 +1533,7 @@ const styles = StyleSheet.create({
   },
   sectionBody: {
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: radius.xxl,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
@@ -1534,8 +1543,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -1565,8 +1574,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 16,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
     backgroundColor: colors.primarySoft,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -1585,10 +1594,10 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   topUpBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     backgroundColor: colors.primary,
-    borderRadius: 14,
+    borderRadius: radius.pill,
   },
   topUpText: { color: '#ffffff', fontSize: 13, fontWeight: '700' },
 
@@ -1623,9 +1632,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   savedIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: radius.pill,
     backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1658,16 +1667,21 @@ const styles = StyleSheet.create({
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    padding: spacing.md,
+    gap: spacing.md,
   },
   metric: {
-    width: '50%',
-    paddingHorizontal: 6,
-    paddingVertical: 8,
+    width: '47%',
+    flexGrow: 1,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  metricValue: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  metricLabel: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  metricValue: { color: colors.primary, fontSize: 18, fontWeight: '800' },
+  metricLabel: { color: colors.textMuted, fontSize: 12, marginTop: 3, fontWeight: '600' },
 
   docRow: {
     flexDirection: 'row',
@@ -1712,10 +1726,10 @@ const styles = StyleSheet.create({
   },
 
   signOutBtn: {
-    marginTop: 28,
+    marginTop: spacing.xxl,
     marginHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 16,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.dangerSoft,
     backgroundColor: colors.dangerSoft,
@@ -1723,23 +1737,23 @@ const styles = StyleSheet.create({
   },
   signOutText: { color: colors.danger, fontSize: 15, fontWeight: '700' },
 
-  safetyRow: { flexDirection: 'row', gap: 12, padding: 14 },
-  themeRow: { flexDirection: 'row', gap: 10, padding: 14 },
+  safetyRow: { flexDirection: 'row', gap: spacing.md, padding: spacing.md },
+  themeRow: { flexDirection: 'row', gap: spacing.md, padding: spacing.md },
   themeOpt: {
-    flex: 1, alignItems: 'center', gap: 6, paddingVertical: 14,
+    flex: 1, alignItems: 'center', gap: 6, paddingVertical: spacing.lg,
     backgroundColor: colors.surfaceMuted, borderWidth: 1.5, borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: radius.xl,
   },
   themeOptActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   themeOptText: { ...type.caption, color: colors.textMuted },
   supportBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: colors.primarySoft, borderRadius: 14, paddingVertical: 14,
+    backgroundColor: colors.primarySoft, borderRadius: radius.pill, paddingVertical: spacing.lg,
   },
   supportBtnText: { color: colors.primary, fontSize: 14, fontWeight: '800' },
   sosBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: colors.danger, borderRadius: 14, paddingVertical: 14,
+    backgroundColor: colors.danger, borderRadius: radius.pill, paddingVertical: spacing.lg,
   },
   sosBtnText: { color: '#fff', fontSize: 14, fontWeight: '800' },
   sosWarn: { ...type.body, color: colors.textMuted, marginBottom: 14 },
@@ -1980,8 +1994,8 @@ const styles = StyleSheet.create({
     gap: 12,
     marginHorizontal: 16,
     marginTop: 14,
-    padding: 16,
-    borderRadius: 20,
+    padding: spacing.xl,
+    borderRadius: radius.xxl,
     backgroundColor: colors.warnSoft,
     borderWidth: 1.5,
     borderColor: colors.warn,
@@ -2008,8 +2022,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginHorizontal: 16,
     marginTop: 14,
-    padding: 16,
-    borderRadius: 20,
+    padding: spacing.xl,
+    borderRadius: radius.xxl,
     backgroundColor: colors.primary,
   },
   switchModeCardAlt: {
@@ -2018,8 +2032,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginHorizontal: 16,
     marginTop: 14,
-    padding: 16,
-    borderRadius: 20,
+    padding: spacing.xl,
+    borderRadius: radius.xxl,
     backgroundColor: colors.primarySoft,
     borderWidth: 1.5,
     borderColor: colors.primary,
@@ -2036,8 +2050,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginHorizontal: 16,
     marginTop: 14,
-    padding: 16,
-    borderRadius: 20,
+    padding: spacing.xl,
+    borderRadius: radius.xxl,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1.5,
     borderColor: colors.border,

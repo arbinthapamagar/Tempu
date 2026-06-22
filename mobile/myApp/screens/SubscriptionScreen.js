@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { userApi } from '../api/user.api';
 import { colors } from '../theme/colors';
+import { radius, spacing, type, shadow } from '../theme';
 
 const PLAN_INFO = {
   parent: {
@@ -173,16 +174,22 @@ function ActiveSubscription({ sub, onPause, onResume, onCancel }) {
     <View>
       <View style={styles.heroCard}>
         <View style={styles.heroTopRow}>
-          <Text style={styles.heroTitle}>{info.name || sub.plan}</Text>
+          <View style={styles.heroPlanPill}>
+            <Text style={styles.heroPlanPillText}>{info.tagline ? 'Active plan' : 'Subscription'}</Text>
+          </View>
           <View style={styles.heroStatus}>
             <View style={styles.heroStatusDot} />
             <Text style={styles.heroStatusText}>{sub.status}</Text>
           </View>
         </View>
+        <Text style={styles.heroTitle}>{info.name || sub.plan}</Text>
+        {!!info.tagline && <Text style={styles.heroTagline}>{info.tagline}</Text>}
         <Text style={styles.heroPrice}>
           Rs {sub.monthlyPrice?.toLocaleString()} <Text style={styles.heroPer}>/ month</Text>
         </Text>
-        <Text style={styles.heroRenews}>Active until {formatDate(sub.endDate)}</Text>
+        <View style={styles.heroRenewsPill}>
+          <Text style={styles.heroRenews}>Active until {formatDate(sub.endDate)}</Text>
+        </View>
       </View>
 
       {sub.plan === 'parent' && sub.childName && (
@@ -278,63 +285,65 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
   },
-  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
+  backBtn: { width: 40, height: 40, borderRadius: radius.pill, backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   backArrow: { width: 10, height: 10, borderLeftWidth: 2, borderBottomWidth: 2, borderColor: colors.text, transform: [{ rotate: '45deg' }], marginLeft: 4 },
-  headerTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
+  headerTitle: { ...type.h2, color: colors.text },
 
-  tabs: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
-  tab: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.surfaceMuted },
-  tabActive: { backgroundColor: colors.primary },
-  tabText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  tabTextActive: { color: '#ffffff' },
+  tabs: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  tab: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm + 2, borderRadius: radius.pill, backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border },
+  tabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  tabText: { ...type.caption, color: colors.textMuted },
+  tabTextActive: { color: '#fff' },
 
-  scroll: { paddingHorizontal: 16, paddingBottom: 40 },
+  scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl + spacing.sm, paddingTop: spacing.xs },
 
-  emptyWrap: { alignItems: 'center', paddingTop: 60 },
-  emptyTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  emptySub: { color: colors.textMuted, fontSize: 14, marginTop: 8 },
-  browseCta: { marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: colors.primary, borderRadius: 999 },
-  browseCtaText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  emptyWrap: { alignItems: 'center', paddingTop: 72, paddingHorizontal: spacing.lg },
+  emptyTitle: { ...type.h1, color: colors.text },
+  emptySub: { ...type.body, color: colors.textMuted, marginTop: spacing.sm, textAlign: 'center' },
+  browseCta: { marginTop: spacing.xl, paddingHorizontal: spacing.xxl, paddingVertical: spacing.md + 2, backgroundColor: colors.primary, borderRadius: radius.pill },
+  browseCtaText: { ...type.bodyBold, color: '#fff' },
 
-  heroCard: { backgroundColor: colors.primary, borderRadius: 18, padding: 20, marginBottom: 20 },
+  heroCard: { backgroundColor: colors.primary, borderRadius: radius.xxl, padding: spacing.xl, marginBottom: spacing.xl, ...shadow.fab },
   heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  heroTitle: { color: '#ffffff', fontSize: 20, fontWeight: '800' },
-  heroStatus: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)' },
-  heroStatusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.surface },
-  heroStatusText: { color: '#ffffff', fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
-  heroPrice: { color: '#ffffff', fontSize: 30, fontWeight: '800', marginTop: 10, letterSpacing: -1 },
-  heroPer: { fontSize: 14, fontWeight: '600' },
-  heroRenews: { color: '#dfeee5', fontSize: 13, marginTop: 4 },
+  heroPlanPill: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 1, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.20)' },
+  heroPlanPillText: { ...type.eyebrow, color: '#fff' },
+  heroStatus: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2, paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 1, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.20)' },
+  heroStatusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#fff' },
+  heroStatusText: { ...type.micro, color: '#fff', textTransform: 'capitalize' },
+  heroTitle: { ...type.display, color: '#fff', marginTop: spacing.lg },
+  heroTagline: { ...type.body, color: 'rgba(255,255,255,0.82)', marginTop: spacing.xs },
+  heroPrice: { color: '#fff', fontSize: 32, fontFamily: type.display.fontFamily, marginTop: spacing.md, letterSpacing: -1 },
+  heroPer: { fontSize: 14, fontFamily: type.bodyBold.fontFamily },
+  heroRenewsPill: { alignSelf: 'flex-start', marginTop: spacing.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 2, borderRadius: radius.pill, backgroundColor: 'rgba(0,0,0,0.18)' },
+  heroRenews: { ...type.caption, color: '#fff' },
 
-  sectionTitle: { color: colors.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', marginTop: 16, marginBottom: 8 },
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 20, overflow: 'hidden' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.divider },
+  sectionTitle: { ...type.eyebrow, color: colors.textMuted, marginTop: spacing.xl, marginBottom: spacing.md },
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xl, overflow: 'hidden' },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.divider },
   rowLast: { borderBottomWidth: 0 },
-  rowLabel: { color: colors.textMuted, fontSize: 13 },
-  rowValue: { color: colors.text, fontSize: 14, fontWeight: '600', maxWidth: '60%', textTransform: 'capitalize' },
+  rowLabel: { ...type.small, color: colors.textMuted },
+  rowValue: { ...type.bodyBold, color: colors.text, maxWidth: '60%', textTransform: 'capitalize' },
 
-  pauseBtn: { marginTop: 24, paddingVertical: 14, borderRadius: 16, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
-  pauseBtnText: { color: colors.text, fontSize: 14, fontWeight: '700' },
-  cancelBtn: { marginTop: 10, paddingVertical: 14, borderRadius: 16, backgroundColor: colors.dangerSoft, alignItems: 'center' },
-  cancelBtnText: { color: colors.danger, fontSize: 14, fontWeight: '700' },
+  pauseBtn: { marginTop: spacing.xxl, paddingVertical: spacing.lg, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceMuted, alignItems: 'center' },
+  pauseBtnText: { ...type.bodyBold, color: colors.text },
+  cancelBtn: { marginTop: spacing.md, paddingVertical: spacing.lg, borderRadius: radius.pill, backgroundColor: colors.dangerSoft, alignItems: 'center' },
+  cancelBtnText: { ...type.bodyBold, color: colors.danger },
 
-  planCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 18, marginBottom: 14 },
-  planBadge: { width: 44, height: 28, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  planBadgeText: { color: '#ffffff', fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
-  planName: { color: colors.text, fontSize: 18, fontWeight: '800' },
-  planTag: { color: colors.textMuted, fontSize: 13, marginTop: 4 },
-  planPrice: { color: colors.text, fontSize: 28, fontWeight: '800', marginTop: 12, letterSpacing: -0.5 },
-  planPer: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
-  featureList: { marginTop: 12, gap: 8 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  featureCheck: { color: colors.primary, fontSize: 14, fontWeight: '800', width: 16 },
-  featureText: { color: colors.text, fontSize: 13, flex: 1 },
-  subscribeBtn: { marginTop: 14, paddingVertical: 13, borderRadius: 999, backgroundColor: colors.primary, alignItems: 'center' },
-  subscribeBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  planCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xxl, padding: spacing.xl, marginBottom: spacing.lg, ...shadow.card },
+  planBadge: { alignSelf: 'flex-start', paddingHorizontal: spacing.md, height: 30, borderRadius: radius.pill, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
+  planBadgeText: { ...type.micro, color: colors.primary },
+  planName: { ...type.h1, color: colors.text },
+  planTag: { ...type.body, color: colors.textMuted, marginTop: spacing.xs },
+  planPrice: { color: colors.text, fontSize: 30, fontFamily: type.display.fontFamily, marginTop: spacing.md, letterSpacing: -0.5 },
+  planPer: { ...type.caption, color: colors.textMuted },
+  featureList: { marginTop: spacing.lg, gap: spacing.md },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  featureCheck: { color: colors.primary, fontSize: 12, fontFamily: type.bodyBold.fontFamily, width: 22, height: 22, lineHeight: 22, textAlign: 'center', borderRadius: radius.pill, backgroundColor: colors.primarySoft, overflow: 'hidden' },
+  featureText: { ...type.small, color: colors.text, flex: 1 },
+  subscribeBtn: { marginTop: spacing.xl, paddingVertical: spacing.md + 2, borderRadius: radius.pill, backgroundColor: colors.primary, alignItems: 'center' },
+  subscribeBtnText: { ...type.bodyBold, color: '#fff' },
 });
