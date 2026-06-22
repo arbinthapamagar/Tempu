@@ -65,7 +65,7 @@ function getAnalyticsRange(query) {
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-//  Auth 
+// Auth
 
 const login = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
@@ -585,7 +585,7 @@ const getAnalyticsVehicleDistribution = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, formatted, 'Vehicle distribution fetched'));
 });
 
-// ─── Users ────────────────────────────────────────────────────────────────────
+// Users
 
 const getUsers = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.manageUsers) throw new apiError(403, 'Insufficient permissions');
@@ -696,7 +696,7 @@ const getUserTransactions = asyncHandler(async (req, res) => {
     );
 });
 
-// ─── Drivers ──────────────────────────────────────────────────────────────────
+// Drivers
 
 const getDrivers = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.manageDrivers) throw new apiError(403, 'Insufficient permissions');
@@ -870,7 +870,7 @@ const getDriverEarnings = asyncHandler(async (req, res) => {
     }, 'Driver earnings fetched'));
 });
 
-// ─── Driver payouts (grants & withdrawals) ─────────────────────────────────────
+// Driver payouts (grants & withdrawals)
 
 // Admin grants / credits money to a driver's withdrawable wallet balance.
 const grantDriverMoney = asyncHandler(async (req, res) => {
@@ -1011,7 +1011,7 @@ const processWithdrawal = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, withdrawal, `Withdrawal ${withdrawal.status}`));
 });
 
-// ─── Pricing control ───────────────────────────────────────────────────────────
+// Pricing control
 
 // Returns the singleton pricing config, creating it with defaults on first access.
 const getPricing = asyncHandler(async (req, res) => {
@@ -1076,7 +1076,7 @@ const updatePricing = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, pricing, 'Pricing updated'));
 });
 
-// ─── Emergency / SOS ───────────────────────────────────────────────────────────
+// Emergency / SOS
 
 const getEmergencies = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
@@ -1197,7 +1197,7 @@ const updateEmergency = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, emergency, `Emergency ${status}`));
 });
 
-// ─── Documents ────────────────────────────────────────────────────────────────
+// Documents
 
 const getAllDocuments = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.verifyDocuments) throw new apiError(403, 'Insufficient permissions');
@@ -1299,7 +1299,7 @@ const deleteDocument = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, { _id: req.params.id }, 'Document deleted'));
 });
 
-// ─── Trips ────────────────────────────────────────────────────────────────────
+// Trips
 
 const getTrips = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.manageTrips) throw new apiError(403, 'Insufficient permissions');
@@ -1377,7 +1377,7 @@ const cancelTripAdmin = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, trip, 'Trip cancelled'));
 });
 
-// ─── Transactions ─────────────────────────────────────────────────────────────
+// Transactions
 
 const getTransactions = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.managePayments) throw new apiError(403, 'Insufficient permissions');
@@ -1448,7 +1448,7 @@ const getTransactionSummary = asyncHandler(async (req, res) => {
     }, 'Transaction summary fetched'));
 });
 
-// ─── Subscriptions ────────────────────────────────────────────────────────────
+// Subscriptions
 
 const getSubscriptions = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.manageSubscriptions) throw new apiError(403, 'Insufficient permissions');
@@ -1516,7 +1516,7 @@ const assignDriverToSubscription = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, subscription, 'Driver assigned to subscription'));
 });
 
-// ─── Support ──────────────────────────────────────────────────────────────────
+// Support
 
 const getSupportTickets = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
@@ -1685,7 +1685,7 @@ const assignTicket = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, ticket, 'Ticket assigned'));
 });
 
-// ─── Admin's own in-app notifications ─────────────────────────────────────────
+// Admin's own in-app notifications
 const getMyAdminNotifications = asyncHandler(async (req, res) => {
     const [items, unread] = await Promise.all([
         AdminNotification.find({ adminId: req.admin._id }).sort({ createdAt: -1 }).limit(30),
@@ -1837,6 +1837,7 @@ const deleteTicket = asyncHandler(async (req, res) => {
 });
 
 // ─── Notifications ────────────────────────────────────────────────────────────
+// Notifications
 
 // Send a notification to a group audience AND/OR a specific bulk-selected set of
 // users, drivers and admins. Body:
@@ -1954,7 +1955,7 @@ const getNotificationHistory = asyncHandler(async (req, res) => {
     );
 });
 
-// ─── DEV/TEST ONLY: seed a dummy pending document so the admin queue has data ──
+// DEV/TEST ONLY: seed a dummy pending document so the admin queue has data
 // Creates (or reuses) a test driver + user and inserts one pending Document.
 // Disabled in production. Call: POST /api/v1/admin/documents/seed-test
 const seedTestDocument = asyncHandler(async (req, res) => {
