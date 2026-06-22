@@ -17,18 +17,18 @@ import { userApi } from '../api/user.api';
 import { colors } from '../theme/colors';
 
 const NOTIFICATION_META = {
-  trip_request: { lib: 'ion', name: 'car', color: '#ea580c', bg: '#fff2e8' },
+  trip_request: { lib: 'ion', name: 'car', color: '#1f242b', bg: '#fff2e8' },
   bid_received: { lib: 'ion', name: 'pricetag', color: '#5c6fff', bg: '#eaecff' },
-  bid_accepted: { lib: 'ion', name: 'checkmark-circle', color: '#ea580c', bg: '#fff2e8' },
+  bid_accepted: { lib: 'ion', name: 'checkmark-circle', color: '#1f242b', bg: '#fff2e8' },
   driver_arriving: { lib: 'ion', name: 'location', color: '#e0464a', bg: '#fbecec' },
   trip_started: { lib: 'mci', name: 'road-variant', color: '#5c6fff', bg: '#eaecff' },
-  trip_completed: { lib: 'ion', name: 'flag', color: '#ea580c', bg: '#fff2e8' },
+  trip_completed: { lib: 'ion', name: 'flag', color: '#1f242b', bg: '#fff2e8' },
   trip_cancelled: { lib: 'ion', name: 'close-circle', color: '#c43d3d', bg: '#fbecec' },
   subscription_alert: { lib: 'mci', name: 'school', color: '#c98a2a', bg: '#fbf1de' },
-  document_verified: { lib: 'ion', name: 'shield-checkmark', color: '#ea580c', bg: '#fff2e8' },
+  document_verified: { lib: 'ion', name: 'shield-checkmark', color: '#1f242b', bg: '#fff2e8' },
   document_rejected: { lib: 'ion', name: 'warning', color: '#c98a2a', bg: '#fbf1de' },
   payment: { lib: 'ion', name: 'wallet', color: '#c98a2a', bg: '#fbf1de' },
-  account_approved: { lib: 'ion', name: 'checkmark-circle', color: '#ea580c', bg: '#fff2e8' },
+  account_approved: { lib: 'ion', name: 'checkmark-circle', color: '#1f242b', bg: '#fff2e8' },
   account_suspended: { lib: 'ion', name: 'ban', color: '#c43d3d', bg: '#fbecec' },
   account_rejected: { lib: 'ion', name: 'close-circle', color: '#c43d3d', bg: '#fbecec' },
   general: { lib: 'ion', name: 'notifications', color: '#5c6fff', bg: '#eaecff' },

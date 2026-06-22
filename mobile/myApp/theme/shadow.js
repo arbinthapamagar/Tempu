@@ -1,10 +1,11 @@
 export const shadow = {
+  // Flat — cards sit on hairline borders, not drop shadows (matches the admin).
   card: {
     shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOpacity: 0.03,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+    elevation: 0,
   },
   sheet: {
     shadowColor: '#000',

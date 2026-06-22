@@ -1,31 +1,32 @@
 import { resolveScheme } from './themeStore';
 
-// "Inked workshop ledger" — warm paper + ink in light; warm charcoal in dark.
-// Tempu orange throughout. Text colors are tuned for contrast in each scheme.
+// Simple, flat, "human-made" — neutral white/paper with near-black ink text and
+// a calm ink accent (matches the redesigned admin: no bright brand orange, no
+// navy-tinted greys). Semantic colours (danger/warn/success) are kept.
 const lightColors = {
-  primary: '#ea580c',
-  primaryDark: '#c2410c',
-  primarySoft: '#fde7d3',
+  primary: '#1f242b',       // ink — buttons / CTAs
+  primaryDark: '#0b0d11',
+  primarySoft: '#f0f0f1',   // light neutral fill (chips, active rows)
 
-  bg: '#f4eee3',
-  background: '#f4eee3',
-  surface: '#fffcf7',
-  surfaceMuted: '#efe7d8',
-  surfaceDark: '#241f1a',
+  bg: '#f4f4f5',
+  background: '#f4f4f5',
+  surface: '#ffffff',
+  surfaceMuted: '#f0f0f1',
+  surfaceDark: '#18181b',
 
-  text: '#241f1a',
-  textMuted: '#7b7066',
-  textFaint: '#a99e90',
+  text: '#0b0d11',          // near-black
+  textMuted: '#5b5f66',
+  textFaint: '#9b9ba1',
 
-  border: '#e4dccd',
-  divider: '#ece3d4',
+  border: '#e7e7e9',
+  divider: '#efeff0',
 
   danger: '#dc2626',
-  dangerSoft: '#fbe3e0',
-  warn: '#c2630e',
-  warnSoft: '#fbe6d4',
+  dangerSoft: '#fdeaea',
+  warn: '#b45309',
+  warnSoft: '#f6ecdf',
   success: '#15803d',
-  accent: '#ea580c',
+  accent: '#1f242b',
 };
 
 const darkColors = {

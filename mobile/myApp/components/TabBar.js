@@ -10,7 +10,7 @@ import {
 } from './Icons';
 import { colors } from '../theme/colors';
 
-const ACTIVE = '#ea580c';
+const ACTIVE = '#1f242b';
 const TABS = [
   { id: 'home', label: 'Home', Icon: HomeIcon, color: ACTIVE },
   { id: 'trips', label: 'Trips', Icon: DocIcon, color: ACTIVE },
