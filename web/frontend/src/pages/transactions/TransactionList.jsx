@@ -161,7 +161,7 @@ export default function TransactionList() {
         <StatsCard title="Failed" value={formatCurrency(summary.failed || 0)} icon={AlertCircle} color="red" />
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+      <div className="bg-white border border-gray-200">
         <div className="px-5 pt-4">
           <Tabs tabs={tabs} active={statusTab} onChange={(v) => { setStatusTab(v); setPage(1) }} />
         </div>

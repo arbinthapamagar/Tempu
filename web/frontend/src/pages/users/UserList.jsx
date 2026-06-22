@@ -271,7 +271,7 @@ export default function UserList() {
         }
       />
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+      <div className="bg-white border border-gray-200">
         {/* Filters */}
         <div className="px-5 py-4 border-b border-gray-50">
           <FilterBar

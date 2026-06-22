@@ -96,7 +96,7 @@ export default function Notifications() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Compose form */}
         <div className="lg:col-span-2 space-y-5">
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <div className="bg-white border border-gray-200 p-4">
             <h3 className="text-sm font-semibold text-gray-900 mb-4">Compose Notification</h3>
             <form onSubmit={handleSubmit((v) => sendMutation.mutate(v))} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -156,7 +156,7 @@ export default function Notifications() {
 
           {/* Sent history */}
           {sent.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <div className="bg-white border border-gray-200 p-4">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Recently Sent ({sent.length})</h3>
               <div className="space-y-3">
                 {sent.map((n, i) => (
@@ -177,7 +177,7 @@ export default function Notifications() {
 
         {/* Quick templates */}
         <div className="space-y-5">
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <div className="bg-white border border-gray-200 p-4">
             <h3 className="text-sm font-semibold text-gray-900 mb-4">Quick Templates</h3>
             <div className="space-y-2">
               {QUICK_TEMPLATES.map((tpl, i) => (

@@ -6,6 +6,7 @@ import {
   Search, Mic, Paperclip, Phone, Video, MessageSquare,
 } from '@/components/ui/icons'
 import { cn } from '../../utils/cn'
+import { PageHeader } from '../../components/shared/PageHeader'
 import { Avatar } from '../../components/ui/Avatar'
 import { supportApi } from '../../api/support.api'
 import { useAuthStore } from '../../store/authStore'
@@ -251,8 +252,8 @@ function ConversationList() {
 export default function SupportInbox() {
   return (
     <div>
-      <h1 className="text-3xl font-extrabold tracking-tight text-orange-600 mb-4">Support</h1>
-      <div className="h-[calc(100vh-12rem)] min-h-[480px] flex border border-gray-200 overflow-hidden bg-white">
+      <PageHeader title="Support" description="Help riders and drivers, and keep every conversation in one place." />
+      <div className="h-[calc(100vh-9rem)] min-h-[480px] flex border border-gray-200 overflow-hidden bg-white">
         <FolderRail />
         <ConversationList />
         <Outlet />

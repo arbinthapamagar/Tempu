@@ -210,7 +210,7 @@ export default function DriverDetail() {
       </div>
 
       {/* Driver card */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-6">
+      <div className="bg-white border border-gray-200 p-4 mb-6">
         <div className="flex items-start gap-3">
           <Avatar src={user?.avatarUrl} name={user?.name} size="xl" />
           <div className="flex-1">
@@ -246,7 +246,7 @@ export default function DriverDetail() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+      <div className="bg-white border border-gray-200">
         <div className="px-6 pt-4">
           <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
         </div>
