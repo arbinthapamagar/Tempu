@@ -23,8 +23,11 @@ const CATEGORY_LABELS = {
   account_issue: 'Account Issue', other: 'Other',
 }
 
+const IMAGE_RE = /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)(\?|$)/i
+
 function MessageAttachment({ msg, isAdmin }) {
   if (!msg.attachmentUrl) return null
+
   if (msg.attachmentType === 'audio') {
     return (
       <div className="mt-2">
@@ -35,14 +38,35 @@ function MessageAttachment({ msg, isAdmin }) {
       </div>
     )
   }
+
+  // Render images inline; click to open the full-size original in a new tab.
+  const isImage = IMAGE_RE.test(msg.attachmentName || '') || IMAGE_RE.test(msg.attachmentUrl)
+  if (isImage) {
+    return (
+      <a href={msg.attachmentUrl} target="_blank" rel="noreferrer" className="mt-2 block" title="Open full image">
+        <img
+          src={msg.attachmentUrl}
+          alt={msg.attachmentName || 'Image attachment'}
+          loading="lazy"
+          className="max-w-[240px] max-h-72 w-auto rounded-lg border border-black/10 object-cover"
+        />
+      </a>
+    )
+  }
+
+  // Any other file (PDF, doc, etc.) → a clear download chip.
   return (
     <a
       href={msg.attachmentUrl}
       target="_blank"
       rel="noreferrer"
-      className={`mt-2 inline-flex items-center gap-1.5 text-xs underline ${isAdmin ? 'text-gray-200' : 'text-gray-700'}`}
+      className={cn(
+        'mt-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs max-w-full',
+        isAdmin ? 'border-white/30 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+      )}
     >
-      <Paperclip className="h-3 w-3" /> {msg.attachmentName || 'Download attachment'}
+      <Paperclip className="h-3.5 w-3.5 shrink-0" />
+      <span className="truncate">{msg.attachmentName || 'Download attachment'}</span>
     </a>
   )
 }
@@ -82,12 +106,22 @@ export default function TicketChat() {
   const [editBody, setEditBody] = useState('')
 
   const callRef = useRef(null)
+  const messagesEndRef = useRef(null)
 
   const { data: ticketRes, isLoading } = useQuery({
     queryKey: ['ticket', id],
     queryFn: () => supportApi.get(id),
     refetchInterval: 5000,
   })
+
+  // Keep the latest message in view so it never hides behind the composer.
+  // Derived from the raw query data so this hook stays ABOVE the early returns
+  // below (hooks must run on every render).
+  const msgCount =
+    (ticketRes?.data?.messages?.length || 0) + (ticketRes?.data?.comments?.length || 0)
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [msgCount, ticketRes?.data?._id])
 
   const { data: agentsRes } = useQuery({
     queryKey: ['support-agents'],
@@ -196,12 +230,6 @@ export default function TicketChat() {
     ...(ticket.messages || []).map((m) => ({ kind: 'message', at: m.createdAt, data: m })),
     ...(ticket.comments || []).map((c) => ({ kind: 'note', at: c.createdAt, data: c })),
   ].sort((a, b) => new Date(a.at) - new Date(b.at))
-
-  // Keep the latest message in view so it never hides behind the composer.
-  const messagesEndRef = useRef(null)
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [timeline.length, ticket._id])
 
   // Watch for "@" while typing a note and pop the agent picker.
   const onCommentChange = (e) => {

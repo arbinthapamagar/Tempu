@@ -10,15 +10,14 @@ import {
 } from './Icons';
 import { colors } from '../theme/colors';
 
-const ACTIVE = '#1f242b';
 const TABS = [
-  { id: 'home', label: 'Home', Icon: HomeIcon, color: ACTIVE },
-  { id: 'trips', label: 'Trips', Icon: DocIcon, color: ACTIVE },
-  { id: 'wallet', label: 'Wallet', Icon: WalletIcon, color: ACTIVE },
-  { id: 'subscribe', label: 'Subscribe', Icon: CardIcon, color: ACTIVE },
-  { id: 'inbox', label: 'Inbox', Icon: BellIcon, color: ACTIVE },
-  { id: 'support', label: 'Support', Icon: ChatIcon, color: ACTIVE },
-  { id: 'account', label: 'Account', Icon: UserIcon, color: ACTIVE },
+  { id: 'home', label: 'Home', Icon: HomeIcon },
+  { id: 'trips', label: 'Trips', Icon: DocIcon },
+  { id: 'wallet', label: 'Wallet', Icon: WalletIcon },
+  { id: 'subscribe', label: 'Subscribe', Icon: CardIcon },
+  { id: 'inbox', label: 'Inbox', Icon: BellIcon },
+  { id: 'support', label: 'Support', Icon: ChatIcon },
+  { id: 'account', label: 'Account', Icon: UserIcon },
 ];
 
 export default function TabBar({ active, onChange }) {
@@ -27,11 +26,11 @@ export default function TabBar({ active, onChange }) {
       {TABS.map((t) => {
         const isActive = t.id === active;
         const Icon = t.Icon;
-        const color = isActive ? t.color : '#9aa39e';
+        const color = isActive ? colors.primary : colors.textMuted;
         return (
           <Pressable
             key={t.id}
-            style={styles.item}
+            style={[styles.item, isActive && styles.itemActive]}
             onPress={() => onChange(t.id)}
             hitSlop={6}
           >
@@ -41,7 +40,7 @@ export default function TabBar({ active, onChange }) {
             <Text
               style={[
                 styles.label,
-                isActive && [styles.labelActive, { color: t.color }],
+                isActive && [styles.labelActive, { color: colors.primary }],
               ]}
             >
               {t.label}
@@ -59,14 +58,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     paddingTop: 10,
     paddingBottom: 18,
+    paddingHorizontal: 4,
   },
   item: {
     flex: 1,
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 4,
+    paddingVertical: 6,
+    borderRadius: 18,
+  },
+  // Active tab sits in a soft orange-tinted pill, echoing the mockup nav.
+  itemActive: {
+    backgroundColor: colors.primarySoft,
   },
   iconBox: {
     width: 22,

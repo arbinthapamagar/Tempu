@@ -63,6 +63,15 @@ function FolderRail() {
   })
   const counts = countsRes?.data?.counts || {}
 
+  // Count of never-answered tickets across ALL statuses (open + in_progress),
+  // so an unanswered ticket is never lost just because it moved to in_progress.
+  const { data: unansweredRes } = useQuery({
+    queryKey: ['support-unanswered'],
+    queryFn: () => supportApi.list({ limit: 100 }),
+    refetchInterval: 10000,
+  })
+  const unansweredCount = (unansweredRes?.data?.tickets || []).filter(isUnanswered).length
+
   const { data: settingsRes } = useQuery({ queryKey: ['support-settings'], queryFn: () => supportApi.settings() })
   const settings = settingsRes?.data || {}
 
@@ -73,6 +82,7 @@ function FolderRail() {
   })
 
   const folders = [
+    { to: '/support?view=unanswered', label: 'Unanswered', icon: Mail, count: unansweredCount, isActive: view === 'unanswered' },
     { to: '/support', label: 'All', icon: Inbox, count: counts.all, isActive: !status && !view },
     { to: '/support?status=open', label: 'New', icon: Mail, count: counts.open, isActive: status === 'open' },
     { to: '/support?status=in_progress', label: 'In progress', icon: Clock, count: counts.in_progress, isActive: status === 'in_progress' },
@@ -162,7 +172,9 @@ function ConversationList() {
   // Personal views + search + tab are applied client-side over the loaded page.
   if (view === 'mine') tickets = tickets.filter((t) => t.assignedTo?._id === admin?._id)
   if (view === 'unassigned') tickets = tickets.filter((t) => !t.assignedTo)
-  if (tab === 'unanswered') tickets = tickets.filter(isUnanswered)
+  if (view === 'unanswered') tickets = tickets.filter(isUnanswered)
+  // The All/Unanswered tab only applies on the plain folders, not the dedicated views.
+  else if (tab === 'unanswered') tickets = tickets.filter(isUnanswered)
   if (search.trim()) {
     const q = search.toLowerCase()
     tickets = tickets.filter((t) =>
@@ -174,6 +186,7 @@ function ConversationList() {
 
   const heading = view === 'mine' ? 'Assigned to me'
     : view === 'unassigned' ? 'Unassigned'
+    : view === 'unanswered' ? 'Unanswered'
     : status ? { open: 'New', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed' }[status]
     : 'All conversations'
 
@@ -195,18 +208,20 @@ function ConversationList() {
         </div>
       </div>
 
-      <div className="flex gap-1.5 px-3 py-2 border-b border-gray-200">
-        {['unanswered', 'all'].map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn('text-xs px-2.5 py-1 capitalize',
-              tab === t ? 'text-gray-900 font-semibold border-b-2 border-gray-900' : 'text-gray-400 hover:text-gray-600')}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      {!view && (
+        <div className="flex gap-1.5 px-3 py-2 border-b border-gray-200">
+          {['unanswered', 'all'].map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={cn('text-xs px-2.5 py-1 capitalize',
+                tab === t ? 'text-gray-900 font-semibold border-b-2 border-gray-900' : 'text-gray-400 hover:text-gray-600')}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         {isLoading ? (

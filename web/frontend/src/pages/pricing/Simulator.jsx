@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChevronDown, Copy, Clock, CloudRain, Leaf, BatteryCharging, Timer, GitCompare, History } from '@/components/ui/icons'
 import { Card } from './Slider'
 import { FareBreakdown } from './FareBreakdown'
+import { DriverEconomics } from './DriverEconomics'
 import {
   VEHICLE_KEYS, VEHICLE_META, computeFare, lookupDistance, travelTimeMinutes,
   co2SavedKg, chargingCost, bidFeedback, suggestedRange, quickBid, rs,
@@ -177,6 +178,17 @@ export function Simulator({ config, activeSlotIndex, lockedCityName }) {
         </button>
         {openBreakdown && <div className="mt-3"><FareBreakdown f={f} /></div>}
       </Card>
+
+      {/* Driver earnings & profit */}
+      <DriverEconomics
+        f={f}
+        config={config}
+        city={city}
+        vehicleKey={vehicleKey}
+        pickup={pickup}
+        drop={drop}
+        slot={slot}
+      />
 
       {/* Bidding */}
       <Card title="Place a Bid">

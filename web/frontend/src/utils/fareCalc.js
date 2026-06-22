@@ -53,10 +53,18 @@ export function lookupDistance(city, from, to) {
 
 // The core calculation. Returns named numbers + a `rows` array for the breakdown
 // card. Multipliers carry a `factor`, money rows carry `amount`.
+// Every ride is billed for at least this distance. A 0.4 km hop still charges
+// as 1 km so very short trips stay worth the driver's time.
+export const MIN_BILLABLE_KM = 1
+
 export function computeFare({ config, city, vehicleKey, pickup, drop, distance, slot }) {
   const v = config?.vehicles?.[vehicleKey] || {}
   const efficiency = Number(v.efficiency) || 1
-  const dist = Number(distance) || 0
+  const actualDist = Number(distance) || 0
+  // Rides under the minimum are billed as the minimum (the rest of the maths
+  // uses this billed distance so the fare and bid floor agree).
+  const dist = Math.max(actualDist, MIN_BILLABLE_KM)
+  const distFloored = actualDist > 0 && actualDist < MIN_BILLABLE_KM
 
   const elecPerKm = (Number(config.electricityCost) || 0) / efficiency
   const maintPerKm = Number(v.maintenancePerKm) || 0
@@ -116,8 +124,43 @@ export function computeFare({ config, city, vehicleKey, pickup, drop, distance, 
   return {
     efficiency, elecPerKm, maintPerKm, baseCostPerKm, profitPerKm, subtotalPerKm,
     withCommission, zone, withZone, microAvg, withMicro, premium, slotMult, withTimeSlot,
-    discountPct, finalPerKm, baseFare, distance: dist, distanceCost, subtotalFare,
+    discountPct, finalPerKm, baseFare, distance: dist, actualDistance: actualDist,
+    billedDistance: dist, distFloored, distanceCost, subtotalFare,
     vatPct, vat, finalFare, rows,
+  }
+}
+
+// Splits a computed fare into who-gets-what, for the admin "driver economics"
+// view. The commission is embedded in the per-km rate (not the flat base fare),
+// so the driver keeps the base fare plus the distance revenue net of commission;
+// their running cost is electricity + maintenance for the distance billed.
+// VAT is pass-through to the government — neither driver nor platform keeps it.
+export function driverEconomics(f, config) {
+  const commPct = Number(config?.commissionPercent) || 0
+  const commDiv = 1 + commPct / 100
+  const bd = f.billedDistance
+
+  // per km
+  const riderPerKm = f.finalPerKm                 // what the rider pays per km (pre-VAT)
+  const driverRevPerKm = riderPerKm / commDiv     // strip the platform commission back out
+  const platformFeePerKm = riderPerKm - driverRevPerKm
+  const runCostPerKm = f.baseCostPerKm            // electricity + maintenance (real, unscaled)
+  const driverProfitPerKm = driverRevPerKm - runCostPerKm
+
+  // per trip (at the billed distance)
+  const distanceCharge = riderPerKm * bd          // pre-VAT distance portion
+  const driverDistanceRev = driverRevPerKm * bd
+  const platformFee = platformFeePerKm * bd
+  const driverGross = f.baseFare + driverDistanceRev   // lands in the driver wallet
+  const runningCost = runCostPerKm * bd
+  const driverNetProfit = driverGross - runningCost
+
+  return {
+    commPct, billedDistance: bd,
+    riderPerKm, driverRevPerKm, platformFeePerKm, runCostPerKm, driverProfitPerKm,
+    distanceCharge, driverDistanceRev, platformFee,
+    driverGross, runningCost, driverNetProfit,
+    baseFare: f.baseFare, vat: f.vat, subtotalFare: f.subtotalFare, riderPays: f.finalFare,
   }
 }
 
