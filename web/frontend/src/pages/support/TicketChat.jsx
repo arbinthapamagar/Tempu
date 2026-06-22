@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -197,6 +197,12 @@ export default function TicketChat() {
     ...(ticket.comments || []).map((c) => ({ kind: 'note', at: c.createdAt, data: c })),
   ].sort((a, b) => new Date(a.at) - new Date(b.at))
 
+  // Keep the latest message in view so it never hides behind the composer.
+  const messagesEndRef = useRef(null)
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [timeline.length, ticket._id])
+
   // Watch for "@" while typing a note and pop the agent picker.
   const onCommentChange = (e) => {
     const val = e.target.value
@@ -374,7 +380,7 @@ export default function TicketChat() {
               <div key={`m-${i}`} className={`flex gap-2.5 ${isAdmin ? 'flex-row-reverse' : ''}`}>
                 <Avatar name={isAdmin ? 'Admin' : person?.name} size="sm" />
                 <div className={`max-w-[75%] flex flex-col ${isAdmin ? 'items-end' : ''}`}>
-                  <div className={`px-3 py-2 rounded-2xl text-sm ${isAdmin ? 'bg-gray-900 text-white rounded-tr-sm' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm'}`}>
+                  <div className={`px-3 py-2 rounded-2xl text-sm ${isAdmin ? 'bg-orange-500 text-white rounded-tr-sm' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm'}`}>
                     {msg.message}
                     <MessageAttachment msg={msg} isAdmin={isAdmin} />
                   </div>
@@ -384,6 +390,7 @@ export default function TicketChat() {
             )
           })}
           {timeline.length === 0 && <p className="text-sm text-gray-400 text-center py-8">No messages yet.</p>}
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Composer */}
