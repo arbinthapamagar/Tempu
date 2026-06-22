@@ -27,6 +27,7 @@ const lightColors = {
   warnSoft: '#f6ecdf',
   success: '#15803d',
   accent: '#1f242b',
+  orange: '#fb7a3c',        // brand orange — used for the user's own reply bubble
 };
 
 const darkColors = {
@@ -53,6 +54,7 @@ const darkColors = {
   warnSoft: '#39290f',
   success: '#4ade80',
   accent: '#fb7a3c',
+  orange: '#fb7a3c',        // brand orange — used for the user's own reply bubble
 };
 
 export const themeScheme = resolveScheme(); // 'light' | 'dark', resolved at load
