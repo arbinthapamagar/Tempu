@@ -24,6 +24,16 @@ const emergencySchema = new mongoose.Schema(
       default: 'active',
     },
     handledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+    // Admin/agent this alert is assigned to for follow-up.
+    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+    // Internal handling notes (not shown to the person who raised the SOS).
+    notes: [
+      {
+        authorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true },
+        body: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     acknowledgedAt: { type: Date, default: null },
     resolvedAt: { type: Date, default: null },
   },

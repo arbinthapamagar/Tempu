@@ -1,4 +1,5 @@
 import { SupportTicket } from '../../models/supportTicket.model.js';
+import { Driver } from '../../models/driver.model.js';
 import { getSupportSettings } from '../../models/supportSettings.model.js';
 import { uploadOnCloudinary } from '../../utils/cloudinary.js';
 import { apiError } from '../../utils/apiError.js';
@@ -22,8 +23,12 @@ const createTicket = asyncHandler(async (req, res) => {
         throw new apiError(400, 'Subject, category, and message are required');
     }
 
+    // Link the driver profile (if any) so support sees vehicle details and can verify.
+    const driver = await Driver.findOne({ userId: req.user._id }).select('_id');
+
     const ticket = await SupportTicket.create({
         userId: req.user._id,
+        driverId: driver?._id || null,
         subject,
         category,
         tripId: tripId || null,
@@ -70,9 +75,6 @@ const addMessage = asyncHandler(async (req, res) => {
 
     const ticket = await SupportTicket.findOne({ _id: req.params.id, userId: req.user._id });
     if (!ticket) throw new apiError(404, 'Ticket not found');
-    if (['resolved', 'closed'].includes(ticket.status)) {
-        throw new apiError(400, 'Cannot add message to a resolved/closed ticket');
-    }
 
     const entry = { senderId: req.user._id, senderType: 'user', message };
 
@@ -85,9 +87,16 @@ const addMessage = asyncHandler(async (req, res) => {
     }
 
     ticket.messages.push(entry);
+    // A reply on a resolved/closed thread reopens the ticket for the customer —
+    // they don't need to file a fresh one to follow up on the same issue.
+    const reopened = ['resolved', 'closed'].includes(ticket.status);
+    if (reopened) {
+        ticket.status = 'open';
+        ticket.resolvedAt = null;
+    }
     await ticket.save();
 
-    return res.status(200).json(new apiResponse(200, ticket, 'Message added'));
+    return res.status(200).json(new apiResponse(200, ticket, reopened ? 'Ticket reopened' : 'Message added'));
 });
 
 export { createTicket, getMyTickets, getTicketById, addMessage, getSupportConfig };

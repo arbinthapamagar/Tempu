@@ -317,7 +317,13 @@ export default function SupportScreen({ onBack, role }) {
                 );
               })}
             </ScrollView>
-            {active.status !== 'closed' && (
+            {active.status === 'closed' && (
+              <View style={styles.reopenBar}>
+                <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+                <Text style={styles.reopenText}>This ticket is closed — send a message below to reopen it.</Text>
+              </View>
+            )}
+            {(
               <View>
                 {recording && (
                   <View style={styles.recordingBar}>
@@ -471,4 +477,10 @@ const styles = StyleSheet.create({
   },
   recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.danger },
   recordingText: { ...type.caption, color: colors.danger, fontWeight: '700' },
+
+  reopenBar: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, backgroundColor: colors.primarySoft,
+  },
+  reopenText: { ...type.caption, color: colors.primary, fontWeight: '700', flexShrink: 1 },
 });
