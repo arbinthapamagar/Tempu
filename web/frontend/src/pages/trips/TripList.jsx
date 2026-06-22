@@ -143,7 +143,7 @@ export default function TripList() {
     <div>
       <PageHeader title="Trip Management" description="View and monitor all platform trips" />
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+      <div className="bg-white border border-gray-200">
         <div className="px-5 pt-4">
           <Tabs tabs={tabs} active={statusTab} onChange={(v) => { setStatusTab(v); setPage(1) }} />
         </div>

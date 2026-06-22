@@ -209,7 +209,7 @@ export default function Dashboard() {
 
       {/* Recent trips + Quick actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="lg:col-span-2 bg-white border border-gray-200 overflow-hidden">
           <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-gray-50">
             <h3 className="text-sm font-semibold text-gray-900">Recent Trips</h3>
             <Link to="/trips" className="text-xs text-orange-600 hover:text-orange-700 font-medium">View all →</Link>

@@ -388,7 +388,7 @@ export default function AdminList() {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+      <div className="bg-white border border-gray-200">
         {selected.length > 0 && (
           <div className="flex items-center gap-3 px-5 py-2.5 border-b border-gray-50 bg-orange-50/40">
             <span className="text-sm font-medium text-gray-700">{selected.length} selected</span>
