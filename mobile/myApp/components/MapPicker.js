@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.primarySoft,
     borderWidth: 1,
-    borderColor: '#cfe6d8',
+    borderColor: colors.border,
     marginBottom: spacing.md - 2,
   },
   myLocText: {

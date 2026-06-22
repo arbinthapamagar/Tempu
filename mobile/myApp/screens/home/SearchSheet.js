@@ -187,7 +187,7 @@ export default function SearchSheet({
           </Pressable>
           <View style={styles.mapBtnDivider} />
           <Pressable style={styles.mapBtn} onPress={() => { hapticConfirm(); onPickDestOnMap?.(); }}>
-            <Ionicons name="map-outline" size={15} color="#5c6fff" />
+            <Ionicons name="map-outline" size={15} color={colors.primary} />
             <Text style={styles.mapBtnText}>Set drop-off on map</Text>
           </Pressable>
         </View>
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#f3f5f2',
+    backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     gap: 12,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#eef0ee',
+    borderBottomColor: colors.divider,
   },
   routeIcons: {
     alignItems: 'center',
@@ -308,19 +308,19 @@ const styles = StyleSheet.create({
   dotGreen: {
     width: 10, height: 10, borderRadius: 5,
     backgroundColor: colors.primary,
-    borderWidth: 2, borderColor: '#d1fae5',
+    borderWidth: 2, borderColor: colors.primarySoft,
   },
-  vline: { width: 2, height: 20, backgroundColor: '#d1d5db', marginVertical: 3 },
+  vline: { width: 2, height: 20, backgroundColor: colors.border, marginVertical: 3 },
   dotGrey: {
     width: 10, height: 10, borderRadius: 5,
-    backgroundColor: '#374151',
-    borderWidth: 2, borderColor: '#e5e7eb',
+    backgroundColor: colors.textMuted,
+    borderWidth: 2, borderColor: colors.border,
   },
 
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f3f5f2',
+    backgroundColor: colors.surfaceMuted,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 2,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   mapBtns: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#eef0ee',
+    borderBottomColor: colors.divider,
   },
   mapBtn: {
     flex: 1,
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 11,
   },
-  mapBtnDivider: { width: 1, backgroundColor: '#eef0ee' },
+  mapBtnDivider: { width: 1, backgroundColor: colors.divider },
   mapBtnText: { fontSize: 13, color: colors.text, fontWeight: '600' },
 
   results: { flex: 1, paddingHorizontal: 16 },
@@ -373,11 +373,11 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center',
     gap: 12, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#f3f5f2',
+    borderBottomWidth: 1, borderBottomColor: colors.divider,
   },
   rowIcon: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: '#f3f5f2',
+    backgroundColor: colors.surfaceMuted,
     alignItems: 'center', justifyContent: 'center',
   },
   rowText: { flex: 1 },

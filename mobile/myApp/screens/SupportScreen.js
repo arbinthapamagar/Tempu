@@ -454,12 +454,12 @@ const styles = StyleSheet.create({
 
   attachChip: {
     flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6,
-    backgroundColor: 'rgba(0,0,0,0.04)', borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted, borderRadius: radius.pill,
     paddingHorizontal: spacing.md, paddingVertical: 6, alignSelf: 'flex-start', maxWidth: '100%',
   },
   attachChipMine: { backgroundColor: 'rgba(255,255,255,0.18)' },
   attachText: { ...type.caption, color: colors.primary, fontWeight: '700', flexShrink: 1 },
-  bubbleImage: { width: 200, height: 200, borderRadius: radius.md, marginTop: 6, backgroundColor: 'rgba(0,0,0,0.05)' },
+  bubbleImage: { width: 200, height: 200, borderRadius: radius.md, marginTop: 6, backgroundColor: colors.surfaceMuted },
 
   previewBar: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm,
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   },
   previewRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   previewText: { ...type.body, color: colors.text, flexShrink: 1 },
-  previewThumb: { width: 56, height: 56, borderRadius: radius.sm, marginRight: 6, backgroundColor: 'rgba(0,0,0,0.05)' },
+  previewThumb: { width: 56, height: 56, borderRadius: radius.sm, marginRight: 6, backgroundColor: colors.surfaceMuted },
   previewCancel: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceMuted },
   previewSend: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
 

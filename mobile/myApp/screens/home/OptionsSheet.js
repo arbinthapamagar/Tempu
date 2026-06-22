@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.md + 2,
     paddingVertical: spacing.md + 2,
-    backgroundColor: '#f3f5f2',
+    backgroundColor: colors.surfaceMuted,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,

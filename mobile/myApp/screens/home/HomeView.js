@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
 
-  mapBand: { height: 200, backgroundColor: '#e8ece6' },
+  mapBand: { height: 200, backgroundColor: colors.surfaceMuted },
 
   body: { flex: 1, backgroundColor: colors.surface },
   bodyContent: {
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: '#f3f5f2',
+    backgroundColor: colors.surfaceMuted,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,

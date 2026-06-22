@@ -302,7 +302,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
 
           {isDriver && (
             <View style={styles.driverBadge}>
-              <Ionicons name="car-sport" size={13} color="#1a56db" />
+              <Ionicons name="car-sport" size={13} color={colors.primary} />
               <Text style={styles.driverBadgeText}>Driver</Text>
             </View>
           )}
@@ -376,7 +376,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
 
         {(driverStatus === 'pending') && (
           <View style={styles.reviewBanner}>
-            <Ionicons name="time-outline" size={22} color="#92400e" />
+            <Ionicons name="time-outline" size={22} color={colors.warn} />
             <View style={{ flex: 1 }}>
               <Text style={styles.reviewBannerTitle}>Documents under review</Text>
               <Text style={styles.reviewBannerSub}>
@@ -1303,7 +1303,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: colors.primarySoft,
     borderWidth: 1,
-    borderColor: '#cfe6d8',
+    borderColor: colors.border,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -1314,7 +1314,7 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: 'rgba(31, 122, 77, 0.12)',
+    backgroundColor: 'rgba(251, 122, 60, 0.12)',
   },
   heroDecorB: {
     position: 'absolute',
@@ -1323,7 +1323,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(31, 122, 77, 0.08)',
+    backgroundColor: 'rgba(251, 122, 60, 0.08)',
   },
   avatarWrap: { position: 'relative', marginBottom: 14 },
   avatarRing: {
@@ -1365,7 +1365,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     backgroundColor: colors.text,
     borderWidth: 3,
-    borderColor: '#ffffff',
+    borderColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1378,7 +1378,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     backgroundColor: colors.danger,
     borderWidth: 3,
-    borderColor: '#ffffff',
+    borderColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1405,7 +1405,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#cfe6d8',
+    borderColor: colors.border,
     gap: 4,
   },
   modeBtn: {
@@ -1437,7 +1437,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#cfe6d8',
+    borderColor: colors.border,
   },
   rolePillText: {
     color: colors.primaryDark,
@@ -1455,12 +1455,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statusActive: {
-    backgroundColor: '#edf6f0',
-    borderColor: '#cfe6d8',
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border,
   },
   statusInactive: {
-    backgroundColor: '#fbecec',
-    borderColor: '#f0cccc',
+    backgroundColor: colors.dangerSoft,
+    borderColor: colors.dangerSoft,
   },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   statusDotActive: { backgroundColor: colors.accent },
@@ -1553,13 +1553,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
-    backgroundColor: '#eef2ef',
+    backgroundColor: colors.surfaceMuted,
   },
-  badgeGood: { backgroundColor: '#e6f3ec' },
-  badgeWarn: { backgroundColor: '#fbeede' },
+  badgeGood: { backgroundColor: colors.surfaceMuted },
+  badgeWarn: { backgroundColor: colors.primarySoft },
   badgeText: { fontSize: 11, fontWeight: '700', color: colors.textMuted },
   badgeTextGood: { color: colors.primaryDark },
-  badgeTextWarn: { color: '#9a6b1f' },
+  badgeTextWarn: { color: colors.warn },
 
   walletCard: {
     flexDirection: 'row',
@@ -1682,14 +1682,14 @@ const styles = StyleSheet.create({
     width: 30,
     height: 38,
     borderRadius: 4,
-    backgroundColor: '#f0f4f1',
+    backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.border,
   },
   docLabel: { color: colors.text, fontSize: 14, fontWeight: '600' },
   docState: { fontSize: 12, marginTop: 2, fontWeight: '600' },
   docStateGood: { color: colors.primaryDark },
-  docStateWarn: { color: '#9a6b1f' },
+  docStateWarn: { color: colors.warn },
   docAction: { color: colors.primary, fontSize: 13, fontWeight: '600' },
 
   linkRow: {
@@ -1717,8 +1717,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#f0cccc',
-    backgroundColor: '#fbecec',
+    borderColor: colors.dangerSoft,
+    backgroundColor: colors.dangerSoft,
     alignItems: 'center',
   },
   signOutText: { color: colors.danger, fontSize: 15, fontWeight: '700' },
@@ -1777,7 +1777,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#cdd2cd',
+    backgroundColor: colors.border,
     marginBottom: 12,
   },
   modalHeader: {
@@ -1968,11 +1968,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: '#eff6ff',
+    backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: colors.border,
   },
-  driverBadgeText: { color: '#1a56db', fontSize: 12, fontWeight: '800' },
+  driverBadgeText: { color: colors.primary, fontSize: 12, fontWeight: '800' },
 
   reviewBanner: {
     flexDirection: 'row',
@@ -1982,16 +1982,16 @@ const styles = StyleSheet.create({
     marginTop: 14,
     padding: 16,
     borderRadius: 20,
-    backgroundColor: '#fffbeb',
+    backgroundColor: colors.warnSoft,
     borderWidth: 1.5,
-    borderColor: '#fcd34d',
+    borderColor: colors.warn,
   },
   rejectedBanner: {
-    backgroundColor: '#fef2f2',
-    borderColor: '#fecaca',
+    backgroundColor: colors.dangerSoft,
+    borderColor: colors.dangerSoft,
   },
   reviewBannerTitle: {
-    color: '#92400e',
+    color: colors.warn,
     fontSize: 14,
     fontWeight: '800',
     marginBottom: 3,
@@ -2038,13 +2038,13 @@ const styles = StyleSheet.create({
     marginTop: 14,
     padding: 16,
     borderRadius: 20,
-    backgroundColor: '#eff6ff',
+    backgroundColor: colors.surfaceMuted,
     borderWidth: 1.5,
-    borderColor: '#bfdbfe',
+    borderColor: colors.border,
   },
   becomeDriverLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   becomeDriverEmoji: { fontSize: 32 },
-  becomeDriverTitle: { color: '#1a56db', fontSize: 15, fontWeight: '800' },
+  becomeDriverTitle: { color: colors.primary, fontSize: 15, fontWeight: '800' },
   becomeDriverSub: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
 
   overlay: {
@@ -2066,12 +2066,12 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: '#bbf7d0',
+    borderColor: colors.border,
   },
   pendingIconEmoji: { fontSize: 40 },
   pendingTitle: {

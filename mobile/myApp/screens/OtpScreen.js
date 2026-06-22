@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   },
   boxError: {
     borderColor: colors.danger,
-    backgroundColor: '#fff0f0',
+    backgroundColor: colors.dangerSoft,
   },
   error: {
     color: colors.danger,

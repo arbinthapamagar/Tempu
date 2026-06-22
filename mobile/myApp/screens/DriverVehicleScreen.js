@@ -305,7 +305,7 @@ export default function DriverVehicleScreen({ onSuccess, onBack }) {
         {step === 2 && (
           <View style={styles.form}>
             <View style={styles.infoBox}>
-              <Ionicons name="information-circle-outline" size={18} color="#1a56db" />
+              <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
               <Text style={styles.infoText}>
                 Upload clear, readable photos. Your application will stay <Text style={{ fontWeight: '700' }}>under review</Text> until our admin approves it.
               </Text>
@@ -429,23 +429,23 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  typeChipSelected: { borderColor: '#1a56db', backgroundColor: '#eff6ff' },
+  typeChipSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   typeEmoji: { fontSize: 16 },
   typeLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  typeLabelSelected: { color: '#1a56db' },
+  typeLabelSelected: { color: colors.primary },
 
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    backgroundColor: '#eff6ff',
+    backgroundColor: colors.surfaceMuted,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: colors.border,
     padding: 14,
     marginBottom: 18,
   },
-  infoText: { flex: 1, color: '#1a56db', fontSize: 13, lineHeight: 19 },
+  infoText: { flex: 1, color: colors.textMuted, fontSize: 13, lineHeight: 19 },
 
   docRow: {
     flexDirection: 'row',
@@ -459,8 +459,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   docRowDone: {
-    borderColor: '#bbf7d0',
-    backgroundColor: '#f0fdf4',
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceMuted,
   },
   docIcon: {
     width: 40,
@@ -475,8 +475,8 @@ const styles = StyleSheet.create({
   docRequired: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#9a6b1f',
-    backgroundColor: '#fef3c7',
+    color: colors.warn,
+    backgroundColor: colors.warnSoft,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 999,
@@ -486,13 +486,13 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, fontSize: 13, marginBottom: 12 },
 
   btn: {
-    backgroundColor: '#1a56db',
+    backgroundColor: colors.primary,
     paddingVertical: 15,
     borderRadius: 999,
     alignItems: 'center',
     marginTop: 4,
   },
-  btnPressed: { backgroundColor: '#1447b8' },
+  btnPressed: { backgroundColor: colors.primaryDark },
   btnDisabled: { opacity: 0.6 },
   btnText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
 

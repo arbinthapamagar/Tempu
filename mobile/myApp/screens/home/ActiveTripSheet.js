@@ -102,7 +102,7 @@ export default function ActiveTripSheet({
             style={styles.actionBtn}
             onPress={() => Alert.alert('Message', 'In-trip messaging is available once the driver arrives.')}
           >
-            <ChatIcon size={16} color="#5c6fff" />
+            <ChatIcon size={16} color={colors.primary} />
             <Text style={styles.actionText}>Message</Text>
           </Pressable>
           <Pressable
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   etaBar: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#eef1ee',
+    backgroundColor: colors.surfaceMuted,
     marginTop: spacing.md,
     marginBottom: spacing.lg,
     overflow: 'hidden',
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: '#f1f6f3',
+    backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   plate: {
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: spacing.sm,
-    backgroundColor: '#f3f5f2',
+    backgroundColor: colors.surfaceMuted,
     borderRadius: radius.md - 2,
     borderWidth: 1,
     borderColor: colors.border,
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: spacing.md + 1,
     borderRadius: radius.pill,
-    backgroundColor: '#f3f5f2',
+    backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.md + 2,
     borderBottomWidth: 1,
-    borderBottomColor: '#cdd2cd',
+    borderBottomColor: colors.divider,
   },
   rowLast: { borderBottomWidth: 0 },
   rowLabel: { color: colors.textMuted, fontSize: 14 },
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md + 2,
     paddingVertical: spacing.md,
     alignItems: 'center',
-    backgroundColor: '#f3f5f2',
+    backgroundColor: colors.surfaceMuted,
     borderRadius: radius.md,
   },
   inProgressText: { color: colors.textMuted, fontSize: 13, fontWeight: '600', textAlign: 'center' },
