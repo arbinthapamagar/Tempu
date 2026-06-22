@@ -7,6 +7,7 @@ import { SplineSansMono_500Medium, SplineSansMono_600SemiBold } from '@expo-goog
 import TabBar from './components/TabBar';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import DriverShell from './screens/driver/DriverShell';
+import ContactSupportScreen from './screens/ContactSupportScreen';
 import DriverPendingScreen from './screens/DriverPendingScreen';
 import DriverVehicleScreen from './screens/DriverVehicleScreen';
 import HomeScreen from './screens/home';
@@ -106,11 +107,19 @@ function AppShell() {
             onPassenger={() => { setRole('passenger'); setAuthScreen('register'); }}
             onDriver={() => { setRole('driver'); setAuthScreen('register'); }}
             onSignIn={() => setAuthScreen('login')}
+            onContact={() => setAuthScreen('contact')}
           />
         )}
 
         {authScreen === 'login' && (
-          <LoginScreen onGoToRegister={() => setAuthScreen('role-select')} />
+          <LoginScreen
+            onGoToRegister={() => setAuthScreen('role-select')}
+            onContact={() => setAuthScreen('contact')}
+          />
+        )}
+
+        {authScreen === 'contact' && (
+          <ContactSupportScreen onBack={() => setAuthScreen('role-select')} />
         )}
 
         {authScreen === 'register' && (

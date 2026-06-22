@@ -13,7 +13,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
 
-export default function LoginScreen({ onGoToRegister }) {
+export default function LoginScreen({ onGoToRegister, onContact }) {
   const { login } = useAuth();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -144,6 +144,15 @@ export default function LoginScreen({ onGoToRegister }) {
             <Text style={styles.footerLink}>Create an account</Text>
           </Pressable>
         </View>
+
+        {onContact && (
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Need help?</Text>
+            <Pressable onPress={onContact} hitSlop={8}>
+              <Text style={styles.footerLink}>Contact us</Text>
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );

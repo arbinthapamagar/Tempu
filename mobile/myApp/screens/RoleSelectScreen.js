@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { colors } from '../theme/colors';
 
-export default function RoleSelectScreen({ onPassenger, onDriver, onSignIn }) {
+export default function RoleSelectScreen({ onPassenger, onDriver, onSignIn, onContact }) {
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.inner}>
@@ -52,6 +52,14 @@ export default function RoleSelectScreen({ onPassenger, onDriver, onSignIn }) {
             <Text style={styles.footerLink}>Sign in</Text>
           </Pressable>
         </View>
+
+        {/* Pre-login help — no account needed */}
+        {onContact && (
+          <Pressable onPress={onContact} hitSlop={8} style={styles.contactRow}>
+            <Text style={styles.contactText}>New here? </Text>
+            <Text style={styles.footerLink}>Contact us</Text>
+          </Pressable>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -135,4 +143,6 @@ const styles = StyleSheet.create({
   },
   footerText: { color: colors.textMuted, fontSize: 14 },
   footerLink: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  contactRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingTop: 10 },
+  contactText: { color: colors.textMuted, fontSize: 13 },
 });

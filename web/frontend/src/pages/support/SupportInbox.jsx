@@ -41,10 +41,8 @@ function isUnanswered(t) {
 export function EmptyConversation() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center px-6 bg-white">
-      <div className="h-14 w-14 rounded-full bg-orange-50 grid place-items-center mb-3">
-        <MessageSquare className="h-6 w-6 text-orange-500" />
-      </div>
-      <p className="text-sm font-medium text-gray-700">Select a conversation</p>
+      <MessageSquare className="h-7 w-7 text-gray-300 mb-3" />
+      <p className="text-sm text-gray-600">Select a conversation</p>
       <p className="text-xs text-gray-400 mt-1">Pick a ticket from the list to read and reply.</p>
     </div>
   )
@@ -90,15 +88,14 @@ function FolderRail() {
     <NavLink
       to={to}
       className={cn(
-        'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
-        isActive ? 'text-orange-600 font-semibold' : 'text-gray-700 font-medium hover:bg-gray-50'
+        'flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm transition-colors',
+        isActive ? 'bg-gray-200/70 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-100'
       )}
     >
-      <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-orange-600' : 'text-gray-400')} />
+      <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-gray-700' : 'text-gray-400')} />
       <span className="flex-1 truncate">{label}</span>
       {count > 0 && (
-        <span className={cn('min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold grid place-items-center',
-          isActive ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600')}>
+        <span className={cn('text-xs tabular-nums', isActive ? 'text-gray-700' : 'text-gray-400')}>
           {count}
         </span>
       )}
@@ -106,7 +103,7 @@ function FolderRail() {
   )
 
   return (
-    <aside className="w-52 shrink-0 border-r border-gray-200 flex flex-col bg-white">
+    <aside className="w-52 shrink-0 border-r border-gray-200 flex flex-col bg-gray-50">
       <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-0.5">
         {folders.map((f) => <Item key={f.label} {...f} />)}
         <p className="px-3 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Personal</p>
@@ -192,7 +189,7 @@ function ConversationList() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search..."
-            className="w-full pl-8 pr-2 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+            className="w-full pl-8 pr-2 py-1.5 text-sm bg-white border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
           />
         </div>
       </div>
@@ -202,8 +199,8 @@ function ConversationList() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={cn('text-xs px-2.5 py-1 rounded-md capitalize font-medium',
-              tab === t ? 'text-orange-600' : 'text-gray-500 hover:text-gray-700')}
+            className={cn('text-xs px-2.5 py-1 capitalize',
+              tab === t ? 'text-gray-900 font-semibold border-b-2 border-gray-900' : 'text-gray-400 hover:text-gray-600')}
           >
             {t}
           </button>
@@ -227,7 +224,7 @@ function ConversationList() {
                 to={`/support/${t._id}${status ? `?status=${status}` : view ? `?view=${view}` : ''}`}
                 className={cn(
                   'flex gap-2.5 px-3 py-2.5 border-b border-gray-100 cursor-pointer border-l-2',
-                  isActive ? 'border-l-orange-500' : 'border-l-transparent'
+                  isActive ? 'border-l-gray-900 bg-gray-50' : 'border-l-transparent hover:bg-gray-50/60'
                 )}
               >
                 <Avatar src={person?.avatarUrl} name={person?.name} size="sm" />
@@ -236,19 +233,6 @@ function ConversationList() {
                     <p className="text-sm font-semibold text-gray-900 truncate">{person?.name || 'Unknown'}</p>
                     <span className="text-[10px] text-gray-400 shrink-0">{formatRelative(t.updatedAt || t.createdAt)}</span>
                   </div>
-                  {/* Who they are — so support can verify at a glance */}
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className={cn('text-[9px] font-bold uppercase tracking-wide px-1.5 py-px rounded shrink-0',
-                      t.driverId ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600')}>
-                      {t.driverId ? 'Driver' : 'Rider'}
-                    </span>
-                    {t.userId?.phone && <span className="text-[10px] text-gray-500 truncate">{t.userId.phone}</span>}
-                  </div>
-                  {t.userId?.email && (
-                    <p className="text-[10px] text-gray-400 truncate flex items-center gap-1 mt-0.5">
-                      <Mail className="h-2.5 w-2.5 shrink-0" />{t.userId.email}
-                    </p>
-                  )}
                   <p className="text-xs text-gray-500 truncate mt-0.5">{preview}</p>
                   <div className="flex items-center gap-1.5 mt-1">
                     <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[t.status] || 'bg-gray-300')} />
@@ -266,10 +250,13 @@ function ConversationList() {
 
 export default function SupportInbox() {
   return (
-    <div className="h-[calc(100vh-9rem)] min-h-[480px] flex border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
-      <FolderRail />
-      <ConversationList />
-      <Outlet />
+    <div>
+      <h1 className="text-3xl font-extrabold tracking-tight text-orange-600 mb-4">Support</h1>
+      <div className="h-[calc(100vh-12rem)] min-h-[480px] flex border border-gray-200 overflow-hidden bg-white">
+        <FolderRail />
+        <ConversationList />
+        <Outlet />
+      </div>
     </div>
   )
 }
