@@ -10,12 +10,12 @@ import {
     getDrivers, getDriverById, updateDriverStatus, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
     grantDriverMoney, getWithdrawals, processWithdrawal,
     getPricing, updatePricing,
-    getEmergencies, updateEmergency,
+    getEmergencies, getEmergencyById, updateEmergency, assignEmergency, addEmergencyNote,
     getAllDocuments, verifyDocument, rejectDocument, updateDocument, deleteDocument, seedTestDocument,
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
     getTransactions, getTransactionById, getTransactionSummary,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
-    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, getSupportAgents, getSupportSettingsAdmin, updateSupportSettings,
+    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, deleteTicket, getSupportAgents, getSupportSettingsAdmin, updateSupportSettings,
     broadcastNotification, getNotificationHistory, getNotificationRecipients,
     getMyAdminNotifications, markMyNotificationRead, markAllMyNotificationsRead,
 } from '../controller/admin.controller.js';
@@ -83,7 +83,10 @@ adminRouter.put('/pricing', updatePricing);
 
 // Emergency / SOS alerts
 adminRouter.get('/emergencies', getEmergencies);
+adminRouter.get('/emergencies/:id', getEmergencyById);
 adminRouter.patch('/emergencies/:id', updateEmergency);
+adminRouter.patch('/emergencies/:id/assign', assignEmergency);
+adminRouter.post('/emergencies/:id/notes', addEmergencyNote);
 
 // Documents
 adminRouter.get('/documents', getAllDocuments);
@@ -126,6 +129,7 @@ adminRouter.patch('/support/:id/assign', assignTicket);
 adminRouter.post('/support/:id/comments', addTicketComment);
 adminRouter.patch('/support/:id/comments/:commentId', editTicketComment);
 adminRouter.delete('/support/:id/comments/:commentId', deleteTicketComment);
+adminRouter.delete('/support/:id', deleteTicket); // super admin only; closed tickets only
 
 // Notifications
 adminRouter.post('/notifications/broadcast', broadcastNotification);

@@ -168,7 +168,10 @@ function ConversationList() {
   if (search.trim()) {
     const q = search.toLowerCase()
     tickets = tickets.filter((t) =>
-      t.subject?.toLowerCase().includes(q) || t.userId?.name?.toLowerCase().includes(q))
+      t.subject?.toLowerCase().includes(q) ||
+      t.userId?.name?.toLowerCase().includes(q) ||
+      t.userId?.phone?.toLowerCase().includes(q) ||
+      t.userId?.email?.toLowerCase().includes(q))
   }
 
   const heading = view === 'mine' ? 'Assigned to me'
@@ -227,12 +230,25 @@ function ConversationList() {
                   isActive ? 'border-l-orange-500' : 'border-l-transparent'
                 )}
               >
-                <Avatar name={person?.name} size="sm" />
+                <Avatar src={person?.avatarUrl} name={person?.name} size="sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-gray-900 truncate">{person?.name || 'Unknown'}</p>
                     <span className="text-[10px] text-gray-400 shrink-0">{formatRelative(t.updatedAt || t.createdAt)}</span>
                   </div>
+                  {/* Who they are — so support can verify at a glance */}
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className={cn('text-[9px] font-bold uppercase tracking-wide px-1.5 py-px rounded shrink-0',
+                      t.driverId ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600')}>
+                      {t.driverId ? 'Driver' : 'Rider'}
+                    </span>
+                    {t.userId?.phone && <span className="text-[10px] text-gray-500 truncate">{t.userId.phone}</span>}
+                  </div>
+                  {t.userId?.email && (
+                    <p className="text-[10px] text-gray-400 truncate flex items-center gap-1 mt-0.5">
+                      <Mail className="h-2.5 w-2.5 shrink-0" />{t.userId.email}
+                    </p>
+                  )}
                   <p className="text-xs text-gray-500 truncate mt-0.5">{preview}</p>
                   <div className="flex items-center gap-1.5 mt-1">
                     <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[t.status] || 'bg-gray-300')} />

@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Send, CheckCircle, Lock, AtSign, Paperclip, Mic, Pencil, Trash2,
-  Phone, Video, CornerUpLeft, MessageSquare, Info, X,
+  Phone, Video, CornerUpLeft, MessageSquare, Info, X, Mail, Car,
 } from '@/components/ui/icons'
 import CallPanel from './CallPanel'
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
@@ -57,6 +57,7 @@ function renderWithMentions(text) {
 
 export default function TicketChat() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const qc = useQueryClient()
   const admin = useAuthStore((s) => s.admin)
 
@@ -160,6 +161,20 @@ export default function TicketChat() {
     onError: (err) => toast.error(err?.message || 'Failed to delete note'),
   })
 
+  // Permanently delete a closed ticket — super admins only (enforced server-side too).
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const deleteMutation = useMutation({
+    mutationFn: () => supportApi.remove(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['support-list'] })
+      qc.invalidateQueries({ queryKey: ['support-counts'] })
+      setConfirmDelete(false)
+      toast.success('Ticket deleted')
+      navigate('/support')
+    },
+    onError: (err) => toast.error(err?.message || 'Failed to delete ticket'),
+  })
+
   // Clear any half-made assignment choice when switching tickets.
   const [prevTicketId, setPrevTicketId] = useState(id)
   if (id !== prevTicketId) { setPrevTicketId(id); setPendingAssignee(null) }
@@ -237,6 +252,18 @@ export default function TicketChat() {
             )}
             {ticket.status === 'resolved' && (
               <Button size="xs" variant="secondary" onClick={() => updateStatus.mutate('closed')} loading={updateStatus.isPending}>Close</Button>
+            )}
+            {ticket.status === 'closed' && (
+              <Button size="xs" variant="secondary" icon={CornerUpLeft} onClick={() => updateStatus.mutate('open')} loading={updateStatus.isPending}>Reopen</Button>
+            )}
+            {ticket.status === 'closed' && admin?.role === 'superadmin' && (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                title="Delete ticket (super admin)"
+                className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             )}
             <button
               onClick={() => setShowInfo((v) => !v)}
@@ -430,13 +457,42 @@ export default function TicketChat() {
           <div className="p-4 border-b border-gray-200">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Submitted by</p>
             <div className="flex items-center gap-3">
-              <Avatar name={person?.name} size="md" />
+              <Avatar src={person?.avatarUrl} name={person?.name} size="md" />
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-900 truncate">{person?.name || '—'}</p>
-                <p className="text-xs text-gray-400">{person?.phone}</p>
-                <p className="text-xs text-gray-400">{ticket.userId ? 'Rider' : 'Driver'}</p>
+                <p className="text-xs text-gray-500">{ticket.driverId ? 'Driver' : 'Rider'}</p>
               </div>
             </div>
+            {/* Contact details so support can verify who they’re talking to */}
+            <div className="mt-3 space-y-1.5">
+              {person?.phone && (
+                <a href={`tel:${person.phone}`} className="flex items-center gap-2 text-xs text-gray-600 hover:text-orange-600">
+                  <Phone className="h-3.5 w-3.5 shrink-0 text-gray-400" /> {person.phone}
+                </a>
+              )}
+              {person?.email && (
+                <a href={`mailto:${person.email}`} className="flex items-center gap-2 text-xs text-gray-600 hover:text-orange-600 truncate">
+                  <Mail className="h-3.5 w-3.5 shrink-0 text-gray-400" /> <span className="truncate">{person.email}</span>
+                </a>
+              )}
+            </div>
+            {/* Vehicle details for driver-raised tickets */}
+            {ticket.driverId && (
+              <div className="mt-3 rounded-lg bg-gray-50 border border-gray-100 p-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1 flex items-center gap-1.5">
+                  <Car className="h-3 w-3" /> Vehicle
+                </p>
+                <p className="text-xs font-medium text-gray-700 capitalize">
+                  {ticket.driverId.vehicleType || '—'}{ticket.driverId.vehiclePlate ? ` · ${ticket.driverId.vehiclePlate}` : ''}
+                </p>
+                {(ticket.driverId.vehicleModel || ticket.driverId.vehicleColor) && (
+                  <p className="text-xs text-gray-500">{[ticket.driverId.vehicleModel, ticket.driverId.vehicleColor].filter(Boolean).join(' · ')}</p>
+                )}
+                {ticket.driverId.rating != null && (
+                  <p className="text-xs text-gray-500 mt-0.5">⭐ {Number(ticket.driverId.rating).toFixed(1)} · <span className="capitalize">{ticket.driverId.status}</span></p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="p-4 border-b border-gray-200">
@@ -514,6 +570,17 @@ export default function TicketChat() {
         confirmLabel="Assign"
         variant="warning"
         loading={assignMutation.isPending}
+      />
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={() => deleteMutation.mutate()}
+        title="Delete ticket"
+        message="This permanently deletes the ticket and its entire conversation. This cannot be undone."
+        confirmLabel="Delete permanently"
+        variant="danger"
+        loading={deleteMutation.isPending}
       />
     </div>
   )

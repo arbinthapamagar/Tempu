@@ -12,8 +12,25 @@ const pick = (...names) => {
   return FALLBACK
 }
 
+// Nudge every icon one Tailwind step larger (a bit bigger, not huge). We bump
+// the size utility tokens callers pass (h-4 w-4 -> h-5 w-5) and raise the
+// no-size default too, so the change applies uniformly without editing every
+// call site. Only exact `h-N`/`w-N` tokens are touched — gap-2, max-w-60, etc.
+// are left alone.
+const STEP_UP = { 3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 11, 11: 12, 12: 14 }
+const bumpSize = (className) =>
+  className
+    .split(/\s+/)
+    .map((token) => {
+      const m = /^([wh])-(\d+)$/.exec(token)
+      if (!m) return token
+      const next = STEP_UP[m[2]]
+      return next ? `${m[1]}-${next}` : token
+    })
+    .join(' ')
+
 const wrap = (Ico) => function Icon({ className = '', ...props }) {
-  const sized = /\b[wh]-/.test(className) ? className : cn('h-5 w-5', className)
+  const sized = /\b[wh]-/.test(className) ? bumpSize(className) : 'h-6 w-6'
   return <Ico className={cn('fill-current', sized)} {...props} />
 }
 
