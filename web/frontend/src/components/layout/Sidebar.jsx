@@ -4,12 +4,15 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   LayoutGrid, Users, Car, Navigation, Repeat, CreditCard, FileText,
   MessageSquare, Building2, BarChart2, Shield, Bell, Zap, X, Banknote, Coins, Siren,
-  ChevronDown, Settings, ChevronsLeft,
+  ChevronDown, Settings, ChevronsLeft, LogOut,
 } from '@/components/ui/icons'
 import { cn } from '../../utils/cn'
 import { Avatar } from '../ui/Avatar'
+import { NotificationBell } from './NotificationBell'
 import { dashboardApi } from '../../api/dashboard.api'
+import { authApi } from '../../api/auth.api'
 import { useAuthStore, hasPermission, canSeeDashboard, homePath } from '../../store/authStore'
+import toast from 'react-hot-toast'
 
 // Each group gets an icon + chevron header (collapsible), with its links indented
 // underneath — the ShipOS sidebar pattern.
@@ -67,11 +70,40 @@ const navSections = [
   },
 ]
 
-export function Sidebar({ open, onClose }) {
-  const { admin } = useAuthStore()
+export function Sidebar({ open, onClose, isCollapsed, onToggle }) {
+  const { admin, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
   const qc = useQueryClient()
+
+  const handleLogout = async () => {
+    try { await authApi.logout() } catch { /* ignore */ }
+    logout()
+    navigate('/login')
+    toast.success('Logged out successfully')
+  }
+
+  // Collapse/expand the rail by double-clicking it (ignore links so navigating
+  // never collapses), or by dragging its right edge left/right past a threshold.
+  const handleDoubleClick = (e) => {
+    if (e.target.closest('a')) return
+    onToggle?.()
+  }
+  const startDrag = (e) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const onMove = (ev) => {
+      const dx = ev.clientX - startX
+      if (dx <= -40 && !isCollapsed) { onToggle?.(); stop() }
+      else if (dx >= 40 && isCollapsed) { onToggle?.(); stop() }
+    }
+    const stop = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', stop)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', stop)
+  }
 
   // Which groups are collapsed. Empty = all expanded.
   const [collapsed, setCollapsed] = useState({})
@@ -108,14 +140,27 @@ export function Sidebar({ open, onClose }) {
 
   return (
     <aside
+      onDoubleClick={handleDoubleClick}
       className={cn(
-        'bg-white text-gray-900 flex flex-col h-screen fixed left-0 top-0 z-30 w-60 transition-transform duration-200',
+        'bg-white text-gray-900 flex flex-col h-screen fixed left-0 top-0 z-30 w-60 transition-all duration-200',
+        // On desktop the bar slides between full and a slim icon rail; on mobile it's the drawer (always full width).
+        isCollapsed ? 'lg:w-16' : 'lg:w-60',
         'lg:translate-x-0',
-        open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        open ? 'translate-x-0' : '-translate-x-full'
       )}
     >
-      {/* Logo: split-colour wordmark like SHIPOS — same height as the header so they align */}
-      <div className="h-20 flex items-center justify-between px-4 border-b border-gray-200">
+      {/* Drag the right edge to collapse/expand (desktop) */}
+      <div
+        onMouseDown={startDrag}
+        className="hidden lg:block absolute right-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-200 z-40"
+        title="Drag to collapse"
+      />
+
+      {/* Logo row — wordmark collapses to just the mark on the slim rail */}
+      <div className={cn(
+        'h-20 flex items-center border-b border-gray-200',
+        isCollapsed ? 'lg:flex-col lg:gap-1 lg:justify-center lg:px-0' : 'justify-between px-4'
+      )}>
         <button
           onClick={() => { navigate(homePath(admin)); onClose?.() }}
           className="flex items-center gap-2 min-w-0 text-left"
@@ -124,10 +169,11 @@ export function Sidebar({ open, onClose }) {
           <div className="bg-orange-500 p-1.5 rounded-lg shrink-0">
             <Zap className="h-6 w-6 text-white" />
           </div>
-          <span className="text-[30px] font-black tracking-tight leading-none">
+          <span className={cn('text-[30px] font-black tracking-tight leading-none', isCollapsed && 'lg:hidden')}>
             <span className="text-gray-900">TEM</span><span className="text-orange-500">PU</span>
           </span>
         </button>
+        {/* Mobile drawer close */}
         <button onClick={onClose} className="lg:hidden p-1 rounded-md hover:bg-gray-100 text-gray-500 shrink-0">
           <X className="h-4 w-4" />
         </button>
@@ -145,14 +191,18 @@ export function Sidebar({ open, onClose }) {
           return (
             <div key={section.label} className="mt-1">
               <button
-                onClick={() => toggleSection(section.label)}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm font-semibold text-gray-800"
+                onClick={() => (isCollapsed ? onToggle?.() : toggleSection(section.label))}
+                title={section.label}
+                className={cn(
+                  'w-full flex items-center px-3 py-2 text-[15px] font-semibold text-gray-900',
+                  isCollapsed ? 'lg:justify-center lg:px-0' : 'justify-between'
+                )}
               >
                 <span className="flex items-center gap-2">
                   <section.icon className="h-4 w-4 text-gray-500" />
-                  {section.label}
+                  <span className={cn(isCollapsed && 'lg:hidden')}>{section.label}</span>
                 </span>
-                <ChevronDown className={cn('h-3 w-3 text-gray-400 transition-transform', isOpen ? '' : '-rotate-90')} />
+                <ChevronDown className={cn('h-3 w-3 text-gray-400 transition-transform', isOpen ? '' : '-rotate-90', isCollapsed && 'lg:hidden')} />
               </button>
 
               {isOpen && visibleItems.map((item) => {
@@ -164,9 +214,11 @@ export function Sidebar({ open, onClose }) {
                     onClick={onClose}
                     className={({ isActive }) =>
                       cn(
-                        'sidebar-link flex items-center justify-between pl-9 pr-3 py-1.5 mx-1 rounded text-[13px] transition-colors',
-                        // text colour stays the same on hover; only the active (clicked) item turns orange
-                        isActive ? 'font-semibold text-orange-600' : 'text-gray-600 hover:bg-gray-50'
+                        'sidebar-link flex items-center justify-between pl-9 pr-3 py-1.5 mx-1 rounded text-sm transition-colors',
+                        // black text throughout; the active item is bold with a subtle fill
+                        isActive ? 'font-semibold text-gray-900 bg-gray-100' : 'text-gray-800 hover:bg-gray-50',
+                        // hidden on the slim desktop rail
+                        isCollapsed && 'lg:hidden'
                       )
                     }
                   >
@@ -185,7 +237,7 @@ export function Sidebar({ open, onClose }) {
       </nav>
 
       {/* Collapse-all button */}
-      <div className="px-3 py-2.5 border-t border-gray-100 border-r border-gray-200">
+      <div className={cn('px-3 py-2.5 border-t border-gray-100 border-r border-gray-200', isCollapsed && 'lg:hidden')}>
         <button
           onClick={collapseAll}
           className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-gray-600"
@@ -195,18 +247,29 @@ export function Sidebar({ open, onClose }) {
         </button>
       </div>
 
-      {/* Admin profile */}
-      <div className="border-t border-gray-100 p-3 border-r border-gray-200">
+      {/* Admin profile + notifications + logout (replaces the old top header) */}
+      <div className={cn(
+        'border-t border-gray-100 p-3 border-r border-gray-200 flex items-center gap-1.5',
+        isCollapsed && 'lg:flex-col lg:gap-2 lg:p-2'
+      )}>
         <button
           onClick={() => { navigate('/profile'); onClose?.() }}
-          className="flex items-center gap-2.5 w-full text-left rounded-lg p-1 -m-1 hover:bg-gray-50 transition-colors"
-          title="View my profile"
+          className={cn('flex items-center gap-2.5 min-w-0 text-left rounded-lg p-1 -m-1 hover:bg-gray-50 transition-colors', isCollapsed ? 'lg:flex-none' : 'flex-1')}
+          title={admin?.name || 'View my profile'}
         >
           <Avatar src={admin?.avatarUrl} name={admin?.name} size="sm" />
-          <div className="min-w-0">
+          <div className={cn('min-w-0', isCollapsed && 'lg:hidden')}>
             <p className="text-sm font-medium text-gray-900 truncate">{admin?.name || 'Admin'}</p>
             <p className="text-xs text-gray-500 capitalize">{admin?.role || 'admin'}</p>
           </div>
+        </button>
+        <NotificationBell openUp />
+        <button
+          onClick={handleLogout}
+          className="shrink-0 p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+          title="Logout"
+        >
+          <LogOut className="h-[18px] w-[18px]" />
         </button>
       </div>
     </aside>

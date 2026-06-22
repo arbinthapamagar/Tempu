@@ -590,19 +590,27 @@ const getAnalyticsVehicleDistribution = asyncHandler(async (req, res) => {
 const getUsers = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.manageUsers) throw new apiError(403, 'Insufficient permissions');
 
-    const { page = 1, limit = 20, status, search, role } = req.query;
+    const { page = 1, limit = 20, status, search, role, userType, verified, joinedFrom, joinedTo } = req.query;
     const limitNum = Math.min(parseInt(limit) || 20, 100);
     const skip = (parseInt(page) - 1) * limitNum;
 
     const filter = {};
     if (status) filter.accountStatus = status;
+    if (userType) filter.userType = userType;
     if (role) filter.role = role;
+    if (verified === 'true') filter.isPhoneVerified = true;
+    else if (verified === 'false') filter.isPhoneVerified = false;
     const minRating = parseFloat(req.query.minRating);
     const maxRating = parseFloat(req.query.maxRating);
     if (!Number.isNaN(minRating) || !Number.isNaN(maxRating)) {
         filter['rating.average'] = {};
         if (!Number.isNaN(minRating)) filter['rating.average'].$gte = minRating;
         if (!Number.isNaN(maxRating)) filter['rating.average'].$lt = maxRating;
+    }
+    if (joinedFrom || joinedTo) {
+        filter.createdAt = {};
+        if (joinedFrom) filter.createdAt.$gte = new Date(joinedFrom);
+        if (joinedTo) filter.createdAt.$lte = new Date(joinedTo);
     }
     if (search) {
         filter.$or = [
@@ -693,19 +701,35 @@ const getUserTransactions = asyncHandler(async (req, res) => {
 const getDrivers = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.manageDrivers) throw new apiError(403, 'Insufficient permissions');
 
-    const { page = 1, limit = 20, status, search, vehicleType } = req.query;
+    const { page = 1, limit = 20, status, search, vehicleType, verified } = req.query;
     const limitNum = Math.min(parseInt(limit) || 20, 100);
     const skip = (parseInt(page) - 1) * limitNum;
 
     const filter = {};
     if (status) filter.status = status;
     if (vehicleType) filter.vehicleType = vehicleType;
+    if (verified === 'true') filter.isVerified = true;
+    else if (verified === 'false') filter.isVerified = false;
     const minRating = parseFloat(req.query.minRating);
     const maxRating = parseFloat(req.query.maxRating);
     if (!Number.isNaN(minRating) || !Number.isNaN(maxRating)) {
         filter.rating = {};
         if (!Number.isNaN(minRating)) filter.rating.$gte = minRating;
         if (!Number.isNaN(maxRating)) filter.rating.$lt = maxRating;
+    }
+    const minRides = parseInt(req.query.minRides);
+    const maxRides = parseInt(req.query.maxRides);
+    if (!Number.isNaN(minRides) || !Number.isNaN(maxRides)) {
+        filter.totalRides = {};
+        if (!Number.isNaN(minRides)) filter.totalRides.$gte = minRides;
+        if (!Number.isNaN(maxRides)) filter.totalRides.$lte = maxRides;
+    }
+    const minEarnings = parseFloat(req.query.minEarnings);
+    const maxEarnings = parseFloat(req.query.maxEarnings);
+    if (!Number.isNaN(minEarnings) || !Number.isNaN(maxEarnings)) {
+        filter.earnings = {};
+        if (!Number.isNaN(minEarnings)) filter.earnings.$gte = minEarnings;
+        if (!Number.isNaN(maxEarnings)) filter.earnings.$lte = maxEarnings;
     }
 
     let query = Driver.find(filter)
@@ -1070,7 +1094,8 @@ const getEmergencies = asyncHandler(async (req, res) => {
             .skip(skip)
             .limit(limitNum)
             .populate('userId', 'name phone avatarUrl')
-            .populate('handledBy', 'name'),
+            .populate('handledBy', 'name')
+            .populate('assignedTo', 'name'),
         Emergency.countDocuments(filter),
         Emergency.countDocuments({ status: 'active' }),
     ]);
@@ -1080,6 +1105,65 @@ const getEmergencies = asyncHandler(async (req, res) => {
         activeCount,
         pagination: { total, page: parseInt(page), limit: limitNum, pages: Math.ceil(total / limitNum) },
     }, 'Emergencies fetched'));
+});
+
+// Fully-populated single emergency for the admin detail view.
+async function buildEmergencyPayload(id) {
+    const emergency = await Emergency.findById(id)
+        .populate('userId', 'name phone email avatarUrl')
+        .populate({ path: 'driverId', select: 'userId vehicleType vehiclePlate vehicleModel vehicleColor status rating', populate: { path: 'userId', select: 'name phone email' } })
+        .populate('handledBy', 'name')
+        .populate('assignedTo', 'name')
+        .populate('notes.authorId', 'name');
+    if (!emergency) return null;
+    return emergency.toObject();
+}
+
+const getEmergencyById = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
+    const payload = await buildEmergencyPayload(req.params.id);
+    if (!payload) throw new apiError(404, 'Emergency not found');
+    return res.status(200).json(new apiResponse(200, payload, 'Emergency fetched'));
+});
+
+const assignEmergency = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
+    const { adminId } = req.body;
+    const assigneeId = adminId || req.admin._id;
+
+    const emergency = await Emergency.findByIdAndUpdate(
+        req.params.id,
+        { assignedTo: assigneeId },
+        { new: true }
+    );
+    if (!emergency) throw new apiError(404, 'Emergency not found');
+
+    // In-app notify the assignee (skip when self-assigning).
+    if (String(assigneeId) !== String(req.admin._id)) {
+        await AdminNotification.create({
+            adminId: assigneeId,
+            title: 'Emergency assigned to you',
+            body: 'An SOS alert has been assigned to you for follow-up.',
+            type: 'emergency',
+            link: `/emergencies?focus=${emergency._id}`,
+        }).catch(() => {});
+    }
+
+    return res.status(200).json(new apiResponse(200, await buildEmergencyPayload(emergency._id), 'Emergency assigned'));
+});
+
+const addEmergencyNote = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
+    const body = (req.body.body || '').trim();
+    if (!body) throw new apiError(400, 'Note cannot be empty');
+
+    const emergency = await Emergency.findById(req.params.id);
+    if (!emergency) throw new apiError(404, 'Emergency not found');
+
+    emergency.notes.push({ authorId: req.admin._id, body });
+    await emergency.save();
+
+    return res.status(200).json(new apiResponse(200, await buildEmergencyPayload(emergency._id), 'Note added'));
 });
 
 const updateEmergency = asyncHandler(async (req, res) => {
@@ -1450,7 +1534,8 @@ const getSupportTickets = asyncHandler(async (req, res) => {
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limitNum)
-            .populate('userId', 'name phone')
+            .populate('userId', 'name phone email avatarUrl')
+            .populate('driverId', 'vehicleType vehiclePlate')
             .populate('assignedTo', 'name'),
         SupportTicket.countDocuments(filter),
         SupportTicket.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
@@ -1469,8 +1554,8 @@ const getSupportTickets = asyncHandler(async (req, res) => {
 // getSupportSettingsAdmin — not per ticket/user.)
 async function buildTicketPayload(id) {
     const ticket = await SupportTicket.findById(id)
-        .populate('userId', 'name phone')
-        .populate({ path: 'driverId', select: 'userId', populate: { path: 'userId', select: 'name phone' } })
+        .populate('userId', 'name phone email avatarUrl')
+        .populate({ path: 'driverId', select: 'userId vehicleType vehiclePlate vehicleModel vehicleColor status rating', populate: { path: 'userId', select: 'name phone email' } })
         .populate('assignedTo', 'name')
         .populate('comments.authorId', 'name')
         .populate('comments.mentions', 'name');
@@ -1738,6 +1823,20 @@ const deleteTicketComment = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, await buildTicketPayload(ticket._id), 'Comment deleted'));
 });
 
+// Permanently delete a ticket. Restricted to super admins, and only once the
+// ticket is closed — so an active conversation can never be wiped out.
+const deleteTicket = asyncHandler(async (req, res) => {
+    if (req.admin.role !== 'superadmin') throw new apiError(403, 'Only a super admin can delete tickets');
+
+    const ticket = await SupportTicket.findById(req.params.id);
+    if (!ticket) throw new apiError(404, 'Ticket not found');
+    if (ticket.status !== 'closed') throw new apiError(400, 'Only closed tickets can be deleted');
+
+    await ticket.deleteOne();
+    return res.status(200).json(new apiResponse(200, { _id: ticket._id }, 'Ticket deleted'));
+});
+
+// ─── Notifications ────────────────────────────────────────────────────────────
 // Notifications
 
 // Send a notification to a group audience AND/OR a specific bulk-selected set of
@@ -1927,12 +2026,12 @@ export {
     getDrivers, getDriverById, updateDriverStatus, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
     grantDriverMoney, getWithdrawals, processWithdrawal,
     getPricing, updatePricing,
-    getEmergencies, updateEmergency,
+    getEmergencies, getEmergencyById, updateEmergency, assignEmergency, addEmergencyNote,
     getAllDocuments, verifyDocument, rejectDocument, updateDocument, deleteDocument, seedTestDocument,
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
     getTransactions, getTransactionById, getTransactionSummary,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
-    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, getSupportAgents, getSupportSettingsAdmin, updateSupportSettings,
+    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, deleteTicket, getSupportAgents, getSupportSettingsAdmin, updateSupportSettings,
     broadcastNotification, getNotificationHistory, getNotificationRecipients,
     getMyAdminNotifications, markMyNotificationRead, markAllMyNotificationsRead,
 };

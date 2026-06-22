@@ -317,7 +317,13 @@ export default function SupportScreen({ onBack, role }) {
                 );
               })}
             </ScrollView>
-            {active.status !== 'closed' && (
+            {active.status === 'closed' && (
+              <View style={styles.reopenBar}>
+                <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+                <Text style={styles.reopenText}>This ticket is closed — send a message below to reopen it.</Text>
+              </View>
+            )}
+            {(
               <View>
                 {recording && (
                   <View style={styles.recordingBar}>
@@ -429,7 +435,7 @@ const styles = StyleSheet.create({
   },
   callBtnText: { ...type.caption, color: colors.primary, fontWeight: '700' },
   bubble: { borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm, maxWidth: '85%' },
-  bubbleMine: { backgroundColor: colors.primary, alignSelf: 'flex-end' },
+  bubbleMine: { backgroundColor: colors.orange, alignSelf: 'flex-end' },
   bubbleAdmin: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignSelf: 'flex-start' },
   bubbleSender: { ...type.micro, color: colors.textMuted, marginBottom: 2 },
   bubbleText: { ...type.body, color: colors.text },
@@ -471,4 +477,10 @@ const styles = StyleSheet.create({
   },
   recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.danger },
   recordingText: { ...type.caption, color: colors.danger, fontWeight: '700' },
+
+  reopenBar: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, backgroundColor: colors.primarySoft,
+  },
+  reopenText: { ...type.caption, color: colors.primary, fontWeight: '700', flexShrink: 1 },
 });

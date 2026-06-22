@@ -149,7 +149,7 @@ export default function WithdrawalList() {
     <div>
       <PageHeader title="Withdrawals" description="Review and settle driver cashout requests" />
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+      <div className="bg-white border border-gray-200">
         <div className="px-5 pt-4">
           <Tabs tabs={tabs} active={statusTab} onChange={(v) => { setStatusTab(v); setPage(1) }} />
         </div>

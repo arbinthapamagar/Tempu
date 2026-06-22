@@ -200,7 +200,7 @@ export default function DocumentQueue() {
     <div>
       <PageHeader title="Document Verification" description="Review and verify driver documents" />
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+      <div className="bg-white border border-gray-200">
         <div className="px-5 pt-4">
           <Tabs tabs={tabs} active={tab} onChange={setTab} />
         </div>

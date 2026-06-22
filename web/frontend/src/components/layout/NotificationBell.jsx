@@ -5,7 +5,7 @@ import { Bell, CheckCheck, MessageSquare } from '@/components/ui/icons'
 import { notificationsApi } from '../../api/notifications.api'
 import { formatRelative } from '../../utils/format'
 
-export function NotificationBell() {
+export function NotificationBell({ openUp = false }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -49,7 +49,7 @@ export function NotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 w-80 max-h-[70vh] overflow-y-auto scrollbar-thin bg-white rounded-xl border border-gray-200 shadow-lg z-40">
+          <div className={`absolute left-0 w-80 max-h-[70vh] overflow-y-auto scrollbar-thin bg-white rounded-xl border border-gray-200 shadow-lg z-40 ${openUp ? 'bottom-full mb-2' : 'right-0 left-auto mt-2'}`}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
               <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
               {unread > 0 && (

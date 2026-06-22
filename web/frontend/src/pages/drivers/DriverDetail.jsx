@@ -25,6 +25,8 @@ export default function DriverDetail() {
   const [activeTab, setActiveTab] = useState('profile')
   const [lightboxDoc, setLightboxDoc] = useState(null)
   const [showGrant, setShowGrant] = useState(false)
+  const [rejectTarget, setRejectTarget] = useState(null) // doc pending rejection
+  const [rejectReason, setRejectReason] = useState('')
 
   const { data: driverRes, isLoading } = useQuery({
     queryKey: ['driver', id],
@@ -51,7 +53,12 @@ export default function DriverDetail() {
 
   const rejectDoc = useMutation({
     mutationFn: ({ docId, reason }) => documentsApi.reject(docId, reason),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['driver-docs', id] }); toast.success('Document rejected') },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['driver-docs', id] })
+      toast.success('Document rejected')
+      setRejectTarget(null)
+      setRejectReason('')
+    },
     onError: (err) => toast.error(err?.message || 'Failed'),
   })
 
@@ -135,7 +142,7 @@ export default function DriverDetail() {
                 <CheckCircle className="h-4 w-4" />
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); rejectDoc.mutate({ docId, reason: 'Document unclear' }) }}
+                onClick={(e) => { e.stopPropagation(); setRejectReason(''); setRejectTarget(row) }}
                 className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-600"
                 title="Reject"
               >
@@ -203,7 +210,7 @@ export default function DriverDetail() {
       </div>
 
       {/* Driver card */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-6">
+      <div className="bg-white border border-gray-200 p-4 mb-6">
         <div className="flex items-start gap-3">
           <Avatar src={user?.avatarUrl} name={user?.name} size="xl" />
           <div className="flex-1">
@@ -239,7 +246,7 @@ export default function DriverDetail() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+      <div className="bg-white border border-gray-200">
         <div className="px-6 pt-4">
           <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
         </div>
@@ -326,6 +333,35 @@ export default function DriverDetail() {
 
       {/* Lightbox — opens PDFs as PDF, images inline */}
       <DocumentLightbox doc={lightboxDoc} onClose={() => setLightboxDoc(null)} />
+
+      {/* Reject reason modal — the note is required so the driver knows what to fix */}
+      <Modal open={!!rejectTarget} onClose={() => { setRejectTarget(null); setRejectReason('') }} title="Reject Document" size="sm">
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            Rejecting: <strong>{docTypeLabel(rejectTarget?.type)}</strong>
+          </p>
+          <Textarea
+            label="Rejection Reason"
+            placeholder="Explain why this document is being rejected..."
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+          />
+          <div className="flex gap-3">
+            <Button variant="secondary" className="flex-1" onClick={() => { setRejectTarget(null); setRejectReason('') }}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              className="flex-1"
+              disabled={!rejectReason.trim()}
+              loading={rejectDoc.isPending}
+              onClick={() => rejectDoc.mutate({ docId: rejectTarget._id, reason: rejectReason })}
+            >
+              Reject
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Grant money modal */}
       <Modal open={showGrant} onClose={() => setShowGrant(false)} title="Grant Money to Driver" size="sm">

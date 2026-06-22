@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  BarChart, Bar, AreaChart, Area,
+  BarChart, Bar, ComposedChart, Area, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
 import { TrendingUp, Users, Car, DollarSign, Navigation } from '@/components/ui/icons'
@@ -16,6 +16,25 @@ const PERIODS = [
   { value: 'year', label: '12 Months' },
   { value: 'custom', label: 'Custom' },
 ]
+
+// Soft, floating tooltip — replaces recharts' boxy default for a nicer feel.
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="rounded-xl border border-gray-100 bg-white/95 backdrop-blur px-3 py-2 shadow-lg">
+      <p className="text-[11px] font-medium text-gray-400 mb-1.5">{label}</p>
+      {payload.map((p) => (
+        <div key={p.dataKey} className="flex items-center gap-2 text-xs">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+          <span className="text-gray-500 capitalize">{p.name}</span>
+          <span className="ml-auto font-semibold text-gray-900">
+            {p.dataKey === 'revenue' ? formatCurrency(p.value) : p.value?.toLocaleString()}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export default function Analytics() {
   const [period, setPeriod] = useState('month')
@@ -156,27 +175,37 @@ export default function Analytics() {
         {tripsLoading ? (
           <div className="h-64 flex items-center justify-center text-sm text-gray-400">Loading...</div>
         ) : tripsData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={tripsData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+          <ResponsiveContainer width="100%" height={300}>
+            <ComposedChart data={tripsData} margin={{ top: 12, right: 12, bottom: 5, left: 0 }}>
               <defs>
                 <linearGradient id="colorTrips" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#f97316" stopOpacity={0.28} />
+                  <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.22} />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-              <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-              <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} formatter={(v, name) => [name === 'revenue' ? formatCurrency(v) : v, name === 'revenue' ? 'Revenue' : 'Trips']} />
-              <Legend />
-              <Area yAxisId="left" type="monotone" dataKey="trips" stroke="#f97316" fill="url(#colorTrips)" strokeWidth={2} name="trips" />
-              <Area yAxisId="right" type="monotone" dataKey="revenue" stroke="#10b981" fill="url(#colorRevenue)" strokeWidth={2} name="revenue" />
-            </AreaChart>
+              <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} dy={6} />
+              <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} allowDecimals={false} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+              <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }} />
+              <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+              {/* soft gradient fills under each line */}
+              <Area yAxisId="left" type="monotone" dataKey="trips" stroke="none" fill="url(#colorTrips)" name="trips" legendType="none" tooltipType="none"
+                isAnimationActive animationDuration={1300} animationEasing="ease-out" />
+              <Area yAxisId="right" type="monotone" dataKey="revenue" stroke="none" fill="url(#colorRevenue)" name="revenue" legendType="none" tooltipType="none"
+                isAnimationActive animationDuration={1300} animationEasing="ease-out" />
+              {/* the animated lines that draw in on top */}
+              <Line yAxisId="left" type="monotone" dataKey="trips" stroke="#f97316" strokeWidth={2.5} name="trips"
+                dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: '#fff' }}
+                isAnimationActive animationDuration={1500} animationEasing="ease-out" />
+              <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2.5} name="revenue"
+                dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: '#fff' }}
+                isAnimationActive animationDuration={1500} animationBegin={250} animationEasing="ease-out" />
+            </ComposedChart>
           </ResponsiveContainer>
         ) : (
           <div className="h-64 flex items-center justify-center text-sm text-gray-400">No data for selected period</div>
@@ -194,12 +223,12 @@ export default function Analytics() {
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={usersData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }} barGap={4} barCategoryGap="30%">
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-                <Legend />
-                <Bar dataKey="users" fill="#f97316" radius={[3, 3, 0, 0]} name="Users" maxBarSize={18} />
-                <Bar dataKey="drivers" fill="#10b981" radius={[3, 3, 0, 0]} name="Drivers" maxBarSize={18} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="users" fill="#f97316" radius={[3, 3, 0, 0]} name="Users" maxBarSize={18} animationDuration={1100} animationEasing="ease-out" />
+                <Bar dataKey="drivers" fill="#10b981" radius={[3, 3, 0, 0]} name="Drivers" maxBarSize={18} animationDuration={1100} animationBegin={150} animationEasing="ease-out" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -217,12 +246,12 @@ export default function Analytics() {
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={tripsData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }} barCategoryGap="30%">
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
-                <Legend />
-                <Bar dataKey="completed" fill="#10b981" radius={[0, 0, 0, 0]} name="Completed" stackId="a" maxBarSize={22} />
-                <Bar dataKey="cancelled" fill="#ef4444" radius={[3, 3, 0, 0]} name="Cancelled" stackId="a" maxBarSize={22} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                <Bar dataKey="completed" fill="#10b981" radius={[0, 0, 0, 0]} name="Completed" stackId="a" maxBarSize={22} animationDuration={1100} animationEasing="ease-out" />
+                <Bar dataKey="cancelled" fill="#ef4444" radius={[3, 3, 0, 0]} name="Cancelled" stackId="a" maxBarSize={22} animationDuration={1100} animationEasing="ease-out" />
               </BarChart>
             </ResponsiveContainer>
           ) : (

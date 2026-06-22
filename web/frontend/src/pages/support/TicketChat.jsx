@@ -1,9 +1,9 @@
-import { useState, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Send, CheckCircle, Lock, AtSign, Paperclip, Mic, Pencil, Trash2,
-  Phone, Video, CornerUpLeft, MessageSquare, Info, X,
+  Phone, Video, CornerUpLeft, MessageSquare, Info, X, Mail, Car,
 } from '@/components/ui/icons'
 import CallPanel from './CallPanel'
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
@@ -23,26 +23,50 @@ const CATEGORY_LABELS = {
   account_issue: 'Account Issue', other: 'Other',
 }
 
+const IMAGE_RE = /\.(png|jpe?g|gif|webp|bmp|svg|heic|heif)(\?|$)/i
+
 function MessageAttachment({ msg, isAdmin }) {
   if (!msg.attachmentUrl) return null
+
   if (msg.attachmentType === 'audio') {
     return (
       <div className="mt-2">
-        <div className={`flex items-center gap-1 text-xs mb-1 ${isAdmin ? 'text-orange-100' : 'text-gray-500'}`}>
+        <div className={`flex items-center gap-1 text-xs mb-1 ${isAdmin ? 'text-gray-300' : 'text-gray-500'}`}>
           <Mic className="h-3 w-3" /> Voice message
         </div>
         <audio controls src={msg.attachmentUrl} className="max-w-full h-9" />
       </div>
     )
   }
+
+  // Render images inline; click to open the full-size original in a new tab.
+  const isImage = IMAGE_RE.test(msg.attachmentName || '') || IMAGE_RE.test(msg.attachmentUrl)
+  if (isImage) {
+    return (
+      <a href={msg.attachmentUrl} target="_blank" rel="noreferrer" className="mt-2 block" title="Open full image">
+        <img
+          src={msg.attachmentUrl}
+          alt={msg.attachmentName || 'Image attachment'}
+          loading="lazy"
+          className="max-w-[240px] max-h-72 w-auto rounded-lg border border-black/10 object-cover"
+        />
+      </a>
+    )
+  }
+
+  // Any other file (PDF, doc, etc.) → a clear download chip.
   return (
     <a
       href={msg.attachmentUrl}
       target="_blank"
       rel="noreferrer"
-      className={`mt-2 inline-flex items-center gap-1.5 text-xs underline ${isAdmin ? 'text-orange-50' : 'text-orange-600'}`}
+      className={cn(
+        'mt-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs max-w-full',
+        isAdmin ? 'border-white/30 text-white hover:bg-white/10' : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+      )}
     >
-      <Paperclip className="h-3 w-3" /> {msg.attachmentName || 'Download attachment'}
+      <Paperclip className="h-3.5 w-3.5 shrink-0" />
+      <span className="truncate">{msg.attachmentName || 'Download attachment'}</span>
     </a>
   )
 }
@@ -50,13 +74,14 @@ function MessageAttachment({ msg, isAdmin }) {
 function renderWithMentions(text) {
   return text.split(/(@[\w]+)/g).map((part, i) =>
     part.startsWith('@')
-      ? <span key={i} className="text-orange-600 font-semibold">{part}</span>
+      ? <span key={i} className="text-gray-900 font-semibold">{part}</span>
       : <span key={i}>{part}</span>
   )
 }
 
 export default function TicketChat() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const qc = useQueryClient()
   const admin = useAuthStore((s) => s.admin)
 
@@ -81,12 +106,22 @@ export default function TicketChat() {
   const [editBody, setEditBody] = useState('')
 
   const callRef = useRef(null)
+  const messagesEndRef = useRef(null)
 
   const { data: ticketRes, isLoading } = useQuery({
     queryKey: ['ticket', id],
     queryFn: () => supportApi.get(id),
     refetchInterval: 5000,
   })
+
+  // Keep the latest message in view so it never hides behind the composer.
+  // Derived from the raw query data so this hook stays ABOVE the early returns
+  // below (hooks must run on every render).
+  const msgCount =
+    (ticketRes?.data?.messages?.length || 0) + (ticketRes?.data?.comments?.length || 0)
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [msgCount, ticketRes?.data?._id])
 
   const { data: agentsRes } = useQuery({
     queryKey: ['support-agents'],
@@ -158,6 +193,20 @@ export default function TicketChat() {
     mutationFn: (commentId) => supportApi.deleteComment(id, commentId),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['ticket', id] }); toast.success('Note deleted') },
     onError: (err) => toast.error(err?.message || 'Failed to delete note'),
+  })
+
+  // Permanently delete a closed ticket — super admins only (enforced server-side too).
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const deleteMutation = useMutation({
+    mutationFn: () => supportApi.remove(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['support-list'] })
+      qc.invalidateQueries({ queryKey: ['support-counts'] })
+      setConfirmDelete(false)
+      toast.success('Ticket deleted')
+      navigate('/support')
+    },
+    onError: (err) => toast.error(err?.message || 'Failed to delete ticket'),
   })
 
   // Clear any half-made assignment choice when switching tickets.
@@ -238,14 +287,54 @@ export default function TicketChat() {
             {ticket.status === 'resolved' && (
               <Button size="xs" variant="secondary" onClick={() => updateStatus.mutate('closed')} loading={updateStatus.isPending}>Close</Button>
             )}
+            {ticket.status === 'closed' && (
+              <Button size="xs" variant="secondary" icon={CornerUpLeft} onClick={() => updateStatus.mutate('open')} loading={updateStatus.isPending}>Reopen</Button>
+            )}
+            {ticket.status === 'closed' && admin?.role === 'superadmin' && (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                title="Delete ticket (super admin)"
+                className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
             <button
               onClick={() => setShowInfo((v) => !v)}
               title="Ticket details"
-              className={cn('p-1.5 rounded-lg transition-colors', showInfo ? 'bg-orange-50 text-orange-600' : 'text-gray-400 hover:bg-gray-100')}
+              className={cn('p-1.5 rounded-lg transition-colors', showInfo ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:bg-gray-100')}
             >
               <Info className="h-4 w-4" />
             </button>
           </div>
+        </div>
+
+        {/* Submitter contact — always visible on open so support can verify the person */}
+        <div className="px-4 py-2 border-b border-gray-100 flex items-center gap-x-4 gap-y-1 flex-wrap text-xs">
+          <span className="flex items-center gap-1.5 font-medium text-gray-800">
+            <Avatar src={person?.avatarUrl} name={person?.name} size="xs" />
+            {person?.name || '—'}
+          </span>
+          <span className={cn('text-[9px] font-bold uppercase tracking-wide px-1.5 py-px rounded',
+            ticket.driverId ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600')}>
+            {ticket.driverId ? 'Driver' : 'Rider'}
+          </span>
+          {person?.phone && (
+            <a href={`tel:${person.phone}`} className="flex items-center gap-1 text-gray-600 hover:text-gray-900">
+              <Phone className="h-3.5 w-3.5 text-gray-400" /> {person.phone}
+            </a>
+          )}
+          {person?.email && (
+            <a href={`mailto:${person.email}`} className="flex items-center gap-1 text-gray-600 hover:text-gray-900 truncate max-w-[220px]">
+              <Mail className="h-3.5 w-3.5 text-gray-400 shrink-0" /> <span className="truncate">{person.email}</span>
+            </a>
+          )}
+          {ticket.driverId && (
+            <span className="flex items-center gap-1 text-gray-600">
+              <Car className="h-3.5 w-3.5 text-gray-400" />
+              <span className="capitalize">{ticket.driverId.vehicleType || '—'}</span>{ticket.driverId.vehiclePlate ? ` · ${ticket.driverId.vehiclePlate}` : ''}
+            </span>
+          )}
         </div>
 
         {/* Timeline */}
@@ -302,7 +391,7 @@ export default function TicketChat() {
                     {!isEditing && c.mentions?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1.5">
                         {c.mentions.map((m) => (
-                          <span key={m._id} className="inline-flex items-center gap-0.5 text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">
+                          <span key={m._id} className="inline-flex items-center gap-0.5 text-[10px] bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">
                             <AtSign className="h-2.5 w-2.5" />{m.name}
                           </span>
                         ))}
@@ -319,7 +408,7 @@ export default function TicketChat() {
               <div key={`m-${i}`} className={`flex gap-2.5 ${isAdmin ? 'flex-row-reverse' : ''}`}>
                 <Avatar name={isAdmin ? 'Admin' : person?.name} size="sm" />
                 <div className={`max-w-[75%] flex flex-col ${isAdmin ? 'items-end' : ''}`}>
-                  <div className={`px-3 py-2 rounded-2xl text-sm ${isAdmin ? 'bg-orange-600 text-white rounded-tr-sm' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm'}`}>
+                  <div className={`px-3 py-2 rounded-2xl text-sm ${isAdmin ? 'bg-orange-500 text-white rounded-tr-sm' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm'}`}>
                     {msg.message}
                     <MessageAttachment msg={msg} isAdmin={isAdmin} />
                   </div>
@@ -329,6 +418,7 @@ export default function TicketChat() {
             )
           })}
           {timeline.length === 0 && <p className="text-sm text-gray-400 text-center py-8">No messages yet.</p>}
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Composer */}
@@ -337,7 +427,7 @@ export default function TicketChat() {
             <button
               onClick={() => setMode('reply')}
               className={cn('flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border transition-colors',
-                mode === 'reply' ? 'bg-orange-50 text-orange-600 border-orange-200 font-medium' : 'text-gray-500 border-gray-200 hover:bg-gray-50')}
+                mode === 'reply' ? 'bg-gray-100 text-gray-900 border-gray-300 font-medium' : 'text-gray-500 border-gray-200 hover:bg-gray-50')}
             >
               <CornerUpLeft className="h-3 w-3" /> Reply
             </button>
@@ -356,10 +446,10 @@ export default function TicketChat() {
             ) : (
               <div>
                 {attachment && (
-                  <div className="mb-2 inline-flex items-center gap-2 max-w-full px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-lg text-xs text-orange-700">
+                  <div className="mb-2 inline-flex items-center gap-2 max-w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700">
                     {attachment.type?.startsWith('audio/') ? <Mic className="h-3 w-3 shrink-0" /> : <Paperclip className="h-3 w-3 shrink-0" />}
                     <span className="truncate">{attachment.name}</span>
-                    <button onClick={() => { setAttachment(null); if (fileInputRef.current) fileInputRef.current.value = '' }} className="shrink-0 text-orange-500 hover:text-orange-700" title="Remove attachment">
+                    <button onClick={() => { setAttachment(null); if (fileInputRef.current) fileInputRef.current.value = '' }} className="shrink-0 text-gray-400 hover:text-gray-600" title="Remove attachment">
                       <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
@@ -370,14 +460,14 @@ export default function TicketChat() {
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Type a reply to the customer…"
                     rows={2}
-                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-orange-500 resize-none"
+                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:border-gray-400 resize-none"
                     onKeyDown={(e) => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); sendReply() } }}
                   />
                   <input ref={fileInputRef} type="file" className="hidden" onChange={(e) => setAttachment(e.target.files?.[0] || null)} />
                   <button onClick={() => fileInputRef.current?.click()} disabled={replyMutation.isPending} className="p-2.5 border border-gray-200 text-gray-500 rounded-lg hover:bg-gray-50 disabled:opacity-50" title="Attach a file">
                     <Paperclip className="h-4 w-4" />
                   </button>
-                  <button onClick={sendReply} disabled={!canSendReply || replyMutation.isPending} className="p-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50" title="Send (Ctrl+Enter)">
+                  <button onClick={sendReply} disabled={!canSendReply || replyMutation.isPending} className="p-2.5 bg-gray-900 text-white rounded-lg hover:bg-black disabled:opacity-50" title="Send (Ctrl+Enter)">
                     <Send className="h-4 w-4" />
                   </button>
                 </div>
@@ -398,7 +488,7 @@ export default function TicketChat() {
               {mentionOpen && filteredAgents.length > 0 && (
                 <div className="absolute z-10 left-3 bottom-full mb-1 w-64 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg">
                   {filteredAgents.map((a) => (
-                    <button key={a._id} type="button" onClick={() => pickMention(a)} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-orange-50">
+                    <button key={a._id} type="button" onClick={() => pickMention(a)} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50">
                       <Avatar name={a.name} size="sm" />
                       <div>
                         <div className="font-medium text-gray-900">{a.name}</div>
@@ -428,24 +518,12 @@ export default function TicketChat() {
           </div>
 
           <div className="p-4 border-b border-gray-200">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Submitted by</p>
-            <div className="flex items-center gap-3">
-              <Avatar name={person?.name} size="md" />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900 truncate">{person?.name || '—'}</p>
-                <p className="text-xs text-gray-400">{person?.phone}</p>
-                <p className="text-xs text-gray-400">{ticket.userId ? 'Rider' : 'Driver'}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 border-b border-gray-200">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Assignment</p>
             <select
               value={selectedAssignee}
               onChange={(e) => setPendingAssignee(e.target.value)}
               disabled={assignMutation.isPending}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 bg-white"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-gray-400 bg-white"
             >
               <option value="" disabled>Unassigned — pick an agent</option>
               {agents.map((a) => (
@@ -469,12 +547,12 @@ export default function TicketChat() {
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Call</p>
               <div className="flex gap-3">
                 {settings.audioCall && (
-                  <button onClick={() => callRef.current?.start('audio')} className="inline-flex items-center gap-1.5 text-sm font-medium text-orange-600 hover:text-orange-700">
+                  <button onClick={() => callRef.current?.start('audio')} className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900">
                     <Phone className="h-4 w-4" /> Audio
                   </button>
                 )}
                 {settings.videoCall && (
-                  <button onClick={() => callRef.current?.start('video')} className="inline-flex items-center gap-1.5 text-sm font-medium text-orange-600 hover:text-orange-700">
+                  <button onClick={() => callRef.current?.start('video')} className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900">
                     <Video className="h-4 w-4" /> Video
                   </button>
                 )}
@@ -514,6 +592,17 @@ export default function TicketChat() {
         confirmLabel="Assign"
         variant="warning"
         loading={assignMutation.isPending}
+      />
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={() => deleteMutation.mutate()}
+        title="Delete ticket"
+        message="This permanently deletes the ticket and its entire conversation. This cannot be undone."
+        confirmLabel="Delete permanently"
+        variant="danger"
+        loading={deleteMutation.isPending}
       />
     </div>
   )

@@ -6,6 +6,7 @@ import {
   Search, Mic, Paperclip, Phone, Video, MessageSquare,
 } from '@/components/ui/icons'
 import { cn } from '../../utils/cn'
+import { PageHeader } from '../../components/shared/PageHeader'
 import { Avatar } from '../../components/ui/Avatar'
 import { supportApi } from '../../api/support.api'
 import { useAuthStore } from '../../store/authStore'
@@ -41,10 +42,8 @@ function isUnanswered(t) {
 export function EmptyConversation() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center px-6 bg-white">
-      <div className="h-14 w-14 rounded-full bg-orange-50 grid place-items-center mb-3">
-        <MessageSquare className="h-6 w-6 text-orange-500" />
-      </div>
-      <p className="text-sm font-medium text-gray-700">Select a conversation</p>
+      <MessageSquare className="h-7 w-7 text-gray-300 mb-3" />
+      <p className="text-sm text-gray-600">Select a conversation</p>
       <p className="text-xs text-gray-400 mt-1">Pick a ticket from the list to read and reply.</p>
     </div>
   )
@@ -64,6 +63,15 @@ function FolderRail() {
   })
   const counts = countsRes?.data?.counts || {}
 
+  // Count of never-answered tickets across ALL statuses (open + in_progress),
+  // so an unanswered ticket is never lost just because it moved to in_progress.
+  const { data: unansweredRes } = useQuery({
+    queryKey: ['support-unanswered'],
+    queryFn: () => supportApi.list({ limit: 100 }),
+    refetchInterval: 10000,
+  })
+  const unansweredCount = (unansweredRes?.data?.tickets || []).filter(isUnanswered).length
+
   const { data: settingsRes } = useQuery({ queryKey: ['support-settings'], queryFn: () => supportApi.settings() })
   const settings = settingsRes?.data || {}
 
@@ -74,6 +82,7 @@ function FolderRail() {
   })
 
   const folders = [
+    { to: '/support?view=unanswered', label: 'Unanswered', icon: Mail, count: unansweredCount, isActive: view === 'unanswered' },
     { to: '/support', label: 'All', icon: Inbox, count: counts.all, isActive: !status && !view },
     { to: '/support?status=open', label: 'New', icon: Mail, count: counts.open, isActive: status === 'open' },
     { to: '/support?status=in_progress', label: 'In progress', icon: Clock, count: counts.in_progress, isActive: status === 'in_progress' },
@@ -90,15 +99,14 @@ function FolderRail() {
     <NavLink
       to={to}
       className={cn(
-        'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
-        isActive ? 'text-orange-600 font-semibold' : 'text-gray-700 font-medium hover:bg-gray-50'
+        'flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm transition-colors',
+        isActive ? 'bg-gray-200/70 text-gray-900 font-medium' : 'text-gray-600 hover:bg-gray-100'
       )}
     >
-      <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-orange-600' : 'text-gray-400')} />
+      <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-gray-700' : 'text-gray-400')} />
       <span className="flex-1 truncate">{label}</span>
       {count > 0 && (
-        <span className={cn('min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold grid place-items-center',
-          isActive ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600')}>
+        <span className={cn('text-xs tabular-nums', isActive ? 'text-gray-700' : 'text-gray-400')}>
           {count}
         </span>
       )}
@@ -106,7 +114,7 @@ function FolderRail() {
   )
 
   return (
-    <aside className="w-52 shrink-0 border-r border-gray-200 flex flex-col bg-white">
+    <aside className="w-52 shrink-0 border-r border-gray-200 flex flex-col bg-gray-50">
       <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-0.5">
         {folders.map((f) => <Item key={f.label} {...f} />)}
         <p className="px-3 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Personal</p>
@@ -164,15 +172,21 @@ function ConversationList() {
   // Personal views + search + tab are applied client-side over the loaded page.
   if (view === 'mine') tickets = tickets.filter((t) => t.assignedTo?._id === admin?._id)
   if (view === 'unassigned') tickets = tickets.filter((t) => !t.assignedTo)
-  if (tab === 'unanswered') tickets = tickets.filter(isUnanswered)
+  if (view === 'unanswered') tickets = tickets.filter(isUnanswered)
+  // The All/Unanswered tab only applies on the plain folders, not the dedicated views.
+  else if (tab === 'unanswered') tickets = tickets.filter(isUnanswered)
   if (search.trim()) {
     const q = search.toLowerCase()
     tickets = tickets.filter((t) =>
-      t.subject?.toLowerCase().includes(q) || t.userId?.name?.toLowerCase().includes(q))
+      t.subject?.toLowerCase().includes(q) ||
+      t.userId?.name?.toLowerCase().includes(q) ||
+      t.userId?.phone?.toLowerCase().includes(q) ||
+      t.userId?.email?.toLowerCase().includes(q))
   }
 
   const heading = view === 'mine' ? 'Assigned to me'
     : view === 'unassigned' ? 'Unassigned'
+    : view === 'unanswered' ? 'Unanswered'
     : status ? { open: 'New', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed' }[status]
     : 'All conversations'
 
@@ -189,23 +203,25 @@ function ConversationList() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search..."
-            className="w-full pl-8 pr-2 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+            className="w-full pl-8 pr-2 py-1.5 text-sm bg-white border border-gray-200 rounded-md focus:outline-none focus:border-gray-400"
           />
         </div>
       </div>
 
-      <div className="flex gap-1.5 px-3 py-2 border-b border-gray-200">
-        {['unanswered', 'all'].map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn('text-xs px-2.5 py-1 rounded-md capitalize font-medium',
-              tab === t ? 'text-orange-600' : 'text-gray-500 hover:text-gray-700')}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      {!view && (
+        <div className="flex gap-1.5 px-3 py-2 border-b border-gray-200">
+          {['unanswered', 'all'].map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={cn('text-xs px-2.5 py-1 capitalize',
+                tab === t ? 'text-gray-900 font-semibold border-b-2 border-gray-900' : 'text-gray-400 hover:text-gray-600')}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         {isLoading ? (
@@ -224,10 +240,10 @@ function ConversationList() {
                 to={`/support/${t._id}${status ? `?status=${status}` : view ? `?view=${view}` : ''}`}
                 className={cn(
                   'flex gap-2.5 px-3 py-2.5 border-b border-gray-100 cursor-pointer border-l-2',
-                  isActive ? 'border-l-orange-500' : 'border-l-transparent'
+                  isActive ? 'border-l-gray-900 bg-gray-50' : 'border-l-transparent hover:bg-gray-50/60'
                 )}
               >
-                <Avatar name={person?.name} size="sm" />
+                <Avatar src={person?.avatarUrl} name={person?.name} size="sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-gray-900 truncate">{person?.name || 'Unknown'}</p>
@@ -250,10 +266,13 @@ function ConversationList() {
 
 export default function SupportInbox() {
   return (
-    <div className="h-[calc(100vh-9rem)] min-h-[480px] flex border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
-      <FolderRail />
-      <ConversationList />
-      <Outlet />
+    <div>
+      <PageHeader title="Support" description="Help riders and drivers, and keep every conversation in one place." />
+      <div className="h-[calc(100vh-9rem)] min-h-[480px] flex border border-gray-200 overflow-hidden bg-white">
+        <FolderRail />
+        <ConversationList />
+        <Outlet />
+      </div>
     </div>
   )
 }

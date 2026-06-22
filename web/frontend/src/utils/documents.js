@@ -3,6 +3,17 @@
 
 export const isPdf = (url) => /\.pdf(\?|$)/i.test(url || '')
 
+// Force-download a file rather than navigating to it. Cloudinary honours the
+// `fl_attachment` delivery flag (works cross-origin, keeps the original name);
+// any other URL falls back to the raw link.
+export const downloadUrl = (url) => {
+  if (!url) return url
+  if (/res\.cloudinary\.com/.test(url) && url.includes('/upload/')) {
+    return url.replace('/upload/', '/upload/fl_attachment/')
+  }
+  return url
+}
+
 export const DOC_TYPE_LABELS = {
   citizenship: 'Citizenship',
   driving_license: 'Driving License',

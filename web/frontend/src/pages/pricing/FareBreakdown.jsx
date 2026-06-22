@@ -36,7 +36,12 @@ export function FareBreakdown({ f }) {
       {/* Fare assembly */}
       <div className="mt-3 border-t border-dashed border-gray-200 pt-3 space-y-1.5">
         <Line label="Base fare" value={rs(f.baseFare)} />
-        <Line label={`Distance cost (${f.distance} km × ${rs(f.finalPerKm)})`} value={rs(f.distanceCost)} />
+        <Line label={`Distance cost (${f.billedDistance} km × ${rs(f.finalPerKm)})`} value={rs(f.distanceCost)} />
+        {f.distFloored && (
+          <p className="px-3 text-xs text-amber-600">
+            Ride is {f.actualDistance} km — billed as the {f.billedDistance} km minimum.
+          </p>
+        )}
         <Line label="Subtotal fare" value={rs(f.subtotalFare)} strong />
         <Line label={`VAT (${f.vatPct}%)`} value={rs(f.vat)} tone="amber" />
       </div>

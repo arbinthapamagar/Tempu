@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle, XCircle, Pause, Play, Eye, Bell, Send, X } from '@/components/ui/icons'
+import { CheckCircle, XCircle, Pause, Play, Eye, Bell, Send, X, Download } from '@/components/ui/icons'
 import { Button } from '../../components/ui/Button'
 import { SendNotificationModal } from '../../components/shared/SendNotificationModal'
 import { DataTable } from '../../components/shared/DataTable'
@@ -15,6 +15,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Tabs } from '../../components/ui/Tabs'
 import { driversApi } from '../../api/drivers.api'
 import { formatDate, formatCurrency, formatRelative } from '../../utils/format'
+import { exportToCsv, dateStamp } from '../../utils/export'
 import toast from 'react-hot-toast'
 
 const VEHICLE_TYPE_OPTIONS = [
@@ -30,7 +31,28 @@ const RATING_OPTIONS = [
   { value: 'lt3', label: 'Below 3★' },
 ]
 
+const VERIFIED_OPTIONS = [
+  { value: 'true', label: 'Verified' },
+  { value: 'false', label: 'Unverified' },
+]
+
+const RIDES_OPTIONS = [
+  { value: '0', label: 'No rides yet' },
+  { value: '1', label: '1+ rides' },
+  { value: '50', label: '50+ rides' },
+  { value: '200', label: '200+ rides' },
+]
+
+const EARNINGS_OPTIONS = [
+  { value: '1', label: 'Has earnings' },
+  { value: '0', label: 'No earnings' },
+  { value: '1000', label: '₹1,000+' },
+  { value: '10000', label: '₹10,000+' },
+]
+
 const ratingToParams = (v) => (v === 'lt3' ? { maxRating: 3 } : v ? { minRating: v } : {})
+const ridesToParams = (v) => (v === '' ? {} : v === '0' ? { maxRides: 0 } : { minRides: Number(v) })
+const earningsToParams = (v) => (v === '' ? {} : v === '0' ? { maxEarnings: 0 } : { minEarnings: Number(v) })
 
 export default function DriverList() {
   const navigate = useNavigate()
@@ -40,22 +62,33 @@ export default function DriverList() {
   const [statusFilter, setStatusFilter] = useState('')
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('')
   const [ratingFilter, setRatingFilter] = useState('')
+  const [verifiedFilter, setVerifiedFilter] = useState('')
+  const [ridesFilter, setRidesFilter] = useState('')
+  const [earningsFilter, setEarningsFilter] = useState('')
   const [confirmAction, setConfirmAction] = useState(null)
   const [selected, setSelected] = useState([]) // [{ id, label }]
   const [notify, setNotify] = useState(null)   // { recipients }
+  const [exporting, setExporting] = useState(false)
   // Seed the tab from a ?status= link (e.g. the dashboard "Pending Drivers" card).
   const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState(searchParams.get('status') || '')
 
+  // Shared query params for the active filters — reused by the table, "select
+  // all matching" and the CSV export so they always agree.
+  const buildParams = (extra = {}) => ({
+    search,
+    status: statusFilter || activeTab || undefined,
+    vehicleType: vehicleTypeFilter || undefined,
+    verified: verifiedFilter || undefined,
+    ...ratingToParams(ratingFilter),
+    ...ridesToParams(ridesFilter),
+    ...earningsToParams(earningsFilter),
+    ...extra,
+  })
+
   const { data, isLoading } = useQuery({
-    queryKey: ['drivers', page, search, statusFilter || activeTab, vehicleTypeFilter, ratingFilter],
-    queryFn: () =>
-      driversApi.list({
-        page, limit: 20, search,
-        status: statusFilter || activeTab || undefined,
-        vehicleType: vehicleTypeFilter || undefined,
-        ...ratingToParams(ratingFilter),
-      }),
+    queryKey: ['drivers', page, search, statusFilter || activeTab, vehicleTypeFilter, ratingFilter, verifiedFilter, ridesFilter, earningsFilter],
+    queryFn: () => driversApi.list(buildParams({ page, limit: 20 })),
     keepPreviousData: true,
   })
 
@@ -96,12 +129,45 @@ export default function DriverList() {
   }
   const selectAllMatching = async () => {
     try {
-      const res = await driversApi.list({ page: 1, limit: Math.max(pagination.total, 1), search, status: statusFilter || activeTab || undefined, vehicleType: vehicleTypeFilter || undefined, ...ratingToParams(ratingFilter) })
+      const res = await driversApi.list(buildParams({ page: 1, limit: Math.max(pagination.total, 1) }))
       const all = res?.data?.drivers || res?.data || []
       setSelected(all.map((d) => ({ id: d._id, label: labelOf(d) })))
       toast.success(`Selected all ${all.length} matching drivers`)
     } catch {
       toast.error('Could not select all')
+    }
+  }
+
+  // Pull every driver matching the current filters and download as CSV (opens in Excel).
+  const exportData = async () => {
+    setExporting(true)
+    try {
+      const res = await driversApi.list(buildParams({ page: 1, limit: Math.max(pagination.total, 1) }))
+      const all = res?.data?.drivers || res?.data || []
+      if (!all.length) { toast.error('Nothing to export'); return }
+      exportToCsv(`drivers-${dateStamp()}`, [
+        { label: 'Name', value: (d) => d.userId?.name || '' },
+        { label: 'Phone', value: (d) => d.userId?.phone || '' },
+        { label: 'Email', value: (d) => d.userId?.email || '' },
+        { label: 'Vehicle Type', value: (d) => d.vehicleType || '' },
+        { label: 'Plate', value: (d) => d.vehiclePlate || '' },
+        { label: 'Model', value: (d) => d.vehicleModel || '' },
+        { label: 'Color', value: (d) => d.vehicleColor || '' },
+        { label: 'Status', value: (d) => d.status || '' },
+        { label: 'Verified', value: (d) => (d.isVerified ? 'Yes' : 'No') },
+        { label: 'Online', value: (d) => (d.isOnline ? 'Yes' : 'No') },
+        { label: 'Rating', value: (d) => (d.rating || 0).toFixed(1) },
+        { label: 'Total Ratings', value: (d) => d.totalRatings || 0 },
+        { label: 'Total Rides', value: (d) => d.totalRides || 0 },
+        { label: 'Earnings', value: (d) => d.earnings || 0 },
+        { label: 'Wallet Balance', value: (d) => d.walletBalance || 0 },
+        { label: 'Joined', value: (d) => formatDate(d.createdAt) },
+      ], all)
+      toast.success(`Exported ${all.length} drivers`)
+    } catch {
+      toast.error('Export failed')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -229,9 +295,14 @@ export default function DriverList() {
       <PageHeader
         title="Driver Management"
         description="Review and manage driver applications and accounts"
+        actions={
+          <Button variant="secondary" size="sm" icon={Download} onClick={exportData} loading={exporting}>
+            Export
+          </Button>
+        }
       />
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+      <div className="bg-white border border-gray-200">
         <div className="px-5 pt-4">
           <Tabs
             tabs={tabs}
@@ -252,10 +323,28 @@ export default function DriverList() {
                 options: VEHICLE_TYPE_OPTIONS,
               },
               {
+                placeholder: 'All Verification',
+                value: verifiedFilter,
+                onChange: (v) => { setVerifiedFilter(v); setPage(1) },
+                options: VERIFIED_OPTIONS,
+              },
+              {
                 placeholder: 'All Ratings',
                 value: ratingFilter,
                 onChange: (v) => { setRatingFilter(v); setPage(1) },
                 options: RATING_OPTIONS,
+              },
+              {
+                placeholder: 'All Rides',
+                value: ridesFilter,
+                onChange: (v) => { setRidesFilter(v); setPage(1) },
+                options: RIDES_OPTIONS,
+              },
+              {
+                placeholder: 'All Earnings',
+                value: earningsFilter,
+                onChange: (v) => { setEarningsFilter(v); setPage(1) },
+                options: EARNINGS_OPTIONS,
               },
             ]}
           />

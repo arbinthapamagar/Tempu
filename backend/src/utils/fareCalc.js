@@ -2,6 +2,10 @@
 // admin simulator formula (web/frontend/src/utils/fareCalc.js) so the fare the
 // rider is shown and the bid floor the server enforces stay consistent.
 
+// Every ride bills for at least this distance (keep in sync with the frontend
+// MIN_BILLABLE_KM so the rider quote and the enforced bid floor match).
+export const MIN_BILLABLE_KM = 1;
+
 export function getActiveSlot(timeSlots = [], hour) {
   return timeSlots.find((s) => {
     if (s.startHour <= s.endHour) return hour >= s.startHour && hour < s.endHour;
@@ -14,7 +18,8 @@ export function computeStandardFare(config, { vehicleType, distanceKm, cityName 
   const v = config?.vehicles?.[vehicleType];
   if (!v) return null;
 
-  const dist = Number(distanceKm) || 0;
+  // Rides under the minimum are billed as the minimum.
+  const dist = Math.max(Number(distanceKm) || 0, MIN_BILLABLE_KM);
   const h = hour == null ? new Date().getHours() : hour;
   const efficiency = Number(v.efficiency) || 1;
 

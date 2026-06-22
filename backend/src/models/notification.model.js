@@ -115,9 +115,9 @@ async function emailNotification(doc) {
     });
 }
 
-notificationSchema.pre('save', function (next) {
+// Mongoose 9 dropped callback (`next`) middleware — hooks are sync/async now.
+notificationSchema.pre('save', function () {
     this._wasNew = this.isNew;
-    next();
 });
 
 // Fire-and-forget: don't block the request that created the notification.

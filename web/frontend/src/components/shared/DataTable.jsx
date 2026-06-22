@@ -39,12 +39,14 @@ export function DataTable({
   const allChecked = selectable && data.every((r) => selectedIds?.has(rowId(r)))
 
   return (
-    <div className="overflow-x-auto">
+    // Body scrolls inside the card; the header row stays pinned (sticky) so the
+    // column titles never move while scrolling a long list.
+    <div className="overflow-auto max-h-[calc(100vh-11rem)]">
       <table className="min-w-full">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-200">
+          <tr className="border-b border-gray-200">
             {selectable && (
-              <th className="px-3.5 py-2.5 w-10">
+              <th className="sticky top-0 z-10 bg-gray-50 px-3.5 py-2.5 w-10">
                 <Checkbox checked={allChecked} onClick={onToggleAll} title="Select all on page" />
               </th>
             )}
@@ -52,7 +54,7 @@ export function DataTable({
               <th
                 key={col.key}
                 className={cn(
-                  'px-3.5 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap',
+                  'sticky top-0 z-10 bg-gray-50 px-3.5 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap',
                   col.className
                 )}
               >

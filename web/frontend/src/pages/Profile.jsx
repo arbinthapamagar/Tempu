@@ -112,7 +112,7 @@ export default function Profile() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Profile card */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
+          <div className="bg-white border border-gray-200 p-4 text-center">
             <div className="flex justify-center mb-3">
               <div className="relative">
                 <Avatar src={admin?.avatarUrl} name={admin?.name} size="xl" />
@@ -166,7 +166,7 @@ export default function Profile() {
         {/* Right column: edit form OR permissions */}
         <div className="lg:col-span-2 space-y-3">
           {editing ? (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <div className="bg-white border border-gray-200 p-4">
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-sm font-semibold text-gray-900">Edit Profile</h3>
                 <button onClick={() => setEditing(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
@@ -195,7 +195,7 @@ export default function Profile() {
               </form>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <div className="bg-white border border-gray-200 p-4">
               <div className="flex items-center gap-2 mb-4">
                 <Shield className="h-4 w-4 text-orange-600" />
                 <h3 className="text-sm font-semibold text-gray-900">
@@ -216,7 +216,7 @@ export default function Profile() {
           )}
 
           {/* Appearance */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+          <div className="bg-white border border-gray-200 p-4">
             <h3 className="text-sm font-semibold text-gray-900 mb-1">Appearance</h3>
             <p className="text-xs text-gray-400 mb-4">Choose how the admin looks. System follows your device.</p>
             <div className="grid grid-cols-3 gap-3">

@@ -73,6 +73,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
 
   const [driverProfile, setDriverProfile] = useState(null);
   const [driverStatus, setDriverStatus] = useState(null); // null | 'pending' | 'approved' | 'rejected' | 'suspended'
+  const [driverLoaded, setDriverLoaded] = useState(false); // false until the driver profile fetch resolves
   const [online, setOnline] = useState(false);
   const [pushNotifs, setPushNotifs] = useState(true);
   const [rideReminders, setRideReminders] = useState(true);
@@ -92,38 +93,44 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
   const [helpView, setHelpView] = useState(null); // null | 'support'
   const [sosBusy, setSosBusy] = useState(false);
 
-  // SOS: confirm, grab location, fire the emergency alert (it lands in the admin panel).
-  const triggerSOS = () => {
-    Alert.alert(
-      'Send emergency alert?',
-      'This immediately shares your live location with the Tempu safety team.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Send SOS',
-          style: 'destructive',
-          onPress: async () => {
-            setSosBusy(true);
-            let loc = {};
-            try {
-              const { status } = await Location.requestForegroundPermissionsAsync();
-              if (status === 'granted') {
-                const pos = await Location.getCurrentPositionAsync({});
-                loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-              }
-            } catch { /* send without location */ }
-            try {
-              await userApi.triggerEmergency({ ...loc, role: onSwitchToPassenger ? 'driver' : 'passenger' });
-              Alert.alert('Alert sent', 'Our safety team has been notified and is responding.');
-            } catch (e) {
-              Alert.alert('Failed', e?.message || 'Could not send alert. Call local emergency services.');
-            } finally {
-              setSosBusy(false);
-            }
-          },
-        },
-      ],
-    );
+  // SOS: open the sheet so the user can add an optional note before sending.
+  const triggerSOS = () => setModal({ type: 'sos' });
+
+  // Grab location and fire the emergency alert (it lands in the admin panel).
+  // The note is optional — we send the alert with or without it. Location is
+  // best-effort: we use the cached fix instantly and cap a fresh fix at 4s so
+  // the SOS never hangs waiting for GPS (which can stall badly indoors).
+  const sendSOS = async (note) => {
+    setSosBusy(true);
+    let loc = {};
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        // Fast path: last known position is usually instant.
+        let pos = await Location.getLastKnownPositionAsync();
+        if (!pos) {
+          // No cache — try a fresh fix but don't wait more than 4s.
+          pos = await Promise.race([
+            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+            new Promise((resolve) => setTimeout(() => resolve(null), 4000)),
+          ]);
+        }
+        if (pos) loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      }
+    } catch { /* send without location */ }
+    try {
+      await userApi.triggerEmergency({
+        ...loc,
+        message: note?.trim() || undefined,
+        role: onSwitchToPassenger ? 'driver' : 'passenger',
+      });
+      closeModal();
+      Alert.alert('Alert sent', 'Our safety team has been notified and is responding.');
+    } catch (e) {
+      Alert.alert('Failed', e?.message || 'Could not send alert. Call local emergency services.');
+    } finally {
+      setSosBusy(false);
+    }
   };
 
   const isDriver = driverStatus === 'approved';
@@ -141,6 +148,8 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
       setOnline(dp?.isOnline ?? false);
     }).catch(() => {
       setDriverStatus(null);
+    }).finally(() => {
+      setDriverLoaded(true);
     });
   }, []);
 
@@ -349,7 +358,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
           </Pressable>
         )}
 
-        {driverStatus === null && (
+        {driverLoaded && driverStatus === null && (
           <Pressable
             style={styles.becomeDriverCard}
             onPress={() => setDriverOverlay('vehicle')}
@@ -625,6 +634,8 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
         addToWallet={addToWallet}
         tfaEnabled={tfaEnabled}
         setTfaEnabled={setTfaEnabled}
+        sendSOS={sendSOS}
+        sosBusy={sosBusy}
       />
 
       {helpView === 'support' && (
@@ -683,6 +694,8 @@ function ProfileModal({
   addToWallet,
   tfaEnabled,
   setTfaEnabled,
+  sendSOS,
+  sosBusy,
 }) {
   return (
     <Modal
@@ -730,6 +743,7 @@ function ProfileModal({
           {modal?.type === 'devices' && <LinkedDevices close={close} />}
           {modal?.type === 'help' && <HelpCentre close={close} />}
           {modal?.type === 'contact' && <ContactSupport close={close} />}
+          {modal?.type === 'sos' && <SosForm onSend={sendSOS} busy={sosBusy} close={close} />}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -769,6 +783,37 @@ function PrimaryButton({ label, onPress }) {
     <Pressable style={styles.primaryBtn} onPress={onPress}>
       <Text style={styles.primaryBtnText}>{label}</Text>
     </Pressable>
+  );
+}
+
+function SosForm({ onSend, busy, close }) {
+  const [note, setNote] = useState('');
+  return (
+    <>
+      <ModalHeader title="Emergency SOS" close={close} />
+      <Text style={styles.sosWarn}>
+        This immediately shares your live location with the Tempu safety team.
+      </Text>
+      <View style={styles.formField}>
+        <Text style={styles.formLabel}>Add a note (optional)</Text>
+        <TextInput
+          value={note}
+          onChangeText={setNote}
+          style={[styles.formInput, styles.sosNoteInput]}
+          placeholder="What's happening? Anything that helps us respond — leave blank if you can't."
+          placeholderTextColor={colors.textFaint}
+          multiline
+        />
+      </View>
+      <Pressable
+        style={[styles.sosSendBtn, busy && { opacity: 0.6 }]}
+        onPress={() => onSend(note)}
+        disabled={busy}
+      >
+        <Ionicons name="alert-circle" size={18} color="#fff" />
+        <Text style={styles.sosBtnText}>{busy ? 'Sending…' : 'Send SOS'}</Text>
+      </Pressable>
+    </>
   );
 }
 
@@ -1075,7 +1120,8 @@ function ContactSupport({ close }) {
 const THEME_OPTIONS = [
   { key: 'system', label: 'System', icon: 'phone-portrait-outline' },
   { key: 'light', label: 'Light', icon: 'sunny-outline' },
-  { key: 'dark', label: 'Dark', icon: 'moon-outline' },
+  // Dark mode is disabled for now — it needs a redesign. Re-add this option and
+  // restore the dark branch in themeStore.resolveScheme() to bring it back.
 ];
 
 function ThemePicker() {
@@ -1696,6 +1742,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger, borderRadius: 14, paddingVertical: 14,
   },
   sosBtnText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  sosWarn: { ...type.body, color: colors.textMuted, marginBottom: 14 },
+  sosNoteInput: { height: 92, paddingTop: 12, textAlignVertical: 'top' },
+  sosSendBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: colors.danger, borderRadius: 14, paddingVertical: 14, marginTop: 4,
+  },
 
   linkRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   linkBadge: {

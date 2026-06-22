@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Users, UserX, Eye, Ban, CheckCircle, Bell, Send, X } from '@/components/ui/icons'
+import { Users, UserX, Eye, Ban, CheckCircle, Bell, Send, X, Download } from '@/components/ui/icons'
 import { SendNotificationModal } from '../../components/shared/SendNotificationModal'
 import { DataTable } from '../../components/shared/DataTable'
 import { Pagination } from '../../components/shared/Pagination'
@@ -14,6 +14,7 @@ import { Modal } from '../../components/ui/Modal'
 import { Badge } from '../../components/ui/Badge'
 import { usersApi } from '../../api/users.api'
 import { formatDate, formatCurrency, formatRelative } from '../../utils/format'
+import { exportToCsv, dateStamp } from '../../utils/export'
 import toast from 'react-hot-toast'
 
 const USER_TYPE_OPTIONS = [
@@ -35,8 +36,27 @@ const RATING_OPTIONS = [
   { value: 'lt3', label: 'Below 3★' },
 ]
 
+const VERIFIED_OPTIONS = [
+  { value: 'true', label: 'Verified' },
+  { value: 'false', label: 'Unverified' },
+]
+
+const JOINED_OPTIONS = [
+  { value: '7', label: 'Last 7 days' },
+  { value: '30', label: 'Last 30 days' },
+  { value: '90', label: 'Last 90 days' },
+  { value: '365', label: 'Last year' },
+]
+
 // Translate the rating filter value into backend min/max params.
 const ratingToParams = (v) => (v === 'lt3' ? { maxRating: 3 } : v ? { minRating: v } : {})
+// Joined buckets become a `joinedFrom` cutoff date (now minus N days).
+const joinedToParams = (v) => {
+  if (!v) return {}
+  const d = new Date()
+  d.setDate(d.getDate() - Number(v))
+  return { joinedFrom: d.toISOString() }
+}
 
 export default function UserList() {
   const qc = useQueryClient()
@@ -45,14 +65,29 @@ export default function UserList() {
   const [statusFilter, setStatusFilter] = useState('')
   const [userTypeFilter, setUserTypeFilter] = useState('')
   const [ratingFilter, setRatingFilter] = useState('')
+  const [verifiedFilter, setVerifiedFilter] = useState('')
+  const [joinedFilter, setJoinedFilter] = useState('')
   const [selectedUser, setSelectedUser] = useState(null)
   const [confirmAction, setConfirmAction] = useState(null) // { user, action }
   const [selected, setSelected] = useState([]) // [{ id, label }] for notifications
   const [notify, setNotify] = useState(null)   // { recipients: [{id,label}] }
+  const [exporting, setExporting] = useState(false)
+
+  // Shared query params for the active filters — reused by the table, "select
+  // all matching" and the CSV export so they always agree.
+  const buildParams = (extra = {}) => ({
+    search,
+    status: statusFilter,
+    userType: userTypeFilter,
+    verified: verifiedFilter || undefined,
+    ...ratingToParams(ratingFilter),
+    ...joinedToParams(joinedFilter),
+    ...extra,
+  })
 
   const { data, isLoading } = useQuery({
-    queryKey: ['users', page, search, statusFilter, userTypeFilter, ratingFilter],
-    queryFn: () => usersApi.list({ page, limit: 20, search, status: statusFilter, userType: userTypeFilter, ...ratingToParams(ratingFilter) }),
+    queryKey: ['users', page, search, statusFilter, userTypeFilter, ratingFilter, verifiedFilter, joinedFilter],
+    queryFn: () => usersApi.list(buildParams({ page, limit: 20 })),
     keepPreviousData: true,
   })
 
@@ -84,12 +119,40 @@ export default function UserList() {
   }
   const selectAllMatching = async () => {
     try {
-      const res = await usersApi.list({ page: 1, limit: Math.max(pagination.total, 1), search, status: statusFilter, userType: userTypeFilter, ...ratingToParams(ratingFilter) })
+      const res = await usersApi.list(buildParams({ page: 1, limit: Math.max(pagination.total, 1) }))
       const all = res?.data?.users || res?.data || []
       setSelected(all.map((u) => ({ id: u._id, label: labelOf(u) })))
       toast.success(`Selected all ${all.length} matching users`)
     } catch {
       toast.error('Could not select all')
+    }
+  }
+
+  // Pull every user matching the current filters and download as CSV (opens in Excel).
+  const exportData = async () => {
+    setExporting(true)
+    try {
+      const res = await usersApi.list(buildParams({ page: 1, limit: Math.max(pagination.total, 1) }))
+      const all = res?.data?.users || res?.data || []
+      if (!all.length) { toast.error('Nothing to export'); return }
+      exportToCsv(`users-${dateStamp()}`, [
+        { label: 'Name', value: (u) => u.name || '' },
+        { label: 'Phone', value: (u) => u.phone || '' },
+        { label: 'Email', value: (u) => u.email || '' },
+        { label: 'Type', value: (u) => u.userType || '' },
+        { label: 'Status', value: (u) => u.accountStatus || '' },
+        { label: 'Rating', value: (u) => u.rating?.average?.toFixed(1) || '' },
+        { label: 'Total Ratings', value: (u) => u.rating?.total || 0 },
+        { label: 'Wallet Balance', value: (u) => u.walletBalance || 0 },
+        { label: 'Phone Verified', value: (u) => (u.isPhoneVerified ? 'Yes' : 'No') },
+        { label: 'Email Verified', value: (u) => (u.isEmailVerified ? 'Yes' : 'No') },
+        { label: 'Joined', value: (u) => formatDate(u.createdAt) },
+      ], all)
+      toast.success(`Exported ${all.length} users`)
+    } catch {
+      toast.error('Export failed')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -201,9 +264,14 @@ export default function UserList() {
       <PageHeader
         title="User Management"
         description="Manage all registered passengers and their accounts"
+        actions={
+          <Button variant="secondary" size="sm" icon={Download} onClick={exportData} loading={exporting}>
+            Export
+          </Button>
+        }
       />
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+      <div className="bg-white border border-gray-200">
         {/* Filters */}
         <div className="px-5 py-4 border-b border-gray-50">
           <FilterBar
@@ -223,10 +291,22 @@ export default function UserList() {
                 options: USER_TYPE_OPTIONS,
               },
               {
+                placeholder: 'All Verification',
+                value: verifiedFilter,
+                onChange: (v) => { setVerifiedFilter(v); setPage(1) },
+                options: VERIFIED_OPTIONS,
+              },
+              {
                 placeholder: 'All Ratings',
                 value: ratingFilter,
                 onChange: (v) => { setRatingFilter(v); setPage(1) },
                 options: RATING_OPTIONS,
+              },
+              {
+                placeholder: 'Any Join Date',
+                value: joinedFilter,
+                onChange: (v) => { setJoinedFilter(v); setPage(1) },
+                options: JOINED_OPTIONS,
               },
             ]}
           />

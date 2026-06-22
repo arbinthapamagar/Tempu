@@ -1,31 +1,37 @@
 import { resolveScheme } from './themeStore';
 
-// "Inked workshop ledger" — warm paper + ink in light; warm charcoal in dark.
-// Tempu orange throughout. Text colors are tuned for contrast in each scheme.
+// Simple, flat, "human-made" — neutral white/paper with near-black ink text and
+// a calm ink accent (matches the redesigned admin: no bright brand orange, no
+// navy-tinted greys). Semantic colours (danger/warn/success) are kept.
+// TRUE BLACK + ORANGE theme. This is the single active app theme (dark mode
+// toggle is disabled — see themeStore.resolveScheme). Pure-black backgrounds,
+// near-black lifted cards, brand orange accent. Tokens are chosen so text/icons
+// that reference primary/primaryDark stay readable on dark fills.
 const lightColors = {
-  primary: '#ea580c',
-  primaryDark: '#c2410c',
-  primarySoft: '#fde7d3',
+  primary: '#fb7a3c',       // brand orange — buttons / CTAs / accents
+  primaryDark: '#ea580c',   // darker orange — pressed states & strong accent text
+  primarySoft: '#2a1712',   // dark orange-tinted fill (chips, active rows)
 
-  bg: '#f4eee3',
-  background: '#f4eee3',
-  surface: '#fffcf7',
-  surfaceMuted: '#efe7d8',
-  surfaceDark: '#241f1a',
+  bg: '#000000',
+  background: '#000000',
+  surface: '#0e0e0e',       // cards — lifted slightly off pure black
+  surfaceMuted: '#161616',  // inputs / muted fills
+  surfaceDark: '#000000',
 
-  text: '#241f1a',
-  textMuted: '#7b7066',
-  textFaint: '#a99e90',
+  text: '#f5f5f4',          // near-white
+  textMuted: '#a3a3a3',
+  textFaint: '#6b6b6b',
 
-  border: '#e4dccd',
-  divider: '#ece3d4',
+  border: '#262626',
+  divider: '#1c1c1c',
 
-  danger: '#dc2626',
-  dangerSoft: '#fbe3e0',
-  warn: '#c2630e',
-  warnSoft: '#fbe6d4',
-  success: '#15803d',
-  accent: '#ea580c',
+  danger: '#f87171',
+  dangerSoft: '#2a1414',
+  warn: '#fbbf24',
+  warnSoft: '#2a2010',
+  success: '#4ade80',
+  accent: '#fb7a3c',
+  orange: '#fb7a3c',        // brand orange — used for the user's own reply bubble
 };
 
 const darkColors = {
@@ -52,6 +58,7 @@ const darkColors = {
   warnSoft: '#39290f',
   success: '#4ade80',
   accent: '#fb7a3c',
+  orange: '#fb7a3c',        // brand orange — used for the user's own reply bubble
 };
 
 export const themeScheme = resolveScheme(); // 'light' | 'dark', resolved at load

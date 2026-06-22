@@ -10,23 +10,23 @@
   --page: #ffffff;          /* pure white body background */
   --surface: #ffffff;       /* cards, panels */
   --surface-2: #f9fafb;     /* subtle fills, table headers */
-  --ink: #212a3a;           /* NobleUI dark heading text */
+  --ink: #0b0d11;           /* near-black heading/body text (crisp, not dim) */
   --line: #e9edf2;          /* hairline borders / card edges */
   --line-strong: #dee2e6;
   --divide-soft: #f2f4f9;
-  --accent: #f19e00;        /* NobleUI / ShipOS primary (golden orange) */
-  --accent-soft: #fef6e6;
-  --accent-ink: #c97f00;
-  /* NobleUI cool-grey text ramp */
-  --t-900: #212a3a;
-  --t-800: #2a3547;
-  --t-700: #495057;
-  --t-600: #7987a1;
-  --t-500: #7987a1;
-  --t-400: #adb5bd;
-  /* flat, soft elevation */
-  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --shadow-md: 0 4px 10px -2px rgba(16, 24, 40, 0.08);
+  --accent: #2f343c;        /* calm neutral ink accent (was golden orange) */
+  --accent-soft: #f6f6f7;
+  --accent-ink: #111317;
+  /* dark, crisp text ramp — top end is true near-black */
+  --t-900: #0b0d11;
+  --t-800: #1a1d22;
+  --t-700: #2f343c;
+  --t-600: #48484d;
+  --t-500: #6e6e74;
+  --t-400: #9b9ba1;
+  /* flat — minimal elevation */
+  --shadow-sm: none;
+  --shadow-md: 0 2px 8px -2px rgba(16, 24, 40, 0.10);
 }
 
 /* Dark — neutral slate, not warm. */
@@ -53,6 +53,10 @@ html.dark {
 }
 
 @layer base {
+  /* Nudge the whole UI a touch bigger (rem-based, so text + spacing scale together). */
+  html {
+    font-size: 17px;
+  }
   body {
     background-color: var(--page);
     color: var(--ink);
@@ -70,10 +74,10 @@ html.dark {
   .card-craft {
     background-color: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 0.75rem;
-    box-shadow: var(--shadow-sm);
+    border-radius: 0.5rem;
+    box-shadow: none;
   }
-  .card-craft-alt { border-radius: 0.75rem; }
+  .card-craft-alt { border-radius: 0.5rem; }
 
   /* small uppercase caption */
   .eyebrow {

@@ -4,6 +4,7 @@ export const supportApi = {
   list: (params) => api.get('/admin/support', { params }),
   get: (id) => api.get(`/admin/support/${id}`),
   update: (id, data) => api.patch(`/admin/support/${id}`, data),
+  remove: (id) => api.delete(`/admin/support/${id}`),
   reply: (id, { message, attachment } = {}) => {
     if (attachment) {
       const form = new FormData()

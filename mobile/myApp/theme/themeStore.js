@@ -33,7 +33,13 @@ export function setThemeMode(mode) {
 }
 
 // Resolve the mode down to an actual scheme.
+// Dark mode is temporarily disabled (it needs a redesign), so we always resolve
+// to light — even for "System" on a dark phone or a stored "dark" preference
+// from before. To re-enable, restore the body below and re-add the Dark option
+// in ProfileScreen's THEME_OPTIONS.
 export function resolveScheme() {
+  return 'light';
+  // eslint-disable-next-line no-unreachable
   const mode = getThemeMode();
   if (mode === 'light' || mode === 'dark') return mode;
   return Appearance.getColorScheme() === 'dark' ? 'dark' : 'light';
