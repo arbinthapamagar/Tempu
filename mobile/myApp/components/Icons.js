@@ -1,5 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
+import { colors } from '../theme/colors';
 
 export const VEHICLE_META = {
   taxi: { name: 'taxi', color: '#f5b400', lib: 'mci' },
@@ -53,19 +54,19 @@ export function DeliveryArt({ size = 64 }) {
   );
 }
 
-export function PinIcon({ size = 16, color = '#1f242b' }) {
+export function PinIcon({ size = 16, color = colors.text }) {
   return <Ionicons name="location" size={size} color={color} />;
 }
 
-export function FlagIcon({ size = 16, color = '#0a0e0c' }) {
+export function FlagIcon({ size = 16, color = colors.text }) {
   return <Ionicons name="flag" size={size} color={color} />;
 }
 
-export function SearchIcon({ size = 20, color = '#0a0e0c' }) {
+export function SearchIcon({ size = 20, color = colors.text }) {
   return <Ionicons name="search" size={size} color={color} />;
 }
 
-export function ChevronIcon({ size = 16, color = '#6b7570', dir = 'right' }) {
+export function ChevronIcon({ size = 16, color = colors.textMuted, dir = 'right' }) {
   const map = {
     right: 'chevron-forward',
     left: 'chevron-back',
@@ -81,15 +82,15 @@ export function StarIcon({ size = 14, color = '#f5b400', filled = true }) {
   );
 }
 
-export function WalletIcon({ size = 22, color = '#c98a2a' }) {
+export function WalletIcon({ size = 22, color = colors.warn }) {
   return <Ionicons name="wallet" size={size} color={color} />;
 }
 
-export function BellIcon({ size = 22, color = '#e0464a' }) {
+export function BellIcon({ size = 22, color = colors.danger }) {
   return <Ionicons name="notifications" size={size} color={color} />;
 }
 
-export function HomeIcon({ size = 22, color = '#1f242b' }) {
+export function HomeIcon({ size = 22, color = colors.text }) {
   return <Ionicons name="home" size={size} color={color} />;
 }
 
@@ -101,7 +102,7 @@ export function UserIcon({ size = 22, color = '#7a4d20' }) {
   return <Ionicons name="person" size={size} color={color} />;
 }
 
-export function CallIcon({ size = 16, color = '#1f242b' }) {
+export function CallIcon({ size = 16, color = colors.text }) {
   return <Ionicons name="call" size={size} color={color} />;
 }
 
@@ -109,11 +110,11 @@ export function ChatIcon({ size = 16, color = '#5c6fff' }) {
   return <Ionicons name="chatbubble-ellipses" size={size} color={color} />;
 }
 
-export function ShareIcon({ size = 16, color = '#0a0e0c' }) {
+export function ShareIcon({ size = 16, color = colors.text }) {
   return <Ionicons name="share-social" size={size} color={color} />;
 }
 
-export function ShieldIcon({ size = 16, color = '#1f242b' }) {
+export function ShieldIcon({ size = 16, color = colors.text }) {
   return <Ionicons name="shield-checkmark" size={size} color={color} />;
 }
 
@@ -121,31 +122,31 @@ export function ReceiptIcon({ size = 16, color = '#5c6fff' }) {
   return <Ionicons name="receipt" size={size} color={color} />;
 }
 
-export function CardIcon({ size = 18, color = '#0a0e0c' }) {
+export function CardIcon({ size = 18, color = colors.text }) {
   return <Ionicons name="card" size={size} color={color} />;
 }
 
-export function CashIcon({ size = 18, color = '#1f242b' }) {
+export function CashIcon({ size = 18, color = colors.text }) {
   return <MaterialCommunityIcons name="cash-multiple" size={size} color={color} />;
 }
 
-export function ArrowDownIcon({ size = 14, color = '#1f242b' }) {
+export function ArrowDownIcon({ size = 14, color = colors.text }) {
   return <Ionicons name="arrow-down" size={size} color={color} />;
 }
 
-export function ArrowUpIcon({ size = 14, color = '#0a0e0c' }) {
+export function ArrowUpIcon({ size = 14, color = colors.text }) {
   return <Ionicons name="arrow-up" size={size} color={color} />;
 }
 
-export function PlusIcon({ size = 16, color = '#0a0e0c' }) {
+export function PlusIcon({ size = 16, color = colors.text }) {
   return <Ionicons name="add" size={size} color={color} />;
 }
 
-export function CheckIcon({ size = 14, color = '#1f242b' }) {
+export function CheckIcon({ size = 14, color = colors.text }) {
   return <Ionicons name="checkmark" size={size} color={color} />;
 }
 
-export function CloseIcon({ size = 14, color = '#c43d3d' }) {
+export function CloseIcon({ size = 14, color = colors.danger }) {
   return <Ionicons name="close" size={size} color={color} />;
 }
 
@@ -218,7 +219,7 @@ export const VEHICLE_TILE_BG = {
 };
 
 export function VehicleTile({ type, size = 64 }) {
-  const bg = VEHICLE_TILE_BG[type] || '#f3f5f2';
+  const bg = VEHICLE_TILE_BG[type] || colors.surfaceMuted;
   return (
     <View
       style={{
@@ -236,7 +237,7 @@ export function VehicleTile({ type, size = 64 }) {
 }
 
 // Generic round icon wrapper for use behind small icons
-export function IconBubble({ children, size = 36, bg = '#f3f5f2' }) {
+export function IconBubble({ children, size = 36, bg = colors.surfaceMuted }) {
   return (
     <View
       style={{

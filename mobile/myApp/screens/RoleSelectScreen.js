@@ -103,12 +103,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   cardPassenger: {
-    backgroundColor: '#f0faf4',
-    borderColor: '#b6e7cc',
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border,
   },
   cardDriver: {
-    backgroundColor: '#eff6ff',
-    borderColor: '#bfdbfe',
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border,
   },
   cardPressed: { opacity: 0.85 },
 

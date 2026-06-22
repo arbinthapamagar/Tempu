@@ -79,7 +79,7 @@ export default function BiddingSheet({ vehicle, offeredPrice, bids = [], onAccep
           </Text>
         </View>
         <View style={styles.timer}>
-          <Text style={[styles.timerText, remaining < 60 && { color: 'red' }]}>
+          <Text style={[styles.timerText, remaining < 60 && { color: colors.danger }]}>
             {formatRemaining(remaining)}
           </Text>
         </View>
@@ -259,9 +259,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: radius.pill,
-    backgroundColor: '#fff7e6',
+    backgroundColor: colors.primarySoft,
   },
-  ratingText: { color: '#8a5a14', fontSize: 11, fontWeight: '800' },
+  ratingText: { color: colors.primaryDark, fontSize: 11, fontWeight: '800' },
   bidMeta: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   bidMessage: { color: colors.text, fontSize: 12, marginTop: 4, fontStyle: 'italic' },
 

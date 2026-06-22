@@ -11,7 +11,7 @@ import { VehiclePhoto } from '../../components/Brand';
 import { FlagIcon, PinIcon } from '../../components/Icons';
 import { Button, Sheet } from '../../components/ui';
 import { VEHICLE_TYPES } from './useRideFlow';
-import { colors, radius, spacing, type } from '../../theme';
+import { colors, radius, shadow, spacing, type } from '../../theme';
 
 const MIN_FARE = 50;
 const FARE_STEP = 20;
@@ -54,8 +54,18 @@ export default function OptionsSheet({
         contentContainerStyle={{ paddingBottom: spacing.sm }}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.header}>
+          <Text style={styles.title}>Select your ride</Text>
+          {vehicle?.eta != null && (
+            <View style={styles.etaPill}>
+              <Ionicons name="time-outline" size={12} color={colors.primary} />
+              <Text style={styles.etaPillText}>{vehicle.eta} min trip</Text>
+            </View>
+          )}
+        </View>
+
         <View style={styles.routeStrip}>
-          <PinIcon size={10} color={colors.primary} />
+          <PinIcon size={11} color={colors.primary} />
           <Text
             style={[
               styles.routeText,
@@ -66,7 +76,7 @@ export default function OptionsSheet({
             {pickupReady ? pickup : 'Set pickup location'}
           </Text>
           <Text style={styles.routeArrow}>→</Text>
-          <FlagIcon size={10} color={colors.text} />
+          <FlagIcon size={11} color={colors.text} />
           <Text style={styles.routeText} numberOfLines={1}>
             {destination}
           </Text>
@@ -78,10 +88,8 @@ export default function OptionsSheet({
           </Text>
         )}
 
-        <Text style={styles.sectionLabel}>Choose a ride</Text>
-
         <View style={styles.rideList}>
-          {VEHICLE_TYPES.map((r, i) => {
+          {VEHICLE_TYPES.map((r) => {
             const selected = r.id === vehicleId;
             const current = Number(offeredPrice) || r.baseFare;
             const bump = (delta) =>
@@ -90,26 +98,26 @@ export default function OptionsSheet({
               <View
                 key={r.id}
                 style={[
-                  i !== VEHICLE_TYPES.length - 1 && styles.rideRowDivider,
-                  selected && styles.rideRowSelected,
+                  styles.rideCard,
+                  selected && styles.rideCardSelected,
                 ]}
               >
                 <Pressable
                   onPress={() => selectVehicle(r.id, r.baseFare)}
                   style={styles.rideRow}
                 >
-                  <View style={styles.rideArt}>
-                    <VehiclePhoto type={r.id} size={44} />
+                  <View
+                    style={[
+                      styles.rideArt,
+                      selected && styles.rideArtSelected,
+                    ]}
+                  >
+                    <VehiclePhoto type={r.id} size={40} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.rideName}>{r.name}</Text>
                     <Text style={styles.rideNote} numberOfLines={1}>
                       {r.note}
-                    </Text>
-                  </View>
-                  <View style={styles.rideRight}>
-                    <Text style={styles.ridePrice}>
-                      Rs {selected ? current : r.baseFare}
                     </Text>
                     <View style={styles.rideEtaRow}>
                       <Ionicons
@@ -117,8 +125,13 @@ export default function OptionsSheet({
                         size={11}
                         color={colors.textMuted}
                       />
-                      <Text style={styles.rideEta}>{r.eta} min</Text>
+                      <Text style={styles.rideEta}>{r.eta} min away</Text>
                     </View>
+                  </View>
+                  <View style={styles.rideRight}>
+                    <Text style={styles.ridePrice}>
+                      Rs {selected ? current : r.baseFare}
+                    </Text>
                   </View>
                 </Pressable>
 
@@ -149,16 +162,18 @@ export default function OptionsSheet({
           })}
         </View>
 
-        {standardFare ? (
+        <View style={styles.promoCard}>
+          <Ionicons
+            name="pricetags-outline"
+            size={16}
+            color={colors.textMuted}
+          />
           <Text style={styles.hint}>
-            Standard fare is Rs {standardFare}. You can offer this or more — drivers
-            then bid and you pick the best one.
+            {standardFare
+              ? `Standard fare is Rs ${standardFare}. Offer this or more — drivers bid and you pick the best one.`
+              : 'Drivers bid on your offer. You pick the best one.'}
           </Text>
-        ) : (
-          <Text style={styles.hint}>
-            Drivers bid on your offer. You pick the best one.
-          </Text>
-        )}
+        </View>
       </ScrollView>
 
       <Button
@@ -173,13 +188,33 @@ export default function OptionsSheet({
 }
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  title: { ...type.h1, color: colors.text },
+  etaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  etaPillText: { ...type.caption, color: colors.primary, fontWeight: '700' },
+
   routeStrip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.md + 2,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md + 2,
-    backgroundColor: '#f3f5f2',
+    backgroundColor: colors.surfaceMuted,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
@@ -194,18 +229,21 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 
-  sectionLabel: {
-    ...type.eyebrow,
-    color: colors.textMuted,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm + 2,
-  },
   rideList: {
+    gap: spacing.sm + 2,
+    marginTop: spacing.lg,
+  },
+  rideCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
+  },
+  rideCardSelected: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+    ...shadow.fab,
   },
   rideRow: {
     flexDirection: 'row',
@@ -214,23 +252,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md + 2,
     paddingVertical: spacing.md,
   },
-  rideRowDivider: { borderBottomWidth: 1, borderBottomColor: colors.divider },
-  rideRowSelected: { backgroundColor: colors.primarySoft },
   rideArt: {
-    width: 52,
-    height: 44,
+    width: 56,
+    height: 56,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  rideArtSelected: { borderColor: colors.primary },
   rideName: { ...type.h3, color: colors.text },
   rideNote: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   rideRight: { alignItems: 'flex-end' },
-  ridePrice: { ...type.bodyBold, color: colors.text, fontWeight: '800' },
+  ridePrice: { ...type.h3, color: colors.text, fontWeight: '800' },
   rideEtaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    marginTop: 3,
+    marginTop: 4,
   },
   rideEta: { color: colors.textMuted, fontSize: 11 },
 
@@ -248,9 +290,9 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   fareBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.border,
@@ -267,9 +309,22 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  hint: { color: colors.textMuted, fontSize: 12, marginTop: spacing.sm },
+  promoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 2,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  hint: { flex: 1, color: colors.textMuted, fontSize: 12, lineHeight: 17 },
   cta: {
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
     paddingVertical: 16,
   },
 });

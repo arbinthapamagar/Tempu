@@ -33,6 +33,10 @@ function savedPlaceIcon(label) {
   return SAVED_PLACE_ICON[label] || 'location';
 }
 
+function titleCase(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export default function HomeView({ onTapSearch, onPickSaved }) {
   const { user } = useAuth();
   const savedAddresses = user?.savedAddresses || [];
@@ -54,10 +58,6 @@ export default function HomeView({ onTapSearch, onPickSaved }) {
         </View>
       </View>
 
-      <View style={styles.mapBand}>
-        <Map step="home" />
-      </View>
-
       <ScrollView
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
@@ -71,14 +71,46 @@ export default function HomeView({ onTapSearch, onPickSaved }) {
           />
         }
       >
-        <Pressable style={styles.searchBar} onPress={onTapSearch}>
-          <SearchIcon size={18} color={colors.text} />
-          <Text style={styles.searchPlaceholder}>Search destination</Text>
-          <View style={styles.searchTrail}>
-            <Text style={styles.searchLater}>Later</Text>
-          </View>
-        </Pressable>
+        {/* Map — rounded "floating" band */}
+        <View style={styles.mapBand}>
+          <Map step="home" />
+        </View>
 
+        {/* Prominent "Where to?" search card */}
+        <View style={styles.searchCard}>
+          <Text style={styles.searchTitle}>Where to?</Text>
+          <Text style={styles.searchSub}>Your next journey awaits.</Text>
+          <Pressable style={styles.searchPill} onPress={onTapSearch}>
+            <SearchIcon size={20} color={colors.primary} />
+            <Text style={styles.searchPillText}>Search for a destination</Text>
+          </Pressable>
+
+          {/* Quick destination pills from saved places */}
+          {savedAddresses.length > 0 && (
+            <View style={styles.quickRow}>
+              {savedAddresses.slice(0, 3).map((s) => (
+                <Pressable
+                  key={s.label}
+                  style={styles.quickPill}
+                  onPress={() => {
+                    hapticPick();
+                    onPickSaved(s.address);
+                  }}
+                >
+                  <Ionicons
+                    name={savedPlaceIcon(s.label)}
+                    size={15}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.quickPillText}>{titleCase(s.label)}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Ride options — rounded tiles */}
+        <Text style={styles.sectionTitle}>Ride options</Text>
         <View style={styles.serviceGrid}>
           {SERVICES.map((s) => {
             const active = s.id === selected;
@@ -100,45 +132,51 @@ export default function HomeView({ onTapSearch, onPickSaved }) {
           })}
         </View>
 
+        {/* Saved places — bento grid of rounded cards */}
         <View style={styles.savedHeader}>
-          <Text style={styles.savedTitle}>Saved places</Text>
+          <Text style={styles.sectionTitle}>Saved places</Text>
           <Pressable hitSlop={8}>
             <Text style={styles.savedSeeAll}>See all</Text>
           </Pressable>
         </View>
 
-        <View style={styles.savedList}>
-          {savedAddresses.slice(0, 2).map((s, i, arr) => (
-            <Pressable
-              key={s.label}
-              style={[
-                styles.savedRow,
-                i !== arr.length - 1 && styles.savedRowDivider,
-              ]}
-              onPress={() => {
-                hapticPick();
-                onPickSaved(s.address);
-              }}
-            >
-              <View style={styles.savedIcon}>
-                <Ionicons
-                  name={savedPlaceIcon(s.label)}
-                  size={16}
-                  color={colors.primaryDark}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.savedLabel}>
-                  {s.label.charAt(0).toUpperCase() + s.label.slice(1)}
-                </Text>
-                <Text style={styles.savedAddress} numberOfLines={1}>
+        {savedAddresses.length > 0 ? (
+          <View style={styles.bentoGrid}>
+            {savedAddresses.slice(0, 4).map((s) => (
+              <Pressable
+                key={s.label}
+                style={styles.bentoCard}
+                onPress={() => {
+                  hapticPick();
+                  onPickSaved(s.address);
+                }}
+              >
+                <View style={styles.bentoIcon}>
+                  <Ionicons
+                    name={savedPlaceIcon(s.label)}
+                    size={18}
+                    color={colors.primary}
+                  />
+                </View>
+                <Text style={styles.bentoLabel}>{titleCase(s.label)}</Text>
+                <Text style={styles.bentoAddress} numberOfLines={2}>
                   {s.address}
                 </Text>
-              </View>
-              <ChevronIcon dir="right" />
-            </Pressable>
-          ))}
-        </View>
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <Pressable style={styles.emptySaved} onPress={onTapSearch}>
+            <View style={styles.bentoIcon}>
+              <Ionicons name="add" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.bentoLabel}>Add a place</Text>
+              <Text style={styles.bentoAddress}>Save home & work for quick booking</Text>
+            </View>
+            <ChevronIcon dir="right" />
+          </Pressable>
+        )}
       </ScrollView>
     </View>
   );
@@ -154,9 +192,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: Math.max(0, STATUS_TOP_PAD - 12),
     paddingBottom: spacing.xs + 2,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   headerRight: {
     flexDirection: 'row',
@@ -174,60 +210,77 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   statusText: {
-    color: colors.primaryDark,
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
 
-  mapBand: { height: 200, backgroundColor: '#e8ece6' },
-
-  body: { flex: 1, backgroundColor: colors.surface },
+  body: { flex: 1, backgroundColor: colors.background },
   bodyContent: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md + 2,
-    paddingBottom: spacing.xxl + 4,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxxl + 8,
   },
 
-  searchBar: {
+  mapBand: {
+    height: 180,
+    borderRadius: radius.xxl,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+
+  // Prominent search card
+  searchCard: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xxl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.xl,
+    ...shadow.card,
+  },
+  searchTitle: { ...type.h2, color: colors.text },
+  searchSub: { ...type.body, color: colors.textMuted, marginTop: 2, marginBottom: spacing.md + 2 },
+  searchPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: '#f3f5f2',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md + 2,
-    paddingVertical: spacing.md + 2,
-  },
-  searchPlaceholder: {
-    flex: 1,
-    ...type.h3,
-    color: colors.text,
-    fontWeight: '500',
-  },
-  searchTrail: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    backgroundColor: colors.surfaceMuted,
     borderRadius: radius.pill,
-    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 4,
+  },
+  searchPillText: { flex: 1, ...type.body, color: colors.textMuted, fontWeight: '500' },
+
+  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.md },
+  quickPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  searchLater: { ...type.caption, color: colors.text, fontWeight: '700' },
+  quickPillText: { ...type.caption, color: colors.text, fontWeight: '700' },
 
-  serviceGrid: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: spacing.md - 2,
-  },
+  sectionTitle: { ...type.bodyBold, color: colors.text, marginTop: spacing.xl },
+
+  serviceGrid: { flexDirection: 'row', gap: 8, marginTop: spacing.md },
   serviceTile: {
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.md - 2,
-    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.xl,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -254,28 +307,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: spacing.md + 2,
-    marginBottom: 2,
   },
-  savedTitle: { ...type.bodyBold, color: colors.text },
-  savedSeeAll: { color: colors.primary, fontSize: 13, fontWeight: '700' },
+  savedSeeAll: { color: colors.primary, fontSize: 13, fontWeight: '700', marginTop: spacing.xl },
 
-  savedList: { marginTop: spacing.sm },
-  savedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md + 2,
-    paddingVertical: spacing.md + 2,
+  bentoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.md },
+  bentoCard: {
+    width: '47%',
+    flexGrow: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
   },
-  savedRowDivider: { borderBottomWidth: 1, borderBottomColor: colors.divider },
-  savedIcon: {
+  bentoIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing.md,
   },
-  savedLabel: { color: colors.text, fontSize: 15, fontWeight: '700' },
-  savedAddress: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
+  bentoLabel: { color: colors.text, fontSize: 15, fontWeight: '800' },
+  bentoAddress: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+
+  emptySaved: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+  },
 });

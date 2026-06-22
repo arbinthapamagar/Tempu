@@ -3,35 +3,34 @@ import { resolveScheme } from './themeStore';
 // Simple, flat, "human-made" — neutral white/paper with near-black ink text and
 // a calm ink accent (matches the redesigned admin: no bright brand orange, no
 // navy-tinted greys). Semantic colours (danger/warn/success) are kept.
-// TRUE BLACK + ORANGE theme. This is the single active app theme (dark mode
-// toggle is disabled — see themeStore.resolveScheme). Pure-black backgrounds,
-// near-black lifted cards, brand orange accent. Tokens are chosen so text/icons
-// that reference primary/primaryDark stay readable on dark fills.
+// UBER-STYLE LIGHT theme. Single active app theme (dark mode toggle disabled —
+// see themeStore.resolveScheme). White backgrounds, near-black text, BLACK
+// buttons/CTAs (white text on them), light-grey fills. Monochrome — NO orange.
 const lightColors = {
-  primary: '#fb7a3c',       // brand orange — buttons / CTAs / accents
-  primaryDark: '#ea580c',   // darker orange — pressed states & strong accent text
-  primarySoft: '#2a1712',   // dark orange-tinted fill (chips, active rows)
+  primary: '#0a0a0a',       // black — buttons / CTAs / active accents
+  primaryDark: '#000000',   // pure black — pressed states
+  primarySoft: '#f2f2f3',   // light grey fill (chips, active rows, icon bubbles)
 
-  bg: '#000000',
-  background: '#000000',
-  surface: '#0e0e0e',       // cards — lifted slightly off pure black
-  surfaceMuted: '#161616',  // inputs / muted fills
-  surfaceDark: '#000000',
+  bg: '#ffffff',
+  background: '#ffffff',
+  surface: '#ffffff',       // cards
+  surfaceMuted: '#f4f4f5',  // inputs / muted fills
+  surfaceDark: '#0a0a0a',
 
-  text: '#f5f5f4',          // near-white
-  textMuted: '#a3a3a3',
-  textFaint: '#6b6b6b',
+  text: '#0a0a0a',          // near-black
+  textMuted: '#6b7280',
+  textFaint: '#9ca3af',
 
-  border: '#262626',
-  divider: '#1c1c1c',
+  border: '#e5e5e7',
+  divider: '#eeeeef',
 
-  danger: '#f87171',
-  dangerSoft: '#2a1414',
-  warn: '#fbbf24',
-  warnSoft: '#2a2010',
-  success: '#4ade80',
-  accent: '#fb7a3c',
-  orange: '#fb7a3c',        // brand orange — used for the user's own reply bubble
+  danger: '#dc2626',
+  dangerSoft: '#fde8e8',
+  warn: '#b45309',
+  warnSoft: '#fdf0e3',
+  success: '#15803d',
+  accent: '#0a0a0a',
+  orange: '#0a0a0a',        // de-oranged → black (kept token name for compatibility)
 };
 
 const darkColors = {

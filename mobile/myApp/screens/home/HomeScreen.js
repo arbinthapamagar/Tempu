@@ -216,11 +216,11 @@ const styles = StyleSheet.create({
   errorBanner: {
     marginHorizontal: 16,
     marginBottom: 8,
-    backgroundColor: '#fef2f2',
+    backgroundColor: colors.dangerSoft,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: colors.danger,
   },
   errorBannerText: { color: colors.danger, fontSize: 13, fontWeight: '500' },
 });

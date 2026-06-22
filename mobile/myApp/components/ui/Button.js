@@ -10,7 +10,7 @@ const VARIANT = {
     border: colors.border,
   },
   ghost: { bg: 'transparent', pressedBg: colors.surfaceMuted, fg: colors.text },
-  danger: { bg: colors.dangerSoft, pressedBg: '#f5d4d4', fg: colors.danger },
+  danger: { bg: colors.dangerSoft, pressedBg: colors.danger, fg: colors.danger },
 };
 
 const SIZE = {

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { CallIcon, ChatIcon, ShareIcon } from '../../components/Icons';
 import { Button, Sheet } from '../../components/ui';
-import { colors, radius, spacing, type } from '../../theme';
+import { colors, radius, shadow, spacing, type } from '../../theme';
 import { PAYMENT_METHODS } from './constants';
 
 const STATUS_LABEL = {
@@ -56,67 +56,102 @@ export default function ActiveTripSheet({
     <Sheet tall>
       <ScrollView showsVerticalScrollIndicator={false}>
         <Text style={styles.kicker}>{statusText}</Text>
-        <Text style={styles.eta}>
-          {tripStatus === 'arriving' ? `${driver.eta} min` : '—'}
-        </Text>
-        <View style={styles.etaBar}>
-          <View
-            style={[
-              styles.etaBarFill,
-              { width: tripStatus === 'arriving' ? '40%' : '90%' },
-            ]}
-          />
+
+        {/* Driver card — rounded sheet with avatar, name, rating pill, vehicle + plate */}
+        <View style={styles.driverCard}>
+          <View style={styles.driverRow}>
+            <View style={styles.driverAvatar}>
+              <Text style={styles.driverInitials}>{initials}</Text>
+            </View>
+            <View style={styles.driverInfo}>
+              <Text style={styles.driverName} numberOfLines={1}>
+                {driver.name}
+              </Text>
+              <View style={styles.ratingPill}>
+                <Ionicons name="star" size={11} color={colors.primary} />
+                <Text style={styles.ratingText}>{driver.rating.toFixed(2)}</Text>
+              </View>
+            </View>
+            <View style={styles.vehicleBlock}>
+              <Text style={styles.vehicleText} numberOfLines={1}>
+                {driver.vehicleColor} {driver.vehicleModel}
+              </Text>
+              <View style={styles.plate}>
+                <Text style={styles.plateText}>{driver.vehiclePlate}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* ETA pill */}
+          <View style={styles.etaRow}>
+            <View style={styles.etaPill}>
+              <Ionicons name="time-outline" size={13} color={colors.primary} />
+              <Text style={styles.etaPillText}>
+                {tripStatus === 'arriving'
+                  ? `Arriving in ${driver.eta} min`
+                  : tripStatus === 'started'
+                  ? 'On the trip'
+                  : 'Trip complete'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Action FABs — call (orange), message, share */}
+          <View style={styles.actions}>
+            <Pressable
+              style={[styles.fab, styles.fabPrimary]}
+              onPress={() => {
+                if (driver.phone) {
+                  Linking.openURL(`tel:${driver.phone}`);
+                } else {
+                  Alert.alert('Call Driver', 'Driver phone number is not available.');
+                }
+              }}
+            >
+              <CallIcon size={20} color="#fff" />
+            </Pressable>
+            <Pressable
+              style={[styles.fab, styles.fabSurface]}
+              onPress={() => Alert.alert('Message', 'In-trip messaging is available once the driver arrives.')}
+            >
+              <ChatIcon size={20} color={colors.primary} />
+            </Pressable>
+            <Pressable
+              style={[styles.fab, styles.fabSurface]}
+              onPress={() => Alert.alert('Share Trip', 'Trip sharing coming soon.')}
+            >
+              <ShareIcon size={20} color={colors.text} />
+            </Pressable>
+          </View>
         </View>
 
-        <View style={styles.driverRow}>
-          <View style={styles.driverAvatar}>
-            <Text style={styles.driverInitials}>{initials}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.driverName}>{driver.name}</Text>
-            <Text style={styles.driverMeta}>
-              {driver.rating.toFixed(2)} · {driver.vehicleColor}{' '}
-              {driver.vehicleModel}
-            </Text>
-          </View>
-          <View style={styles.plate}>
-            <Text style={styles.plateText}>{driver.vehiclePlate}</Text>
+        {/* Journey line — pickup → destination with endpoint dots */}
+        <View style={styles.journeyCard}>
+          <View style={styles.journeyRow}>
+            <View style={styles.journeyTrack}>
+              <View style={[styles.journeyDot, styles.journeyDotStart]} />
+              <View style={styles.journeyLine} />
+              <View style={[styles.journeyDot, styles.journeyDotEnd]} />
+            </View>
+            <View style={styles.journeyLabels}>
+              <View style={styles.journeyStop}>
+                <Text style={styles.journeyLabel}>Pickup</Text>
+                <Text style={styles.journeyValue} numberOfLines={1}>
+                  Current location
+                </Text>
+              </View>
+              <View style={styles.journeyStopLast}>
+                <Text style={styles.journeyLabel}>Drop-off</Text>
+                <Text style={styles.journeyValue} numberOfLines={1}>
+                  {destination}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
 
-        <View style={styles.actions}>
-          <Pressable
-            style={styles.actionBtn}
-            onPress={() => {
-              if (driver.phone) {
-                Linking.openURL(`tel:${driver.phone}`);
-              } else {
-                Alert.alert('Call Driver', 'Driver phone number is not available.');
-              }
-            }}
-          >
-            <CallIcon size={16} color={colors.primary} />
-            <Text style={styles.actionText}>Call</Text>
-          </Pressable>
-          <Pressable
-            style={styles.actionBtn}
-            onPress={() => Alert.alert('Message', 'In-trip messaging is available once the driver arrives.')}
-          >
-            <ChatIcon size={16} color="#5c6fff" />
-            <Text style={styles.actionText}>Message</Text>
-          </Pressable>
-          <Pressable
-            style={styles.actionBtn}
-            onPress={() => Alert.alert('Share Trip', 'Trip sharing coming soon.')}
-          >
-            <ShareIcon size={16} color={colors.text} />
-            <Text style={styles.actionText}>Share</Text>
-          </Pressable>
-        </View>
-
+        {/* Fare & payment */}
         <View style={styles.detailList}>
-          <DetailRow label="Pickup" value="Current location" />
-          <DetailRow label="Drop-off" value={destination} />
           <DetailRow label="Payment" value={paymentLabel} />
           <DetailRow label="Agreed fare" value={`Rs ${bid.amount}`} bold last />
         </View>
@@ -143,78 +178,134 @@ export default function ActiveTripSheet({
 }
 
 const styles = StyleSheet.create({
-  kicker: { ...type.eyebrow, color: colors.textMuted, marginBottom: 4 },
-  eta: {
-    color: colors.text,
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: -1,
-  },
-  etaBar: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#eef1ee',
-    marginTop: spacing.md,
-    marginBottom: spacing.lg,
-    overflow: 'hidden',
-  },
-  etaBarFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 3 },
+  kicker: { ...type.eyebrow, color: colors.textMuted, marginBottom: spacing.md },
 
+  // Driver card — rounded sheet over the map
+  driverCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xxl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    ...shadow.card,
+  },
   driverRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md + 2,
-    paddingVertical: spacing.sm,
+    gap: spacing.md,
   },
   driverAvatar: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#f1f6f3',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  driverInitials: { color: colors.primaryDark, fontSize: 18, fontWeight: '700' },
+  driverInitials: { color: colors.primary, fontSize: 18, fontWeight: '700' },
+  driverInfo: { flex: 1, gap: 6 },
   driverName: { color: colors.text, fontSize: 17, fontWeight: '700' },
-  driverMeta: { color: colors.textMuted, fontSize: 13, marginTop: 3 },
+  ratingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft,
+  },
+  ratingText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
+  vehicleBlock: { alignItems: 'flex-end', gap: 6, maxWidth: '40%' },
+  vehicleText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
   plate: {
     paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.sm,
-    backgroundColor: '#f3f5f2',
-    borderRadius: radius.md - 2,
+    paddingVertical: 5,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  plateText: { color: colors.text, fontSize: 12, fontWeight: '700' },
+  plateText: { color: colors.text, fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
+
+  etaRow: { marginTop: spacing.md },
+  etaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft,
+  },
+  etaPillText: { color: colors.primary, fontSize: 13, fontWeight: '700' },
 
   actions: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.md + 2,
-    marginBottom: spacing.lg,
+    gap: spacing.md,
+    marginTop: spacing.lg,
   },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: 6,
-    paddingVertical: spacing.md + 1,
-    borderRadius: radius.pill,
-    backgroundColor: '#f3f5f2',
-    borderWidth: 1,
-    borderColor: colors.border,
+  fab: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionText: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  fabPrimary: { backgroundColor: colors.primary, ...shadow.fab },
+  fabSurface: {
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
 
-  detailList: { backgroundColor: colors.surface },
+  // Journey line — pickup → destination
+  journeyCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+  },
+  journeyRow: { flexDirection: 'row', gap: spacing.md },
+  journeyTrack: { alignItems: 'center', paddingTop: 5 },
+  journeyDot: { width: 12, height: 12, borderRadius: 6 },
+  journeyDotStart: { backgroundColor: colors.primary },
+  journeyDotEnd: {
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+  },
+  journeyLine: {
+    width: 2,
+    flex: 1,
+    minHeight: 28,
+    backgroundColor: colors.border,
+    marginVertical: 4,
+  },
+  journeyLabels: { flex: 1, justifyContent: 'space-between' },
+  journeyStop: { marginBottom: spacing.lg },
+  journeyStopLast: {},
+  journeyLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+  journeyValue: { color: colors.text, fontSize: 14, fontWeight: '700', marginTop: 2 },
+
+  detailList: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
+  },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: spacing.md + 2,
     borderBottomWidth: 1,
-    borderBottomColor: '#cdd2cd',
+    borderBottomColor: colors.divider,
   },
   rowLast: { borderBottomWidth: 0 },
   rowLabel: { color: colors.textMuted, fontSize: 14 },
@@ -242,7 +333,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md + 2,
     paddingVertical: spacing.md,
     alignItems: 'center',
-    backgroundColor: '#f3f5f2',
+    backgroundColor: colors.surfaceMuted,
     borderRadius: radius.md,
   },
   inProgressText: { color: colors.textMuted, fontSize: 13, fontWeight: '600', textAlign: 'center' },

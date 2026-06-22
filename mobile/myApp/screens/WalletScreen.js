@@ -13,6 +13,7 @@ import { ArrowDownIcon, ArrowUpIcon, CheckIcon } from '../components/Icons';
 import { userApi } from '../api/user.api';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
+import { radius, spacing, type, shadow } from '../theme';
 
 const PAYMENT_LABELS = {
   cash: 'Cash',
@@ -109,7 +110,9 @@ export default function WalletScreen() {
       </View>
 
       <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Available balance</Text>
+        <View style={styles.balanceDecor} />
+        <View style={styles.balanceDecorSmall} />
+        <Text style={styles.balanceLabel}>Available Balance</Text>
         <Text style={styles.balanceAmount}>Rs {walletBalance.toLocaleString()}</Text>
         <View style={styles.balanceActions}>
           <Pressable
@@ -117,19 +120,21 @@ export default function WalletScreen() {
             onPress={handleTopUp}
             disabled={topping}
           >
-            <Text style={styles.balanceBtnPrimaryText}>{topping ? 'Adding…' : 'Top up'}</Text>
+            <ArrowDownIcon size={15} color={colors.primaryDark} />
+            <Text style={styles.balanceBtnPrimaryText}>{topping ? 'Adding…' : 'Add Funds'}</Text>
           </Pressable>
           <Pressable
             style={styles.balanceBtnGhost}
             onPress={() => alert('Send feature coming soon')}
           >
-            <Text style={styles.balanceBtnGhostText}>Send</Text>
+            <ArrowUpIcon size={15} color="#fff" />
+            <Text style={styles.balanceBtnGhostText}>Withdraw</Text>
           </Pressable>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick top up</Text>
+        <Text style={styles.sectionTitle}>Quick Top Up</Text>
         <View style={styles.topupGrid}>
           {TOPUP_AMOUNTS.map((a) => {
             const active = topUp === a;
@@ -156,7 +161,7 @@ export default function WalletScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Payment methods</Text>
+        <Text style={styles.sectionTitle}>Payment Methods</Text>
         <View style={styles.methodList}>
           {Object.entries(PAYMENT_LABELS).map(([id, label]) => {
             const preferred = preferredMethod === id;
@@ -182,7 +187,14 @@ export default function WalletScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent transactions</Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          {transactions.length > 0 && (
+            <Pressable onPress={onRefresh} hitSlop={8}>
+              <Text style={styles.viewAll}>View All</Text>
+            </Pressable>
+          )}
+        </View>
         {loading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: 16 }} />
         ) : transactions.length === 0 ? (
@@ -198,9 +210,9 @@ export default function WalletScreen() {
                 >
                   <View style={[styles.txIcon, positive ? styles.txIconPos : styles.txIconNeg]}>
                     {positive ? (
-                      <ArrowDownIcon size={16} color={colors.primary} />
+                      <ArrowDownIcon size={16} color={colors.success} />
                     ) : (
-                      <ArrowUpIcon size={16} color={colors.text} />
+                      <ArrowUpIcon size={16} color={colors.danger} />
                     )}
                   </View>
                   <View style={{ flex: 1 }}>
@@ -227,56 +239,171 @@ export default function WalletScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingBottom: 40 },
-  header: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 12 },
-  headerTitle: { color: colors.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
-  headerSub: { color: colors.textMuted, fontSize: 13, marginTop: 4 },
+  scroll: { paddingBottom: spacing.xxxl + spacing.sm },
+  header: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.md },
+  headerTitle: { ...type.display, color: colors.text },
+  headerSub: { ...type.small, color: colors.textMuted, marginTop: spacing.xs },
 
+  // ── Balance card ──────────────────────────────────────────────
   balanceCard: {
-    marginHorizontal: 20,
-    padding: 20,
+    marginHorizontal: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
     backgroundColor: colors.primary,
-    borderRadius: 18,
+    borderRadius: radius.xxl,
+    overflow: 'hidden',
+    ...shadow.fab,
   },
-  balanceLabel: { color: '#dfeee5', fontSize: 12, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
-  balanceAmount: { color: '#ffffff', fontSize: 34, fontWeight: '800', marginTop: 6, letterSpacing: -1 },
-  balanceActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  balanceBtnPrimary: { flex: 1, paddingVertical: 12, borderRadius: 999, backgroundColor: colors.surface, alignItems: 'center' },
-  balanceBtnPrimaryText: { color: colors.primaryDark, fontSize: 14, fontWeight: '700' },
-  balanceBtnGhost: { flex: 1, paddingVertical: 12, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', alignItems: 'center' },
-  balanceBtnGhostText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  balanceDecor: {
+    position: 'absolute',
+    top: -70,
+    right: -50,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  balanceDecorSmall: {
+    position: 'absolute',
+    bottom: -60,
+    left: -30,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  balanceLabel: {
+    ...type.eyebrow,
+    color: 'rgba(255,255,255,0.85)',
+  },
+  balanceAmount: {
+    ...type.display,
+    fontSize: 40,
+    color: '#fff',
+    marginTop: spacing.sm,
+    letterSpacing: -1,
+  },
+  balanceActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl },
+  balanceBtnPrimary: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  balanceBtnPrimaryText: { ...type.bodyBold, color: colors.primaryDark },
+  balanceBtnGhost: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  balanceBtnGhostText: { ...type.bodyBold, color: '#fff' },
 
-  section: { paddingHorizontal: 20, marginTop: 24 },
-  sectionTitle: { color: colors.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 12 },
+  // ── Sections ──────────────────────────────────────────────────
+  section: { paddingHorizontal: spacing.xl, marginTop: spacing.xxl },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  sectionTitle: { ...type.eyebrow, color: colors.textMuted, marginBottom: spacing.md },
+  viewAll: { ...type.caption, color: colors.primary, marginBottom: spacing.md },
 
-  topupGrid: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  topupChip: { flex: 1, paddingVertical: 14, borderRadius: 16, borderWidth: 1, borderColor: colors.border, alignItems: 'center', backgroundColor: colors.surface },
+  // ── Quick top up ──────────────────────────────────────────────
+  topupGrid: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  topupChip: {
+    flex: 1,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+  },
   topupChipActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
-  topupChipText: { color: colors.text, fontSize: 14, fontWeight: '700' },
-  topupChipTextActive: { color: colors.primaryDark },
+  topupChipText: { ...type.bodyBold, color: colors.text },
+  topupChipTextActive: { color: colors.primary },
 
-  cta: { paddingVertical: 14, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center' },
-  ctaText: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
+  cta: {
+    paddingVertical: spacing.lg,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  ctaText: { ...type.bodyBold, fontSize: 15, color: '#fff' },
 
-  methodList: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 20, overflow: 'hidden' },
-  methodRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderBottomWidth: 1, borderBottomColor: colors.divider },
-  methodLabel: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  methodSub: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  preferredPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: colors.primarySoft },
-  preferredText: { color: colors.primaryDark, fontSize: 11, fontWeight: '700' },
+  // ── Payment methods ───────────────────────────────────────────
+  methodList: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+  },
+  methodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  methodLabel: { ...type.bodyBold, color: colors.text },
+  methodSub: { ...type.caption, color: colors.textMuted, marginTop: 2 },
+  preferredPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft,
+  },
+  preferredText: { ...type.micro, color: colors.primary },
 
-  txList: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 20, overflow: 'hidden' },
-  txRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderBottomWidth: 1, borderBottomColor: colors.divider },
+  // ── Transactions ──────────────────────────────────────────────
+  txList: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+  },
+  txRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
   txRowLast: { borderBottomWidth: 0 },
-  txIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
-  txIconPos: { backgroundColor: colors.primarySoft },
-  txIconNeg: { backgroundColor: colors.surfaceMuted },
-  txTitle: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  txMeta: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  txIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  txIconPos: { backgroundColor: 'rgba(74,222,128,0.12)' },
+  txIconNeg: { backgroundColor: 'rgba(248,113,113,0.12)' },
+  txTitle: { ...type.bodyBold, color: colors.text },
+  txMeta: { ...type.caption, color: colors.textMuted, marginTop: 2 },
   txRight: { alignItems: 'flex-end' },
-  txAmount: { fontSize: 14, fontWeight: '800' },
-  txPos: { color: colors.primary },
-  txNeg: { color: colors.text },
-  txDate: { color: colors.textFaint, fontSize: 11, marginTop: 2 },
-  empty: { color: colors.textMuted, textAlign: 'center', marginTop: 16, fontSize: 14 },
+  txAmount: { ...type.bodyBold, fontSize: 15 },
+  txPos: { color: colors.success },
+  txNeg: { color: colors.danger },
+  txDate: { ...type.micro, color: colors.textFaint, marginTop: 2 },
+  empty: { ...type.body, color: colors.textMuted, textAlign: 'center', marginTop: spacing.lg },
 });

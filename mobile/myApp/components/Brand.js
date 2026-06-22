@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Image, View } from 'react-native';
 import { PaymentChip, VehicleTile } from './Icons';
+import { colors } from '../theme/colors';
 
 // Drop your own brand logos / vehicle photos into these paths and they'll
 // show automatically. Until then, the colored vector icon is used as fallback.
@@ -55,12 +56,12 @@ function ImageWithFallback({ source, size, fallback, radius, plain }) {
         width: size,
         height: size,
         borderRadius: radius != null ? radius : size * 0.28,
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.surface,
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: '#eceeec',
+        borderColor: colors.border,
       }}
     >
       <Image

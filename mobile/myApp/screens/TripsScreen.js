@@ -94,12 +94,14 @@ export default function TripsScreen() {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <View style={styles.headerSide} />
-        <Text style={styles.headerTitle}>Trips</Text>
-        <View style={styles.headerSide}>
-          <View style={styles.countPill}>
-            <Text style={styles.countPillText}>{filtered.length}</Text>
-          </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>History</Text>
+          <Text style={styles.headerSubtitle}>
+            {filtered.length} {filtered.length === 1 ? 'trip' : 'trips'} · your past rides
+          </Text>
+        </View>
+        <View style={styles.countPill}>
+          <Text style={styles.countPillText}>{filtered.length}</Text>
         </View>
       </View>
 
@@ -139,7 +141,13 @@ export default function TripsScreen() {
         {error ? (
           <Text style={styles.errorText}>{error}</Text>
         ) : filtered.length === 0 ? (
-          <Text style={styles.empty}>No trips yet.</Text>
+          <View style={styles.emptyWrap}>
+            <View style={styles.emptyIcon}>
+              <ReceiptIcon size={22} color={colors.textFaint} />
+            </View>
+            <Text style={styles.emptyTitle}>No trips yet</Text>
+            <Text style={styles.emptySub}>Your ride history will appear here.</Text>
+          </View>
         ) : (
           filtered.map((t) => {
             const open = openId === t._id;
@@ -147,12 +155,12 @@ export default function TripsScreen() {
             return (
               <Pressable
                 key={t._id}
-                style={styles.card}
+                style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
                 onPress={() => setOpenId(open ? null : t._id)}
               >
                 <View style={styles.cardTop}>
                   <View style={styles.cardIcon}>
-                    <VehiclePhoto type={t.vehicleType} size={32} />
+                    <VehiclePhoto type={t.vehicleType} size={34} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardTitleSmall} numberOfLines={1}>
@@ -165,7 +173,7 @@ export default function TripsScreen() {
                           isCancelled ? styles.statusDotCancelled : styles.statusDotOk,
                         ]}
                       />
-                      <Text style={styles.compactMeta}>
+                      <Text style={styles.compactMeta} numberOfLines={1}>
                         {formatDateTime(t.createdAt)} · {VEHICLE_LABELS[t.vehicleType]}
                       </Text>
                     </View>
@@ -174,7 +182,25 @@ export default function TripsScreen() {
                     <Text style={styles.cardPriceSmall}>
                       Rs {t.finalPrice ?? t.offeredPrice}
                     </Text>
-                    <ChevronIcon dir={open ? 'up' : 'down'} size={14} />
+                    <View style={styles.rightBottomRow}>
+                      <View
+                        style={[
+                          styles.typePill,
+                          isCancelled ? styles.typePillCancelled : styles.typePillOk,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.typePillText,
+                            isCancelled ? styles.typePillTextCancelled : styles.typePillTextOk,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {VEHICLE_LABELS[t.vehicleType] || t.vehicleType}
+                        </Text>
+                      </View>
+                      <ChevronIcon dir={open ? 'up' : 'down'} size={14} />
+                    </View>
                   </View>
                 </View>
 
@@ -258,27 +284,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 4 : 12,
-    paddingBottom: 12,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 8 : 16,
+    paddingBottom: 14,
   },
-  headerSide: {
-    minWidth: 40,
-    alignItems: 'flex-end',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  headerTitle: { color: colors.text, fontSize: 18, fontWeight: '800', letterSpacing: -0.3 },
+  headerTitle: { color: colors.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.6 },
+  headerSubtitle: { color: colors.textMuted, fontSize: 13, marginTop: 2, letterSpacing: -0.1 },
   countPill: {
-    minWidth: 26,
-    height: 22,
-    paddingHorizontal: 8,
-    borderRadius: 11,
+    minWidth: 30,
+    height: 26,
+    paddingHorizontal: 10,
+    borderRadius: 13,
     backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  countPillText: { color: colors.text, fontSize: 12, fontWeight: '800' },
+  countPillText: { color: colors.text, fontSize: 13, fontWeight: '800' },
 
   filters: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 10 },
   filterChip: {
@@ -309,32 +332,62 @@ const styles = StyleSheet.create({
   filterCountTextActive: { color: '#ffffff' },
 
   list: { paddingHorizontal: 20, paddingBottom: 28 },
-  empty: { color: colors.textMuted, textAlign: 'center', marginTop: 36, fontSize: 14 },
   errorText: { color: colors.danger, textAlign: 'center', marginTop: 36, fontSize: 14 },
+
+  emptyWrap: { alignItems: 'center', marginTop: 64, paddingHorizontal: 24 },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  emptyTitle: { color: colors.text, fontSize: 16, fontWeight: '800', letterSpacing: -0.2 },
+  emptySub: { color: colors.textMuted, fontSize: 13, marginTop: 4, textAlign: 'center' },
 
   card: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 20,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: 24,
+    padding: 16,
+    marginBottom: 12,
   },
-  cardTop: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  cardPressed: { opacity: 0.85, backgroundColor: colors.surfaceMuted },
+  cardTop: { flexDirection: 'row', gap: 14, alignItems: 'center' },
   cardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  cardTitleSmall: { color: colors.text, fontSize: 14, fontWeight: '700' },
-  compactMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  cardTitleSmall: { color: colors.text, fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
+  compactMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5 },
   statusDotSmall: { width: 6, height: 6, borderRadius: 3 },
-  compactMeta: { color: colors.textMuted, fontSize: 11, flex: 1 },
-  cardRightCompact: { alignItems: 'flex-end', gap: 3 },
-  cardPriceSmall: { color: colors.text, fontSize: 14, fontWeight: '800' },
+  compactMeta: { color: colors.textMuted, fontSize: 12, flex: 1 },
+  cardRightCompact: { alignItems: 'flex-end', gap: 6 },
+  cardPriceSmall: { color: colors.primary, fontSize: 16, fontWeight: '800', letterSpacing: -0.3 },
+  rightBottomRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  typePill: {
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+    maxWidth: 96,
+  },
+  typePillOk: { backgroundColor: colors.primarySoft },
+  typePillCancelled: { backgroundColor: colors.dangerSoft },
+  typePillText: { fontSize: 11, fontWeight: '700', letterSpacing: -0.1 },
+  typePillTextOk: { color: colors.primary },
+  typePillTextCancelled: { color: colors.danger },
 
   expandedRoute: {
     marginTop: 10,

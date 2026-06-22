@@ -28,7 +28,7 @@ function DriverTabBar({ active, onChange, locked }) {
             <Ionicons
               name={isActive ? t.icon : `${t.icon}-outline`}
               size={23}
-              color={isActive ? colors.primary : (locked ? colors.textFaint : '#9aa39e')}
+              color={isActive ? colors.primary : (locked ? colors.textFaint : colors.textMuted)}
             />
             <Text style={[styles.label, isActive && styles.labelActive]}>{t.label}</Text>
           </Pressable>
