@@ -18,6 +18,7 @@ const vehicleSchema = new mongoose.Schema(
     efficiency: { type: Number, default: 0 },        // km per kWh
     maintenancePerKm: { type: Number, default: 0 },  // Rs / km
     baseFare: { type: Number, default: 0 },          // Rs
+    perMinuteRate: { type: Number, default: 0 },     // Rs / min (Uber-style time charge)
   },
   { _id: false }
 );
