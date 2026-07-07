@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
   Alert,
@@ -12,12 +13,14 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/type';
 
 export default function LoginScreen({ onGoToRegister, onContact }) {
   const { login } = useAuth();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [focused, setFocused] = useState(null); // 'phone' | 'password'
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -54,75 +57,108 @@ export default function LoginScreen({ onGoToRegister, onContact }) {
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      {/* Top bar: wordmark + help */}
+      <View style={styles.header}>
+        <Text style={styles.brand}>Tempu</Text>
+        <View style={styles.headerBtn}>
+          <Ionicons name="help" size={20} color={colors.textMuted} />
+        </View>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.brand}>Tempu</Text>
+        {/* Hero */}
+        <View style={styles.hero}>
           <Text style={styles.welcome}>Welcome back</Text>
           <Text style={styles.subtitle}>
-            Sign in with your phone number to continue.
+            Enter your details to access your account and start your journey.
           </Text>
         </View>
 
+        {/* Form */}
         <View style={styles.form}>
+          {/* Phone */}
           <View style={styles.field}>
-            <Text style={styles.label}>Phone number</Text>
-            <TextInput
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="98XXXXXXXX"
-              placeholderTextColor={colors.textFaint}
-              keyboardType="phone-pad"
-              style={styles.input}
-              autoComplete="tel"
-              editable={!submitting}
-            />
+            <Text style={styles.label}>PHONE NUMBER</Text>
+            <View
+              style={[
+                styles.inputBox,
+                focused === 'phone' && styles.inputBoxFocused,
+              ]}
+            >
+              <View style={styles.prefix}>
+                <Text style={styles.prefixText}>+977</Text>
+              </View>
+              <TextInput
+                value={phone}
+                onChangeText={setPhone}
+                onFocus={() => setFocused('phone')}
+                onBlur={() => setFocused(null)}
+                placeholder="98XXXXXXXX"
+                placeholderTextColor={colors.textFaint}
+                keyboardType="phone-pad"
+                maxLength={10}
+                style={styles.input}
+                autoComplete="tel"
+                editable={!submitting}
+              />
+            </View>
           </View>
 
+          {/* Password */}
           <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordRow}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>PASSWORD</Text>
+              <Pressable
+                hitSlop={8}
+                onPress={() =>
+                  Alert.alert(
+                    'Forgot Password',
+                    'Enter your registered phone number. An OTP will be sent to your email.',
+                    [{ text: 'OK' }],
+                  )
+                }
+              >
+                <Text style={styles.forgot}>Forgot password?</Text>
+              </Pressable>
+            </View>
+            <View
+              style={[
+                styles.inputBox,
+                focused === 'password' && styles.inputBoxFocused,
+              ]}
+            >
               <TextInput
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Enter your password"
+                onFocus={() => setFocused('password')}
+                onBlur={() => setFocused(null)}
+                placeholder="••••••••"
                 placeholderTextColor={colors.textFaint}
                 secureTextEntry={!showPassword}
-                style={[styles.input, styles.passwordInput]}
+                style={[styles.input, { paddingLeft: 0 }]}
                 autoComplete="password"
                 editable={!submitting}
               />
               <Pressable
                 onPress={() => setShowPassword((v) => !v)}
-                style={styles.toggle}
                 hitSlop={8}
               >
-                <Text style={styles.toggleText}>
-                  {showPassword ? 'Hide' : 'Show'}
-                </Text>
+                <Ionicons
+                  name={showPassword ? 'eye-off' : 'eye'}
+                  size={22}
+                  color={colors.textMuted}
+                />
               </Pressable>
             </View>
           </View>
 
-          <Pressable
-            hitSlop={8}
-            style={styles.forgotWrap}
-            onPress={() =>
-              Alert.alert(
-                'Forgot Password',
-                'Enter your registered phone number. An OTP will be sent to your email.',
-                [{ text: 'OK' }],
-              )
-            }
-          >
-            <Text style={styles.forgot}>Forgot password?</Text>
-          </Pressable>
-
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
+          {/* Primary CTA */}
           <Pressable
             style={({ pressed }) => [
               styles.primaryButton,
@@ -133,26 +169,32 @@ export default function LoginScreen({ onGoToRegister, onContact }) {
             disabled={submitting}
           >
             <Text style={styles.primaryButtonText}>
-              {submitting ? 'Signing in…' : 'Sign in'}
+              {submitting ? 'Logging in…' : 'Log in'}
             </Text>
           </Pressable>
-        </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>New here?</Text>
-          <Pressable onPress={onGoToRegister} hitSlop={8}>
-            <Text style={styles.footerLink}>Create an account</Text>
-          </Pressable>
-        </View>
+          {/* OR divider */}
+          <View style={styles.divider}>
+            <View style={styles.line} />
+            <Text style={styles.orText}>OR</Text>
+            <View style={styles.line} />
+          </View>
 
-        {onContact && (
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Need help?</Text>
-            <Pressable onPress={onContact} hitSlop={8}>
-              <Text style={styles.footerLink}>Contact us</Text>
+          {/* Create account */}
+          <View style={styles.createRow}>
+            <Text style={styles.footerText}>Don't have an account? </Text>
+            <Pressable onPress={onGoToRegister} hitSlop={8}>
+              <Text style={styles.footerLink}>Create account</Text>
             </Pressable>
           </View>
-        )}
+
+          {onContact && (
+            <Pressable onPress={onContact} hitSlop={8} style={styles.contactRow}>
+              <Ionicons name="headset" size={18} color={colors.textMuted} />
+              <Text style={styles.contactText}>Contact support</Text>
+            </Pressable>
+          )}
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -160,96 +202,149 @@ export default function LoginScreen({ onGoToRegister, onContact }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.background },
+
+  header: {
+    height: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    backgroundColor: colors.surface,
+  },
+  brand: {
+    fontFamily: fonts.displayBold,
+    fontSize: 28,
+    color: colors.primary,
+    letterSpacing: -0.3,
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   scroll: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 72,
-    paddingBottom: 32,
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: 40,
   },
-  header: { marginBottom: 32 },
-  brand: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 2,
-    marginBottom: 24,
-  },
+
+  hero: { marginBottom: 40 },
   welcome: {
-    color: colors.text,
+    fontFamily: fonts.displayBold,
     fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 6,
+    lineHeight: 36,
+    letterSpacing: -0.3,
+    color: colors.primary,
+    marginBottom: 8,
   },
   subtitle: {
+    fontFamily: fonts.bodyRegular,
+    fontSize: 16,
+    lineHeight: 24,
     color: colors.textMuted,
-    fontSize: 15,
-    lineHeight: 22,
   },
-  form: { marginBottom: 24 },
-  field: { marginBottom: 18 },
+
+  form: { gap: 24 },
+  field: { gap: 8 },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
   label: {
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    letterSpacing: 0.6,
     color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 6,
   },
-  input: {
-    backgroundColor: colors.surface,
+  forgot: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.primary,
+  },
+
+  inputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
+  },
+  inputBoxFocused: {
+    borderColor: colors.primary,
+  },
+  prefix: {
+    paddingRight: 12,
+    marginRight: 4,
+    borderRightWidth: 1,
+    borderRightColor: colors.border,
+  },
+  prefixText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 18,
+    color: colors.primary,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingLeft: 8,
+    fontFamily: fonts.body,
+    fontSize: 18,
     color: colors.text,
   },
-  passwordRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  passwordInput: { flex: 1, paddingRight: 60 },
-  toggle: {
-    position: 'absolute',
-    right: 12,
-    paddingHorizontal: 4,
-    paddingVertical: 6,
-  },
-  toggleText: {
-    color: colors.primary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  forgotWrap: { alignSelf: 'flex-end', marginBottom: 20 },
-  forgot: {
-    color: colors.primary,
-    fontSize: 13,
-    fontWeight: '500',
-  },
+
   error: {
+    fontFamily: fonts.body,
     color: colors.danger,
     fontSize: 13,
-    marginBottom: 12,
+    marginTop: -8,
   },
+
   primaryButton: {
     backgroundColor: colors.primary,
-    paddingVertical: 16,
+    paddingVertical: 18,
     borderRadius: 999,
     alignItems: 'center',
+    marginTop: 8,
+    ...{
+      shadowColor: '#000',
+      shadowOpacity: 0.12,
+      shadowOffset: { width: 0, height: 8 },
+      shadowRadius: 24,
+      elevation: 4,
+    },
   },
-  primaryButtonPressed: { backgroundColor: colors.primaryDark },
+  primaryButtonPressed: { backgroundColor: colors.primaryDark, transform: [{ scale: 0.98 }] },
   primaryButtonDisabled: { opacity: 0.6 },
   primaryButtonText: {
+    fontFamily: fonts.display,
+    fontSize: 20,
     color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 8,
+
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  line: { flex: 1, height: 1, backgroundColor: colors.border },
+  orText: {
+    fontFamily: fonts.mono,
+    fontSize: 13,
+    color: colors.textMuted,
   },
-  footerText: { color: colors.textMuted, fontSize: 14 },
-  footerLink: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+
+  createRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  footerText: { fontFamily: fonts.body, color: colors.textMuted, fontSize: 16 },
+  footerLink: { fontFamily: fonts.bodyBold, color: colors.primary, fontSize: 16 },
+
+  contactRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+  contactText: {
+    fontFamily: fonts.bodySemibold,
+    color: colors.textMuted,
+    fontSize: 14,
+  },
 });

@@ -20,10 +20,12 @@ const TABS = [
   { id: 'account', label: 'Account', Icon: UserIcon },
 ];
 
-export default function TabBar({ active, onChange }) {
+export default function TabBar({ active, onChange, isDriver = false }) {
+  // The Wallet tab is driver-only; normal passengers don't see it.
+  const tabs = TABS.filter((t) => t.id !== 'wallet' || isDriver);
   return (
     <View style={styles.wrap}>
-      {TABS.map((t) => {
+      {tabs.map((t) => {
         const isActive = t.id === active;
         const Icon = t.Icon;
         const color = isActive ? colors.primary : colors.textMuted;

@@ -76,10 +76,13 @@ export function Sidebar({ open, onClose, isCollapsed, onToggle }) {
   const location = useLocation()
   const qc = useQueryClient()
 
-  const handleLogout = async () => {
-    try { await authApi.logout() } catch { /* ignore */ }
+  const handleLogout = () => {
+    // Best-effort server revoke (fires while the token is still present), but
+    // never block the UI on it — clear locally and navigate immediately so the
+    // button always works even if the API is slow or unreachable.
+    authApi.logout().catch(() => { /* ignore */ })
     logout()
-    navigate('/login')
+    navigate('/login', { replace: true })
     toast.success('Logged out successfully')
   }
 

@@ -7,13 +7,14 @@ import {
     getDashboardStats, getDashboardRecentTrips, getNavCounts, markNavSeen,
     getAnalyticsOverview, getAnalyticsTrips, getAnalyticsUsers, getAnalyticsTopDrivers, getAnalyticsVehicleDistribution,
     getUsers, getUserById, updateUserStatus, getUserTrips, getUserTransactions,
+    getSuppliers, getSupplierById, verifySupplier, updateSupplierPlan, toggleSupplierStatus,
     getDrivers, getDriverById, updateDriverStatus, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
     grantDriverMoney, getWithdrawals, processWithdrawal,
     getPricing, updatePricing,
     getEmergencies, getEmergencyById, updateEmergency, assignEmergency, addEmergencyNote,
     getAllDocuments, verifyDocument, rejectDocument, updateDocument, deleteDocument, seedTestDocument,
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
-    getTransactions, getTransactionById, getTransactionSummary,
+    getTransactions, getTransactionById, getTransactionSummary, exportTransactions,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
     getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, deleteTicket, getSupportAgents, getSupportSettingsAdmin, updateSupportSettings,
     broadcastNotification, getNotificationHistory, getNotificationRecipients,
@@ -62,6 +63,13 @@ adminRouter.patch('/users/:id/status', updateUserStatus);
 adminRouter.get('/users/:id/trips', getUserTrips);
 adminRouter.get('/users/:id/transactions', getUserTransactions);
 
+// Suppliers
+adminRouter.get('/suppliers', getSuppliers);
+adminRouter.get('/suppliers/:id', getSupplierById);
+adminRouter.patch('/suppliers/:id/verify', verifySupplier);
+adminRouter.patch('/suppliers/:id/plan', updateSupplierPlan);
+adminRouter.patch('/suppliers/:id/toggle', toggleSupplierStatus);
+
 // Drivers
 adminRouter.get('/drivers', getDrivers);
 adminRouter.get('/drivers/:id', getDriverById);
@@ -107,6 +115,7 @@ adminRouter.patch('/trips/:id/cancel', cancelTripAdmin);
 // Transactions
 adminRouter.get('/transactions', getTransactions);
 adminRouter.get('/transactions/summary', getTransactionSummary);
+adminRouter.get('/transactions/export', exportTransactions);
 adminRouter.get('/transactions/:id', getTransactionById);
 
 // Subscriptions

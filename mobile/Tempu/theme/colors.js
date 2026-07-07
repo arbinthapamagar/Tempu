@@ -7,30 +7,30 @@ import { resolveScheme } from './themeStore';
 // see themeStore.resolveScheme). White backgrounds, near-black text, BLACK
 // buttons/CTAs (white text on them), light-grey fills. Monochrome — NO orange.
 const lightColors = {
-  primary: '#0a0a0a',       // black — buttons / CTAs / active accents
-  primaryDark: '#000000',   // pure black — pressed states
-  primarySoft: '#f2f2f3',   // light grey fill (chips, active rows, icon bubbles)
+  primary: '#000000',       // pure black — buttons / CTAs / active accents
+  primaryDark: '#1c1b1b',   // pressed states
+  primarySoft: '#eeeeee',   // surface-container — chips, active rows, icon bubbles
 
-  bg: '#ffffff',
-  background: '#ffffff',
-  surface: '#ffffff',       // cards
-  surfaceMuted: '#f4f4f5',  // inputs / muted fills
-  surfaceDark: '#0a0a0a',
+  bg: '#f9f9f9',            // page background (surface)
+  background: '#f9f9f9',
+  surface: '#ffffff',       // cards (surface-container-lowest)
+  surfaceMuted: '#f3f3f4',  // inputs / muted fills (surface-container-low)
+  surfaceDark: '#000000',
 
-  text: '#0a0a0a',          // near-black
-  textMuted: '#6b7280',
-  textFaint: '#9ca3af',
+  text: '#1a1c1c',          // on-background near-black
+  textMuted: '#5d5e60',     // secondary
+  textFaint: '#747878',     // outline
 
-  border: '#e5e5e7',
-  divider: '#eeeeef',
+  border: '#e2e2e2',        // surface-container-highest — hairline borders
+  divider: '#eeeeee',
 
-  danger: '#dc2626',
-  dangerSoft: '#fde8e8',
+  danger: '#ba1a1a',
+  dangerSoft: '#ffdad6',
   warn: '#b45309',
   warnSoft: '#fdf0e3',
   success: '#15803d',
-  accent: '#0a0a0a',
-  orange: '#0a0a0a',        // de-oranged → black (kept token name for compatibility)
+  accent: '#000000',
+  orange: '#000000',        // monochrome → black (kept token name for compatibility)
 };
 
 const darkColors = {

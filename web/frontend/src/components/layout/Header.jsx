@@ -10,12 +10,10 @@ export function Header({ onMenuClick }) {
   const navigate = useNavigate()
   const { admin, logout } = useAuthStore()
 
-  const handleLogout = async () => {
-    try {
-      await authApi.logout()
-    } catch { /* ignore */ }
+  const handleLogout = () => {
+    authApi.logout().catch(() => { /* ignore */ })
     logout()
-    navigate('/login')
+    navigate('/login', { replace: true })
     toast.success('Logged out successfully')
   }
 

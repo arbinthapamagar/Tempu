@@ -32,15 +32,28 @@ const supportTicketSchema = new mongoose.Schema(
             required: true,
         },
 
+        // Pre-login enquiries have no account — identify the person by email and
+        // gate access to the thread with a random token instead of a JWT.
+        guest: {
+            name: { type: String, default: null },
+            email: { type: String, default: null },
+        },
+        guestToken: {
+            type: String,
+            default: null,
+            index: true,
+        },
+
         messages: [
             {
+                // Null for guest messages (pre-login enquiries have no account).
                 senderId: {
                     type: mongoose.Schema.Types.ObjectId,
-                    required: true,
+                    default: null,
                 },
                 senderType: {
                     type: String,
-                    enum: ['user', 'driver', 'admin'],
+                    enum: ['user', 'driver', 'admin', 'guest'],
                     required: true,
                 },
                 // Optional once an attachment is present (a voice note or file
