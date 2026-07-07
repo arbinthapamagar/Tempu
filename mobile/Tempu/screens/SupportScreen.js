@@ -43,7 +43,7 @@ export default function SupportScreen({ onBack, role }) {
   const [message, setMessage] = useState('');
   const [reply, setReply] = useState('');
 
-  // Support capabilities — global, admin-controlled. Default: calls off.
+  // Support capabilities - global, admin-controlled. Default: calls off.
   const [settings, setSettings] = useState({ voiceMessages: true, documents: true, audioCall: false, videoCall: false });
   const canVoice = settings.voiceMessages;
   const canDocs = settings.documents;
@@ -325,7 +325,7 @@ export default function SupportScreen({ onBack, role }) {
             {active.status === 'closed' && (
               <View style={styles.reopenBar}>
                 <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
-                <Text style={styles.reopenText}>This ticket is closed — send a message below to reopen it.</Text>
+                <Text style={styles.reopenText}>This ticket is closed - send a message below to reopen it.</Text>
               </View>
             )}
             {(

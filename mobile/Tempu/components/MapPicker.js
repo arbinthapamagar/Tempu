@@ -132,7 +132,7 @@ export default function MapPicker({ visible, title = 'Drop-off', onCancel, onCon
       setCenter(c);
       mapRef.current?.animateToRegion({ ...c, ...ZOOMED }, 500);
     } catch {
-      // Permission denied or hardware unavailable — silently no-op.
+      // Permission denied or hardware unavailable - silently no-op.
     }
   };
 

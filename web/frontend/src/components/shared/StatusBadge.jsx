@@ -37,6 +37,6 @@ const STATUS_MAP = {
 }
 
 export function StatusBadge({ status }) {
-  const config = STATUS_MAP[status] || { label: status || '—', variant: 'default' }
+  const config = STATUS_MAP[status] || { label: status || '-', variant: 'default' }
   return <Badge variant={config.variant}>{config.label}</Badge>
 }

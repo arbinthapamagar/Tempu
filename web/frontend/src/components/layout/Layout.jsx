@@ -25,7 +25,7 @@ export default function Layout() {
         onToggle={() => setCollapsed((c) => !c)}
       />
 
-      {/* Mobile-only open button — desktop always shows the (slim or full) rail */}
+      {/* Mobile-only open button - desktop always shows the (slim or full) rail */}
       <button
         onClick={() => setSidebarOpen(true)}
         className="lg:hidden fixed top-3 left-3 z-20 p-2 rounded-lg bg-white border border-gray-200 text-gray-600 shadow-sm"
@@ -34,7 +34,7 @@ export default function Layout() {
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* Main content — padding tracks the rail width on desktop */}
+      {/* Main content - padding tracks the rail width on desktop */}
       <div className={cn('transition-[padding] duration-200', collapsed ? 'lg:pl-16' : 'lg:pl-60')}>
         <main className="min-h-screen">
           <div className="p-3 sm:p-5 mx-auto w-full max-w-[1600px]">

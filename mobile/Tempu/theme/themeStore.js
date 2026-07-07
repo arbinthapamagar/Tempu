@@ -1,6 +1,6 @@
 import { Appearance } from 'react-native';
 
-// Synchronous storage so the chosen theme is known the instant modules load —
+// Synchronous storage so the chosen theme is known the instant modules load -
 // styles bake their colors at import. MMKV is a native module; if it isn't in
 // the running binary (e.g. Expo Go, or a dev client built before it was added),
 // we degrade gracefully to system theme + in-memory session override instead of
@@ -34,7 +34,7 @@ export function setThemeMode(mode) {
 
 // Resolve the mode down to an actual scheme.
 // Dark mode is temporarily disabled (it needs a redesign), so we always resolve
-// to light — even for "System" on a dark phone or a stored "dark" preference
+// to light - even for "System" on a dark phone or a stored "dark" preference
 // from before. To re-enable, restore the body below and re-add the Dark option
 // in ProfileScreen's THEME_OPTIONS.
 export function resolveScheme() {

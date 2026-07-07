@@ -15,7 +15,7 @@ import { useAuthStore, hasPermission, canSeeDashboard, homePath } from '../../st
 import toast from 'react-hot-toast'
 
 // Each group gets an icon + chevron header (collapsible), with its links indented
-// underneath — the ShipOS sidebar pattern.
+// underneath - the ShipOS sidebar pattern.
 const navSections = [
   {
     label: 'Overview',
@@ -78,7 +78,7 @@ export function Sidebar({ open, onClose, isCollapsed, onToggle }) {
 
   const handleLogout = () => {
     // Best-effort server revoke (fires while the token is still present), but
-    // never block the UI on it — clear locally and navigate immediately so the
+    // never block the UI on it - clear locally and navigate immediately so the
     // button always works even if the API is slow or unreachable.
     authApi.logout().catch(() => { /* ignore */ })
     logout()
@@ -159,7 +159,7 @@ export function Sidebar({ open, onClose, isCollapsed, onToggle }) {
         title="Drag to collapse"
       />
 
-      {/* Logo row — wordmark collapses to just the mark on the slim rail */}
+      {/* Logo row - wordmark collapses to just the mark on the slim rail */}
       <div className={cn(
         'h-20 flex items-center border-b border-gray-200',
         isCollapsed ? 'lg:flex-col lg:gap-1 lg:justify-center lg:px-0' : 'justify-between px-4'

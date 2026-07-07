@@ -27,7 +27,7 @@ function destinationText(w) {
     const d = w.destination || {}
     return [d.bankName, d.accountName, d.accountNumber].filter(Boolean).join(' · ')
   }
-  return w.destination?.walletId || '—'
+  return w.destination?.walletId || '-'
 }
 
 export default function WithdrawalList() {
@@ -73,7 +73,7 @@ export default function WithdrawalList() {
         <div className="flex items-center gap-3">
           <Avatar name={driver?.userId?.name} size="sm" />
           <div>
-            <p className="text-sm font-medium text-gray-900">{driver?.userId?.name || '—'}</p>
+            <p className="text-sm font-medium text-gray-900">{driver?.userId?.name || '-'}</p>
             <p className="text-xs text-gray-400">{driver?.userId?.phone || ''}</p>
           </div>
         </div>
@@ -135,7 +135,7 @@ export default function WithdrawalList() {
               </>
             )}
             {(row.status === 'paid' || row.status === 'rejected') && (
-              <span className="text-xs text-gray-300">—</span>
+              <span className="text-xs text-gray-300">-</span>
             )}
           </div>
         )

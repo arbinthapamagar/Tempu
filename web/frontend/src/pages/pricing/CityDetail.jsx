@@ -73,7 +73,7 @@ export function CityDetail({ config, setConfig, index, activeSlotIndex, onRename
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:divide-x lg:divide-gray-200">
       {/* Left: this city's settings */}
       <div className="space-y-3 lg:pr-6">
-        <Card title={`${city.name} — rates`}>
+        <Card title={`${city.name} - rates`}>
           <div className="space-y-3">
             <Slider label="Zone traffic multiplier" value={city.zoneMultiplier} min={1} max={2} step={0.1}
               onChange={(v) => patchCity({ zoneMultiplier: v })} format={(v) => v.toFixed(1)} suffix="×"

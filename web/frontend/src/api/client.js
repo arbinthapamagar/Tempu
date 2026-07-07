@@ -20,7 +20,7 @@ api.interceptors.response.use(
     const status = error.response?.status
     // 401 = invalid/expired token. A 403 whose message is the deactivation
     // notice is also a session-level failure (the account was disabled after
-    // login) — force logout. Ordinary permission 403s ('Insufficient
+    // login) - force logout. Ordinary permission 403s ('Insufficient
     // permissions') must NOT log the user out.
     const deactivated =
       status === 403 && error.response?.data?.message === 'Admin account is deactivated'

@@ -155,7 +155,7 @@ export default function Profile() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs text-gray-400">{row.label}</p>
-                    <p className="text-sm font-medium text-gray-800 truncate">{row.value || '—'}</p>
+                    <p className="text-sm font-medium text-gray-800 truncate">{row.value || '-'}</p>
                   </div>
                 </div>
               ))}

@@ -530,7 +530,7 @@ function AdminDetail({ admin, isSelf, canManage, onEditProfile, onEdit, onToggle
             </div>
             <div className="min-w-0">
               <p className="text-xs text-gray-400">{row.label}</p>
-              <p className="text-sm font-medium text-gray-800 truncate">{row.value || '—'}</p>
+              <p className="text-sm font-medium text-gray-800 truncate">{row.value || '-'}</p>
             </div>
           </div>
         ))}
@@ -539,7 +539,7 @@ function AdminDetail({ admin, isSelf, canManage, onEditProfile, onEdit, onToggle
       {/* Permissions */}
       <div>
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-          Permissions {isSuper && <span className="text-orange-600 normal-case font-medium">(Full access — all permissions)</span>}
+          Permissions {isSuper && <span className="text-orange-600 normal-case font-medium">(Full access - all permissions)</span>}
         </p>
         <div className="grid grid-cols-2 gap-2">
           {PERMISSIONS.map((perm) => {

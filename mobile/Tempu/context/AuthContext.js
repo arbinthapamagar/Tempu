@@ -44,7 +44,7 @@ export function AuthProvider({ children }) {
 
   const verifyOtp = useCallback(
     async (otp) => {
-      if (!tempToken) throw new Error('No temp token — start registration again');
+      if (!tempToken) throw new Error('No temp token - start registration again');
       const res = await authApi.verifyOtp(otp, tempToken);
       const { user: u, accessToken, refreshToken } = res.data;
       await tokenStore.set(accessToken, refreshToken);
@@ -64,7 +64,7 @@ export function AuthProvider({ children }) {
     try {
       await authApi.logout();
     } catch {
-      // best-effort — clear local state regardless
+      // best-effort - clear local state regardless
     }
     await tokenStore.clear();
     setUser(null);

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-// Global support capabilities — a single document (key:'global') that applies to
+// Global support capabilities - a single document (key:'global') that applies to
 // ALL tickets/users. Text messages are always allowed; the rest are toggles.
 // Calls are blocked by default; voice notes and documents are allowed.
 const supportSettingsSchema = new mongoose.Schema(

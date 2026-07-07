@@ -2,7 +2,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { colors, radius, shadow } from '../../theme';
 
 /**
- * Round button (back, close, recenter, etc.) — soft surface with optional elevation.
+ * Round button (back, close, recenter, etc.) - soft surface with optional elevation.
  */
 export default function IconButton({
   children,

@@ -195,7 +195,7 @@ export default function TicketChat() {
     onError: (err) => toast.error(err?.message || 'Failed to delete note'),
   })
 
-  // Permanently delete a closed ticket — super admins only (enforced server-side too).
+  // Permanently delete a closed ticket - super admins only (enforced server-side too).
   const [confirmDelete, setConfirmDelete] = useState(false)
   const deleteMutation = useMutation({
     mutationFn: () => supportApi.remove(id),
@@ -218,9 +218,9 @@ export default function TicketChat() {
   if (!ticket) return <div className="flex-1 grid place-items-center text-gray-500">Ticket not found.</div>
 
   const person = ticket.userId || ticket.driverId
-  // Pre-login guests have no account — use their submitted name/email instead.
+  // Pre-login guests have no account - use their submitted name/email instead.
   const isGuest = !ticket.userId && !ticket.driverId && !!ticket.guest?.email
-  const displayName = person?.name || ticket.guest?.name || ticket.guest?.email || '—'
+  const displayName = person?.name || ticket.guest?.name || ticket.guest?.email || '-'
   const displayEmail = person?.email || ticket.guest?.email || null
   const currentAssignee = ticket.assignedTo?._id || ''
   const selectedAssignee = pendingAssignee ?? currentAssignee
@@ -313,7 +313,7 @@ export default function TicketChat() {
           </div>
         </div>
 
-        {/* Submitter contact — always visible on open so support can verify the person */}
+        {/* Submitter contact - always visible on open so support can verify the person */}
         <div className="px-4 py-2 border-b border-gray-100 flex items-center gap-x-4 gap-y-1 flex-wrap text-xs">
           <span className="flex items-center gap-1.5 font-medium text-gray-800">
             <Avatar src={person?.avatarUrl} name={displayName} size="xs" />
@@ -336,7 +336,7 @@ export default function TicketChat() {
           {ticket.driverId && (
             <span className="flex items-center gap-1 text-gray-600">
               <Car className="h-3.5 w-3.5 text-gray-400" />
-              <span className="capitalize">{ticket.driverId.vehicleType || '—'}</span>{ticket.driverId.vehiclePlate ? ` · ${ticket.driverId.vehiclePlate}` : ''}
+              <span className="capitalize">{ticket.driverId.vehicleType || '-'}</span>{ticket.driverId.vehiclePlate ? ` · ${ticket.driverId.vehiclePlate}` : ''}
             </span>
           )}
         </div>
@@ -529,7 +529,7 @@ export default function TicketChat() {
               disabled={assignMutation.isPending}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-gray-400 bg-white"
             >
-              <option value="" disabled>Unassigned — pick an agent</option>
+              <option value="" disabled>Unassigned - pick an agent</option>
               {agents.map((a) => (
                 <option key={a._id} value={a._id}>{a.name}{a.role ? ` (${a.role})` : ''}</option>
               ))}
