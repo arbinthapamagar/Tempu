@@ -43,7 +43,7 @@ const PLAN_INFO = {
 };
 
 function formatDate(value) {
-  if (!value) return '—';
+  if (!value) return '-';
   return new Date(value).toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
@@ -274,7 +274,7 @@ function Row({ label, value, last }) {
   return (
     <View style={[styles.row, last && styles.rowLast]}>
       <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue} numberOfLines={1}>{value ?? '—'}</Text>
+      <Text style={styles.rowValue} numberOfLines={1}>{value ?? '-'}</Text>
     </View>
   );
 }

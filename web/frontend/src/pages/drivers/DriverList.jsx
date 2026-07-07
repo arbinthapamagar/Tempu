@@ -73,7 +73,7 @@ export default function DriverList() {
   const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState(searchParams.get('status') || '')
 
-  // Shared query params for the active filters — reused by the table, "select
+  // Shared query params for the active filters - reused by the table, "select
   // all matching" and the CSV export so they always agree.
   const buildParams = (extra = {}) => ({
     search,
@@ -187,8 +187,8 @@ export default function DriverList() {
         <div className="flex items-center gap-3">
           <Avatar src={val?.avatarUrl} name={val?.name} size="sm" />
           <div>
-            <p className="font-medium text-gray-900 text-sm">{val?.name || '—'}</p>
-            <p className="text-xs text-gray-400">{val?.phone || '—'}</p>
+            <p className="font-medium text-gray-900 text-sm">{val?.name || '-'}</p>
+            <p className="text-xs text-gray-400">{val?.phone || '-'}</p>
           </div>
         </div>
       ),
@@ -203,7 +203,7 @@ export default function DriverList() {
         </div>
       ),
     },
-    { key: 'vehicleModel', header: 'Model', render: (val, row) => `${val || '—'} ${row.vehicleColor ? `(${row.vehicleColor})` : ''}` },
+    { key: 'vehicleModel', header: 'Model', render: (val, row) => `${val || '-'} ${row.vehicleColor ? `(${row.vehicleColor})` : ''}` },
     { key: 'status', header: 'Status', render: (val) => <StatusBadge status={val} /> },
     {
       key: 'isVerified',

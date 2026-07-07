@@ -73,7 +73,7 @@ export default function UserList() {
   const [notify, setNotify] = useState(null)   // { recipients: [{id,label}] }
   const [exporting, setExporting] = useState(false)
 
-  // Shared query params for the active filters — reused by the table, "select
+  // Shared query params for the active filters - reused by the table, "select
   // all matching" and the CSV export so they always agree.
   const buildParams = (extra = {}) => ({
     search,
@@ -170,7 +170,7 @@ export default function UserList() {
         </div>
       ),
     },
-    { key: 'email', header: 'Email', render: (val) => val || <span className="text-gray-400">—</span> },
+    { key: 'email', header: 'Email', render: (val) => val || <span className="text-gray-400">-</span> },
     {
       key: 'userType',
       header: 'Type',
@@ -186,7 +186,7 @@ export default function UserList() {
       header: 'Rating',
       render: (val, row) => (
         <span className="text-sm">
-          ⭐ {row.rating?.average?.toFixed(1) || '—'}
+          ⭐ {row.rating?.average?.toFixed(1) || '-'}
           <span className="text-gray-400 text-xs ml-1">({row.rating?.total || 0})</span>
         </span>
       ),
@@ -410,17 +410,17 @@ function UserDetailContent({ user }) {
           { label: 'Gender', value: user.gender },
           { label: 'Date of Birth', value: formatDate(user.dateOfBirth) },
           { label: 'Wallet Balance', value: formatCurrency(user.walletBalance || 0) },
-          { label: 'Rating', value: `${user.rating?.average?.toFixed(1) || '—'} (${user.rating?.total || 0} reviews)` },
+          { label: 'Rating', value: `${user.rating?.average?.toFixed(1) || '-'} (${user.rating?.total || 0} reviews)` },
           { label: 'Phone Verified', value: user.isPhoneVerified ? 'Yes' : 'No' },
           { label: 'Email Verified', value: user.isEmailVerified ? 'Yes' : 'No' },
-          { label: 'Preferred Payment', value: user.preferredPaymentMethod || '—' },
+          { label: 'Preferred Payment', value: user.preferredPaymentMethod || '-' },
           { label: 'Last Login', value: formatRelative(user.lastLoginAt) },
           { label: 'Member Since', value: formatDate(user.createdAt) },
           { label: 'Driver Profile', value: user.driverProfile ? 'Yes' : 'No' },
         ].map(({ label, value }) => (
           <div key={label} className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-            <p className="text-sm font-medium text-gray-700 capitalize">{value || '—'}</p>
+            <p className="text-sm font-medium text-gray-700 capitalize">{value || '-'}</p>
           </div>
         ))}
       </div>

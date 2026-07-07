@@ -1,6 +1,6 @@
 import { cn } from '../../utils/cn'
 
-// Flat, professional buttons — solid fill, subtle hover, no offset shadows.
+// Flat, professional buttons - solid fill, subtle hover, no offset shadows.
 const variants = {
   primary: 'bg-orange-600 text-white hover:bg-orange-700 focus:ring-orange-400',
   secondary: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-gray-400',

@@ -111,14 +111,14 @@ export default function DocumentQueue() {
       render: (_val, row) => (
         <div className="flex items-center gap-2">
           <Avatar name={row.driverId?.userId?.name} size="xs" />
-          <span className="text-sm text-gray-700">{row.driverId?.userId?.name || '—'}</span>
+          <span className="text-sm text-gray-700">{row.driverId?.userId?.name || '-'}</span>
         </div>
       ),
     },
     {
       key: 'expiresAt',
       header: 'Expires',
-      render: (val) => <span className="text-xs text-gray-500">{val ? formatDate(val) : '—'}</span>,
+      render: (val) => <span className="text-xs text-gray-500">{val ? formatDate(val) : '-'}</span>,
     },
     {
       key: 'createdAt',
@@ -215,7 +215,7 @@ export default function DocumentQueue() {
         />
       </div>
 
-      {/* Lightbox — opens PDFs as PDF, images inline */}
+      {/* Lightbox - opens PDFs as PDF, images inline */}
       <DocumentLightbox
         doc={lightbox}
         onClose={() => setLightbox(null)}

@@ -125,7 +125,7 @@ export default function useDriverFlow(initialOnline = false) {
         const live = bids.find((b) => ACTIVE_TRIP_STATUSES.includes(b.tripId?.status));
         if (!stop && live?.tripId?._id) setActiveTripId(live.tripId._id);
       } catch {
-        // ignore — try again next tick
+        // ignore - try again next tick
       }
     };
     check();

@@ -1,4 +1,4 @@
-// Pure EV fare-calculation helpers. No React, no side effects — so the admin
+// Pure EV fare-calculation helpers. No React, no side effects - so the admin
 // simulator, the "compare vehicles" view and analytics all share one formula.
 
 export const VEHICLE_META = {
@@ -134,7 +134,7 @@ export function computeFare({ config, city, vehicleKey, pickup, drop, distance, 
 // view. The commission is embedded in the per-km rate (not the flat base fare),
 // so the driver keeps the base fare plus the distance revenue net of commission;
 // their running cost is electricity + maintenance for the distance billed.
-// VAT is pass-through to the government — neither driver nor platform keeps it.
+// VAT is pass-through to the government - neither driver nor platform keeps it.
 export function driverEconomics(f, config) {
   const commPct = Number(config?.commissionPercent) || 0
   const commDiv = 1 + commPct / 100

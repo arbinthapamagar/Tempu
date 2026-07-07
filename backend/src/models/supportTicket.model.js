@@ -32,7 +32,7 @@ const supportTicketSchema = new mongoose.Schema(
             required: true,
         },
 
-        // Pre-login enquiries have no account — identify the person by email and
+        // Pre-login enquiries have no account - identify the person by email and
         // gate access to the thread with a random token instead of a JWT.
         guest: {
             name: { type: String, default: null },
@@ -96,7 +96,7 @@ const supportTicketSchema = new mongoose.Schema(
         },
 
         // Internal collaboration notes between admins/support agents. NOT shown
-        // to the user/driver — distinct from `messages` (the customer thread).
+        // to the user/driver - distinct from `messages` (the customer thread).
         comments: [
             {
                 authorId: {

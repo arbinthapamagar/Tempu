@@ -70,7 +70,7 @@ export default function useRideFlow() {
           setPickupCoords(pos.coords);
         }
       } catch {
-        // permission denied or offline — leave empty
+        // permission denied or offline - leave empty
       } finally {
         if (!cancelled) setLocating(false);
       }
@@ -111,7 +111,7 @@ export default function useRideFlow() {
         const res = await bidApi.getForTrip(tripId);
         setBids(res.data || []);
       } catch {
-        // network glitch — keep showing existing bids
+        // network glitch - keep showing existing bids
       }
     };
 

@@ -28,7 +28,7 @@ const createReview = asyncHandler(async (req, res) => {
     trip.isRatedByRider = true;
     await trip.save();
 
-    // Atomic running average update — prevents race condition
+    // Atomic running average update - prevents race condition
     await Driver.findByIdAndUpdate(
         trip.driverId,
         [

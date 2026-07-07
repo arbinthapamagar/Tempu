@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 
-// Thin wrappers so call-sites stay readable. All swallow errors silently —
+// Thin wrappers so call-sites stay readable. All swallow errors silently -
 // haptics are a non-essential nice-to-have.
 
 export function tap() {

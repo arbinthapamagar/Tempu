@@ -12,7 +12,7 @@ const supportRouter = Router();
 
 supportRouter.post('/contact', contactSupport);
 
-// Pre-login live chat — no auth; the thread token gates access.
+// Pre-login live chat - no auth; the thread token gates access.
 supportRouter.post('/ticket', createGuestTicket);
 supportRouter.get('/ticket/:id', getGuestTicket);
 supportRouter.post('/ticket/:id/messages', addGuestMessage);

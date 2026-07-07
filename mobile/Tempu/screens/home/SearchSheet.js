@@ -192,7 +192,7 @@ export default function SearchSheet({
           </Pressable>
         </View>
 
-        {/* Results list — fills space between inputs and keyboard */}
+        {/* Results list - fills space between inputs and keyboard */}
         <ScrollView
           style={styles.results}
           keyboardShouldPersistTaps="handled"

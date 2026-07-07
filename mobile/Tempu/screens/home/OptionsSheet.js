@@ -89,7 +89,7 @@ export default function OptionsSheet({
 
         {!pickupReady && (
           <Text style={styles.warn}>
-            Pickup not detected — set it from the search screen to continue.
+            Pickup not detected - set it from the search screen to continue.
           </Text>
         )}
 
@@ -177,7 +177,7 @@ export default function OptionsSheet({
           <Ionicons name="pricetags-outline" size={15} color={colors.textMuted} />
           <Text style={styles.hint}>
             {standardFare
-              ? `Standard fare is Rs ${standardFare}. Offer this or more — drivers bid and you pick the best one.`
+              ? `Standard fare is Rs ${standardFare}. Offer this or more - drivers bid and you pick the best one.`
               : 'Drivers bid on your offer. You pick the best one.'}
           </Text>
         </View>

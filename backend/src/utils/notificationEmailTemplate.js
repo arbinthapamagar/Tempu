@@ -22,7 +22,7 @@ const notificationEmailTemplate = ({ name, title, body, link, linkLabel = 'View 
       ` : ''}
 
       <p style="color: #6b7280; font-size: 13px; margin-top: 24px;">You're receiving this because of activity on your Tempu account.</p>
-      <p style="color: #6b7280; font-size: 13px;">— The Tempu Team</p>
+      <p style="color: #6b7280; font-size: 13px;">- The Tempu Team</p>
     </div>
   `;
 };

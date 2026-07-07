@@ -24,7 +24,7 @@ function Field({ label, value }) {
   return (
     <div className="py-2 border-b border-gray-50 last:border-0">
       <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-      <p className="text-sm text-gray-800 font-medium">{value || '—'}</p>
+      <p className="text-sm text-gray-800 font-medium">{value || '-'}</p>
     </div>
   )
 }
@@ -117,7 +117,7 @@ export default function TripDetail() {
                   <p className="text-sm text-gray-500">{rider.phone}</p>
                 </div>
               </div>
-              <Field label="Rating" value={`${rider.rating?.average?.toFixed(1) || '—'} / 5.0`} />
+              <Field label="Rating" value={`${rider.rating?.average?.toFixed(1) || '-'} / 5.0`} />
               <Field label="User Type" value={rider.userType} />
             </div>
           ) : <p className="text-sm text-gray-400">No rider info</p>}
@@ -135,7 +135,7 @@ export default function TripDetail() {
                 </div>
               </div>
               <Field label="Vehicle" value={`${driver.vehicleModel || ''} ${driver.vehiclePlate}`} />
-              <Field label="Rating" value={`${driver.rating?.toFixed(1) || '—'} / 5.0`} />
+              <Field label="Rating" value={`${driver.rating?.toFixed(1) || '-'} / 5.0`} />
             </div>
           ) : <p className="text-sm text-gray-400 italic">No driver assigned</p>}
         </InfoCard>
@@ -178,7 +178,7 @@ export default function TripDetail() {
               {bids.map((bid) => (
                 <div key={bid._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <p className="text-sm font-medium">{bid.driverId?.userId?.name || '—'}</p>
+                    <p className="text-sm font-medium">{bid.driverId?.userId?.name || '-'}</p>
                     <p className="text-xs text-gray-400">{bid.message || 'No message'}</p>
                   </div>
                   <div className="text-right">

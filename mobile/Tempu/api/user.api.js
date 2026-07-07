@@ -86,7 +86,7 @@ export const userApi = {
     return json;
   },
 
-  // Fare quote (standard fare from Pricing Control — used as the bid floor)
+  // Fare quote (standard fare from Pricing Control - used as the bid floor)
   getFareQuote: (params) => {
     const qs = new URLSearchParams(params).toString();
     return api.get(`/users/fare-quote?${qs}`);

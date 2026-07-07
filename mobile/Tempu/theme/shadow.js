@@ -1,5 +1,5 @@
 export const shadow = {
-  // Flat — cards sit on hairline borders, not drop shadows (matches the admin).
+  // Flat - cards sit on hairline borders, not drop shadows (matches the admin).
   card: {
     shadowColor: '#000',
     shadowOpacity: 0.03,

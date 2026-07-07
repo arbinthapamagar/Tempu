@@ -95,7 +95,7 @@ export function DataTable({
                       col.cellClassName
                     )}
                   >
-                    {col.render ? col.render(row[col.key], row) : (row[col.key] ?? '—')}
+                    {col.render ? col.render(row[col.key], row) : (row[col.key] ?? '-')}
                   </td>
                 ))}
               </tr>

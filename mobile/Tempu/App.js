@@ -34,8 +34,8 @@ import { colors, isDark } from './theme/colors';
 const STATUS_BAR_STYLE = 'dark-content';
 
 // authScreen values:
-// 'role-select' | 'login' | 'register' | 'otp' — unauthenticated
-// 'driver-vehicle' | 'driver-pending'          — authenticated, driver onboarding
+// 'role-select' | 'login' | 'register' | 'otp' - unauthenticated
+// 'driver-vehicle' | 'driver-pending'          - authenticated, driver onboarding
 function AppShell() {
   const { user, loading } = useAuth();
   const [authScreen, setAuthScreen] = useState('role-select');

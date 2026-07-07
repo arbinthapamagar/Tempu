@@ -63,8 +63,8 @@ export function Simulator({ config, activeSlotIndex, lockedCityName }) {
     return { name: c.name, perKm: cf.finalPerKm, fare: cf.finalFare }
   })
   const avgPerKm = perCity.length ? perCity.reduce((s, x) => s + x.perKm, 0) / perCity.length : 0
-  const cheapest = perCity.reduce((a, b) => (b.fare < a.fare ? b : a), perCity[0] || { name: '—', fare: 0 })
-  const dearest = perCity.reduce((a, b) => (b.fare > a.fare ? b : a), perCity[0] || { name: '—', fare: 0 })
+  const cheapest = perCity.reduce((a, b) => (b.fare < a.fare ? b : a), perCity[0] || { name: '-', fare: 0 })
+  const dearest = perCity.reduce((a, b) => (b.fare > a.fare ? b : a), perCity[0] || { name: '-', fare: 0 })
 
   const selectCity = (name) => {
     const c = cities.find((x) => x.name === name)
@@ -81,7 +81,7 @@ export function Simulator({ config, activeSlotIndex, lockedCityName }) {
       `Tempu EV Fare Estimate`,
       `${city?.name} · ${VEHICLE_META[vehicleKey].label}`,
       `${pickup} → ${drop} (${distance} km)`,
-      `Time slot: ${slot?.name || '—'} (×${slot?.multiplier ?? 1})`,
+      `Time slot: ${slot?.name || '-'} (×${slot?.multiplier ?? 1})`,
       `Premium: ${premiumLabel} (×${premiumValue})`,
       `Final cost/km: ${rs(f.finalPerKm)}`,
       `Standard fare: ${rs(standard)}`,
@@ -113,7 +113,7 @@ export function Simulator({ config, activeSlotIndex, lockedCityName }) {
       </div>
 
       {/* Route selection */}
-      <Card title={lockedCityName ? `Fare estimator — ${lockedCityName}` : 'Trip'} icon={Timer}>
+      <Card title={lockedCityName ? `Fare estimator - ${lockedCityName}` : 'Trip'} icon={Timer}>
         <div className="grid grid-cols-2 gap-3">
           {!lockedCityName && (
             <label className="block">
@@ -150,7 +150,7 @@ export function Simulator({ config, activeSlotIndex, lockedCityName }) {
             </select>
           </label>
           <label className="block col-span-2">
-            <span className="block text-xs font-medium text-gray-600 mb-1">Distance (km) — auto-filled, editable</span>
+            <span className="block text-xs font-medium text-gray-600 mb-1">Distance (km) - auto-filled, editable</span>
             <input type="number" min={0} step={0.5} value={distance}
               onChange={(e) => setDistOverride(e.target.value === '' ? 0 : parseFloat(e.target.value))}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none" />

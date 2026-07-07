@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        // Roboto — the ShipOS / NobleUI theme font.
+        // Roboto - the ShipOS / NobleUI theme font.
         sans: ['Roboto', 'Segoe UI', 'system-ui', 'sans-serif'],
         display: ['Roboto', 'Segoe UI', 'system-ui', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
@@ -30,7 +30,7 @@ export default {
           800: '#1a1d22',
           900: '#111317',
         },
-        // Tailwind's default `gray` is cool (blue-tinted) — `gray-900` is #111827,
+        // Tailwind's default `gray` is cool (blue-tinted) - `gray-900` is #111827,
         // which reads navy. Remap to a TRUE-neutral ramp with a near-black top so
         // all text is black (not navy) in light mode, app-wide.
         gray: {

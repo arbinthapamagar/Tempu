@@ -57,7 +57,7 @@ export default function ActiveTripSheet({
       <ScrollView showsVerticalScrollIndicator={false}>
         <Text style={styles.kicker}>{statusText}</Text>
 
-        {/* Driver card — rounded sheet with avatar, name, rating pill, vehicle + plate */}
+        {/* Driver card - rounded sheet with avatar, name, rating pill, vehicle + plate */}
         <View style={styles.driverCard}>
           <View style={styles.driverRow}>
             <View style={styles.driverAvatar}>
@@ -96,7 +96,7 @@ export default function ActiveTripSheet({
             </View>
           </View>
 
-          {/* Action FABs — call (orange), message, share */}
+          {/* Action FABs - call (orange), message, share */}
           <View style={styles.actions}>
             <Pressable
               style={[styles.fab, styles.fabPrimary]}
@@ -125,7 +125,7 @@ export default function ActiveTripSheet({
           </View>
         </View>
 
-        {/* Journey line — pickup → destination with endpoint dots */}
+        {/* Journey line - pickup → destination with endpoint dots */}
         <View style={styles.journeyCard}>
           <View style={styles.journeyRow}>
             <View style={styles.journeyTrack}>
@@ -180,7 +180,7 @@ export default function ActiveTripSheet({
 const styles = StyleSheet.create({
   kicker: { ...type.eyebrow, color: colors.textMuted, marginBottom: spacing.md },
 
-  // Driver card — rounded sheet over the map
+  // Driver card - rounded sheet over the map
   driverCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.xxl,
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
 
-  // Journey line — pickup → destination
+  // Journey line - pickup → destination
   journeyCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,

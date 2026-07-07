@@ -67,7 +67,7 @@ export default function TripList() {
     {
       key: 'userId',
       header: 'Rider',
-      render: (val) => <span className="text-sm font-medium">{val?.name || '—'}</span>,
+      render: (val) => <span className="text-sm font-medium">{val?.name || '-'}</span>,
     },
     {
       key: 'driverId',
@@ -84,7 +84,7 @@ export default function TripList() {
       header: 'Pickup',
       render: (val) => (
         <span className="text-xs text-gray-600 max-w-[120px] block truncate" title={val?.address}>
-          {val?.address || '—'}
+          {val?.address || '-'}
         </span>
       ),
     },
@@ -93,7 +93,7 @@ export default function TripList() {
       header: 'Drop-off',
       render: (val) => (
         <span className="text-xs text-gray-600 max-w-[120px] block truncate" title={val?.address}>
-          {val?.address || '—'}
+          {val?.address || '-'}
         </span>
       ),
     },
