@@ -170,7 +170,7 @@ export default function DriverEarnings() {
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>
-              {stats?.totalRatings ? Number(stats.rating).toFixed(1) : '—'}
+              {stats?.totalRatings ? Number(stats.rating).toFixed(1) : '-'}
             </Text>
             <Text style={styles.statLabel}>Rating</Text>
           </View>

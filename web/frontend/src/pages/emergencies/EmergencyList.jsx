@@ -56,7 +56,7 @@ export default function EmergencyList() {
         <div className="flex items-center gap-3">
           <Avatar name={u?.name} size="sm" />
           <div>
-            <p className="text-sm font-medium text-gray-900">{u?.name || '—'}</p>
+            <p className="text-sm font-medium text-gray-900">{u?.name || '-'}</p>
             <p className="text-xs text-gray-400">{row.contactPhone || u?.phone || ''} · {row.role}</p>
           </div>
         </div>
@@ -73,7 +73,7 @@ export default function EmergencyList() {
         </a>
       ) : <span className="text-xs text-gray-400">No location</span>),
     },
-    { key: 'message', header: 'Note', render: (m) => <span className="text-sm text-gray-600 max-w-[220px] truncate inline-block" title={m || ''}>{m || '—'}</span> },
+    { key: 'message', header: 'Note', render: (m) => <span className="text-sm text-gray-600 max-w-[220px] truncate inline-block" title={m || ''}>{m || '-'}</span> },
     { key: 'assignedTo', header: 'Assigned', render: (a) => a?.name ? <span className="text-xs text-gray-600">{a.name}</span> : <span className="text-xs text-gray-300">Unassigned</span> },
     { key: 'createdAt', header: 'Raised', render: (v) => <span className="text-xs text-gray-500">{formatRelative(v)}</span> },
     { key: 'status', header: 'Status', render: (v) => <StatusBadge status={v} /> },
@@ -94,7 +94,7 @@ export default function EmergencyList() {
               <CheckCircle className="h-4 w-4" />
             </button>
           )}
-          {row.status === 'resolved' && <span className="text-xs text-gray-300">—</span>}
+          {row.status === 'resolved' && <span className="text-xs text-gray-300">-</span>}
         </div>
       ),
     },
@@ -192,7 +192,7 @@ function EmergencyDetail({ id, onUpdateStatus, statusPending }) {
           <div>
             <h3 className="text-lg font-bold text-gray-900">{person?.name || 'Unknown'}</h3>
             <a href={`tel:${e.contactPhone || person?.phone || ''}`} className="text-sm text-gray-500 hover:text-orange-600 flex items-center gap-1.5">
-              <Phone className="h-3.5 w-3.5" /> {e.contactPhone || person?.phone || '—'}
+              <Phone className="h-3.5 w-3.5" /> {e.contactPhone || person?.phone || '-'}
             </a>
             {person?.email && (
               <a href={`mailto:${person.email}`} className="text-sm text-gray-500 hover:text-orange-600 flex items-center gap-1.5">
@@ -207,7 +207,7 @@ function EmergencyDetail({ id, onUpdateStatus, statusPending }) {
         </div>
       </div>
 
-      {/* The SOS note — front and centre */}
+      {/* The SOS note - front and centre */}
       <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-red-500 mb-1 flex items-center gap-1.5">
           <AlertTriangle className="h-3.5 w-3.5" /> SOS Message
@@ -235,7 +235,7 @@ function EmergencyDetail({ id, onUpdateStatus, statusPending }) {
           <div className="bg-gray-50 rounded-lg p-3 col-span-2">
             <p className="text-xs text-gray-400 mb-0.5 flex items-center gap-1.5"><Car className="h-3 w-3" /> Driver / Vehicle</p>
             <p className="text-sm font-medium text-gray-700 capitalize">
-              {driverInfo.vehicleType || '—'}{driverInfo.vehiclePlate ? ` · ${driverInfo.vehiclePlate}` : ''}
+              {driverInfo.vehicleType || '-'}{driverInfo.vehiclePlate ? ` · ${driverInfo.vehiclePlate}` : ''}
               {(driverInfo.vehicleModel || driverInfo.vehicleColor) ? ` · ${[driverInfo.vehicleModel, driverInfo.vehicleColor].filter(Boolean).join(' ')}` : ''}
             </p>
             {driverInfo.userId?.email && <p className="text-xs text-gray-500 mt-0.5">{driverInfo.userId.email}</p>}
@@ -243,9 +243,9 @@ function EmergencyDetail({ id, onUpdateStatus, statusPending }) {
         )}
         {[
           { label: 'Raised', value: formatDateTime(e.createdAt) },
-          { label: 'Acknowledged', value: e.acknowledgedAt ? formatDateTime(e.acknowledgedAt) : '—' },
-          { label: 'Resolved', value: e.resolvedAt ? formatDateTime(e.resolvedAt) : '—' },
-          { label: 'Handled by', value: e.handledBy?.name || '—' },
+          { label: 'Acknowledged', value: e.acknowledgedAt ? formatDateTime(e.acknowledgedAt) : '-' },
+          { label: 'Resolved', value: e.resolvedAt ? formatDateTime(e.resolvedAt) : '-' },
+          { label: 'Handled by', value: e.handledBy?.name || '-' },
         ].map(({ label, value }) => (
           <div key={label} className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-400 mb-0.5">{label}</p>
@@ -254,7 +254,7 @@ function EmergencyDetail({ id, onUpdateStatus, statusPending }) {
         ))}
       </div>
 
-      {/* Validity actions — acknowledge if it's real, resolve once handled */}
+      {/* Validity actions - acknowledge if it's real, resolve once handled */}
       <div className="flex flex-wrap gap-2">
         {e.status === 'active' && (
           <Button variant="warning" size="sm" icon={BellRing} loading={statusPending} onClick={() => onUpdateStatus('acknowledged')}>
@@ -280,7 +280,7 @@ function EmergencyDetail({ id, onUpdateStatus, statusPending }) {
             onChange={(ev) => setAssignee(ev.target.value)}
             className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 bg-white"
           >
-            <option value="">Unassigned — pick an agent</option>
+            <option value="">Unassigned - pick an agent</option>
             {agents.map((a) => (
               <option key={a._id} value={a._id}>{a.name}{a.role ? ` (${a.role})` : ''}</option>
             ))}

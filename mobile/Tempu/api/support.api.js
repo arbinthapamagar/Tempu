@@ -1,6 +1,6 @@
 import { api } from './client';
 
-// Public, pre-login support — no auth needed. The guest chat thread is gated by
+// Public, pre-login support - no auth needed. The guest chat thread is gated by
 // a random token returned when the thread is created.
 export const supportPublicApi = {
   contact: (data) => api.post('/support/contact', data, { skipAuth: true }),

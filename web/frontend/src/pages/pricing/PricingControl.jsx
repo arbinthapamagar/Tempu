@@ -72,7 +72,7 @@ function Dashboard({ initial }) {
       <div>
         <PageHeader
           title={city.name}
-          description="Pricing for this city — every change recalculates the estimate live."
+          description="Pricing for this city - every change recalculates the estimate live."
           actions={<Button icon={Save} onClick={() => save.mutate()} loading={save.isPending}>Save</Button>}
         />
         <button onClick={() => setSelected(null)} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-5">

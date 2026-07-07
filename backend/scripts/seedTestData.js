@@ -1,17 +1,17 @@
 /**
  * Seed realistic TEST DATA for the Support, Documents and Emergency (SOS) surfaces.
  *
- *   node scripts/seedTestData.js          # create (idempotent — skips what already exists)
+ *   node scripts/seedTestData.js          # create (idempotent - skips what already exists)
  *   FRESH=1 node scripts/seedTestData.js  # wipe previously-seeded test data first, then recreate
  *
  * What it creates:
  *   • A small pool of realistic riders + drivers (phones in the 9710-00000x range
  *     so this script can find and clean up only its own data).
- *   • Support tickets — real category/subject/status mixes, multi-message threads,
+ *   • Support tickets - real category/subject/status mixes, multi-message threads,
  *     a couple assigned to the super admin with internal notes.
- *   • Documents — real, publicly-reachable sample PDFs/images so the in-app PDF
+ *   • Documents - real, publicly-reachable sample PDFs/images so the in-app PDF
  *     iframe + image lightbox actually render; mixed pending/approved/rejected.
- *   • Emergencies — fired through the REAL SOS endpoint (POST /api/v1/users/emergency)
+ *   • Emergencies - fired through the REAL SOS endpoint (POST /api/v1/users/emergency)
  *     using a freshly-minted user access token, NOT a hard-coded DB insert. If the
  *     API server isn't reachable it falls back to a direct insert and says so.
  *
@@ -128,10 +128,10 @@ async function seedSupport(riders, drivers, superAdmin) {
   const defs = [
     {
       who: riders[0], subject: 'Driver took a longer route', category: 'trip_issue', status: 'in_progress',
-      assign: true, comment: 'Checked the GPS trail — looks like a genuine diversion for road works. @Arbeen verifying fare.',
+      assign: true, comment: 'Checked the GPS trail - looks like a genuine diversion for road works. @Arbeen verifying fare.',
       thread: [
         ['user', 'My driver took a much longer route than the app showed and the fare was higher.', 90],
-        ['admin', 'Thanks for flagging this — I am pulling up your trip’s GPS log now.', 70],
+        ['admin', 'Thanks for flagging this - I am pulling up your trip’s GPS log now.', 70],
         ['user', 'Appreciate it. The map said 12 minutes but it took almost 25.', 60],
       ],
     },
@@ -145,7 +145,7 @@ async function seedSupport(riders, drivers, superAdmin) {
       thread: [
         ['user', 'Every time I tap on Trip History the app closes itself.', 60 * 30],
         ['admin', 'We pushed a fix in the latest update. Could you update the app and try again?', 60 * 28],
-        ['user', 'Updated — working now, thank you!', 60 * 26],
+        ['user', 'Updated - working now, thank you!', 60 * 26],
       ],
     },
     {
@@ -173,7 +173,7 @@ async function seedSupport(riders, drivers, superAdmin) {
       who: riders[0], subject: 'Lost phone in the vehicle', category: 'other', status: 'resolved', resolvedAt: ago(60 * 70),
       thread: [
         ['user', 'I think I left my phone on the back seat of my last ride.', 60 * 80],
-        ['admin', 'We contacted the driver — he has your phone and will meet you at the pickup point.', 60 * 72],
+        ['admin', 'We contacted the driver - he has your phone and will meet you at the pickup point.', 60 * 72],
         ['user', 'Got it back. Thank you so much!', 60 * 70],
       ],
     },
@@ -268,7 +268,7 @@ async function seedDocuments(drivers) {
 
 // Fire one SOS through the REAL endpoint; fall back to a direct insert if the
 // server is unreachable. Returns { id, viaEndpoint } so callers can post-process
-// (e.g. mark it acknowledged/resolved — an admin action, not part of the SOS).
+// (e.g. mark it acknowledged/resolved - an admin action, not part of the SOS).
 async function fireSos(e) {
   const token = e.actor.generateAccessToken();
   const body = { lat: e.lat, lng: e.lng, address: e.address, message: e.message, role: e.role };
@@ -301,27 +301,27 @@ async function fireSos(e) {
   return { id: created._id, viaEndpoint: false };
 }
 
-// ── Emergencies — through the REAL SOS endpoint ────────────────────────────────
+// ── Emergencies - through the REAL SOS endpoint ────────────────────────────────
 async function seedEmergencies(riders, drivers, superAdmin) {
   // Realistic Kathmandu-valley coordinates + addresses. `resolve` marks how the
-  // alert should end up — the SOS always fires live as 'active', then we apply
+  // alert should end up - the SOS always fires live as 'active', then we apply
   // the admin handling step directly (there's no public resolve endpoint).
   const events = [
     { actor: riders[0], role: 'passenger', lat: 27.7172, lng: 85.3240, address: 'Durbar Marg, Kathmandu', message: 'Feeling unsafe, driver is not following the route.' },
-    { actor: riders[2], role: 'passenger', lat: 27.6710, lng: 85.4298, address: 'Suryabinayak, Bhaktapur', message: 'Minor accident — need assistance.' },
+    { actor: riders[2], role: 'passenger', lat: 27.6710, lng: 85.4298, address: 'Suryabinayak, Bhaktapur', message: 'Minor accident - need assistance.' },
     { actor: drivers[1].user, role: 'driver', lat: 27.6788, lng: 85.3492, address: 'Koteshwor Chowk, Kathmandu', message: 'Passenger is being aggressive, requesting help.' },
-    { actor: riders[1], role: 'passenger', lat: 27.7406, lng: 85.3360, address: 'Lazimpat, Kathmandu', message: 'SOS — vehicle broke down in an unsafe area at night.' },
+    { actor: riders[1], role: 'passenger', lat: 27.7406, lng: 85.3360, address: 'Lazimpat, Kathmandu', message: 'SOS - vehicle broke down in an unsafe area at night.' },
     { actor: drivers[0].user, role: 'driver', lat: 27.7016, lng: 85.3206, address: 'Kalimati, Kathmandu', message: 'Medical emergency, passenger unwell.' },
     // These get transitioned to acknowledged / resolved after firing.
     { actor: riders[3], role: 'passenger', lat: 27.6588, lng: 85.3247, address: 'Satdobato, Lalitpur', message: 'Driver stopped at an unknown location.', resolve: 'acknowledged' },
     { actor: drivers[3].user, role: 'driver', lat: 27.7295, lng: 85.3439, address: 'Chabahil, Kathmandu', message: 'Roadside collision, no injuries.', resolve: 'resolved' },
-    { actor: riders[2], role: 'passenger', lat: 27.6892, lng: 85.3180, address: 'Kalanki, Kathmandu', message: 'Felt threatened during the ride — now safe.', resolve: 'resolved' },
+    { actor: riders[2], role: 'passenger', lat: 27.6892, lng: 85.3180, address: 'Kalanki, Kathmandu', message: 'Felt threatened during the ride - now safe.', resolve: 'resolved' },
   ];
 
   // Skip if we already have all of them (avoid piling up on re-runs).
   const existing = await Emergency.countDocuments();
   if (existing >= events.length && !FRESH) {
-    console.log(`Emergencies: ${existing} already present — skipping (run with FRESH=1 to reset).`);
+    console.log(`Emergencies: ${existing} already present - skipping (run with FRESH=1 to reset).`);
     return;
   }
 
@@ -345,7 +345,7 @@ async function seedEmergencies(riders, drivers, superAdmin) {
     }
   }
   console.log(`Emergencies: ${viaEndpoint} via SOS endpoint, ${viaFallback} via direct fallback (${acknowledged} acknowledged, ${resolved} resolved, rest active).`);
-  if (viaFallback > 0) console.log(`  (start the API server — npm start — for a true end-to-end SOS, or set SEED_API_URL)`);
+  if (viaFallback > 0) console.log(`  (start the API server - npm start - for a true end-to-end SOS, or set SEED_API_URL)`);
 }
 
 async function wipeSeeded() {
@@ -364,7 +364,7 @@ async function run() {
   await dbConnect();
 
   const superAdmin = await Admin.findOne({ role: 'superadmin' });
-  if (!superAdmin) console.warn('No super admin found — tickets will be created unassigned. Run `npm run seed` first.');
+  if (!superAdmin) console.warn('No super admin found - tickets will be created unassigned. Run `npm run seed` first.');
 
   if (FRESH) await wipeSeeded();
 

@@ -87,7 +87,7 @@ const addMessage = asyncHandler(async (req, res) => {
     }
 
     ticket.messages.push(entry);
-    // A reply on a resolved/closed thread reopens the ticket for the customer —
+    // A reply on a resolved/closed thread reopens the ticket for the customer -
     // they don't need to file a fresh one to follow up on the same issue.
     const reopened = ['resolved', 'closed'].includes(ticket.status);
     if (reopened) {

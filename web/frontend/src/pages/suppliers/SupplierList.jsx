@@ -187,7 +187,7 @@ function SupplierDetail({ supplier }) {
         ].map(({ label, value }) => (
           <div key={label} className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-            <p className="text-sm font-medium text-gray-800 capitalize">{value || '—'}</p>
+            <p className="text-sm font-medium text-gray-800 capitalize">{value || '-'}</p>
           </div>
         ))}
       </div>

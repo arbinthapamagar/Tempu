@@ -51,20 +51,20 @@ export default function Dashboard() {
   const tripsChartData = tripsChartRes?.data || tripsChartRes || []
 
   const statCards = [
-    { title: 'Total Users', value: stats.totalUsers?.toLocaleString() ?? '—', icon: Users, color: 'indigo', subtitle: 'Registered passengers', to: '/users' },
-    { title: 'Active Drivers', value: stats.activeDrivers?.toLocaleString() ?? '—', icon: Car, color: 'emerald', subtitle: 'Online & approved', to: '/drivers?status=approved' },
-    { title: "Today's Trips", value: stats.tripsToday?.toLocaleString() ?? '—', icon: Navigation, color: 'blue', subtitle: 'Across all vehicle types', to: '/trips' },
-    { title: "Today's Revenue", value: stats.revenueToday != null ? formatCurrency(stats.revenueToday) : '—', icon: DollarSign, color: 'purple', subtitle: 'Platform earnings', to: '/transactions' },
-    { title: 'Pending Documents', value: stats.pendingDocuments?.toLocaleString() ?? '—', icon: FileText, color: 'amber', subtitle: 'Awaiting verification', to: '/documents' },
-    { title: 'Open Tickets', value: stats.openTickets?.toLocaleString() ?? '—', icon: MessageSquare, color: 'rose', subtitle: 'Support requests', to: '/support?status=open' },
-    { title: 'Subscriptions', value: stats.activeSubscriptions?.toLocaleString() ?? '—', icon: Repeat, color: 'teal', subtitle: 'Active plans', to: '/subscriptions' },
-    { title: 'Pending Drivers', value: stats.pendingDrivers?.toLocaleString() ?? '—', icon: Clock, color: 'red', subtitle: 'Awaiting approval', to: '/drivers?status=pending' },
+    { title: 'Total Users', value: stats.totalUsers?.toLocaleString() ?? '-', icon: Users, color: 'indigo', subtitle: 'Registered passengers', to: '/users' },
+    { title: 'Active Drivers', value: stats.activeDrivers?.toLocaleString() ?? '-', icon: Car, color: 'emerald', subtitle: 'Online & approved', to: '/drivers?status=approved' },
+    { title: "Today's Trips", value: stats.tripsToday?.toLocaleString() ?? '-', icon: Navigation, color: 'blue', subtitle: 'Across all vehicle types', to: '/trips' },
+    { title: "Today's Revenue", value: stats.revenueToday != null ? formatCurrency(stats.revenueToday) : '-', icon: DollarSign, color: 'purple', subtitle: 'Platform earnings', to: '/transactions' },
+    { title: 'Pending Documents', value: stats.pendingDocuments?.toLocaleString() ?? '-', icon: FileText, color: 'amber', subtitle: 'Awaiting verification', to: '/documents' },
+    { title: 'Open Tickets', value: stats.openTickets?.toLocaleString() ?? '-', icon: MessageSquare, color: 'rose', subtitle: 'Support requests', to: '/support?status=open' },
+    { title: 'Subscriptions', value: stats.activeSubscriptions?.toLocaleString() ?? '-', icon: Repeat, color: 'teal', subtitle: 'Active plans', to: '/subscriptions' },
+    { title: 'Pending Drivers', value: stats.pendingDrivers?.toLocaleString() ?? '-', icon: Clock, color: 'red', subtitle: 'Awaiting approval', to: '/drivers?status=pending' },
   ]
 
   const tripColumns = [
     {
       key: 'riderName', header: 'Rider',
-      render: (val) => <span className="font-medium text-gray-900">{val || '—'}</span>,
+      render: (val) => <span className="font-medium text-gray-900">{val || '-'}</span>,
     },
     { key: 'driverName', header: 'Driver', render: (val) => val || <span className="text-gray-400 italic text-xs">Unassigned</span> },
     {

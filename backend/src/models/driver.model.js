@@ -15,7 +15,7 @@ const driverSchema = new mongoose.Schema(
             required: true,
         },
 
-        // City the driver operates in — used to classify drivers and apply that
+        // City the driver operates in - used to classify drivers and apply that
         // city's pricing. Matches a city name in the pricing config.
         city: {
             type: String,

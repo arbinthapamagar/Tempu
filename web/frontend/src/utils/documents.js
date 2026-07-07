@@ -1,4 +1,4 @@
-// Shared document helpers — used by the admin document queue and the driver
+// Shared document helpers - used by the admin document queue and the driver
 // document section so the list/table + PDF-aware preview behave identically.
 
 export const isPdf = (url) => /\.pdf(\?|$)/i.test(url || '')
@@ -27,4 +27,4 @@ export const DOC_TYPE_LABELS = {
 }
 
 export const docTypeLabel = (type) =>
-  DOC_TYPE_LABELS[type] || (type ? type.replace(/_/g, ' ') : '—')
+  DOC_TYPE_LABELS[type] || (type ? type.replace(/_/g, ' ') : '-')

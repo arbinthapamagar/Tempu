@@ -81,7 +81,7 @@ const getBidsForTrip = asyncHandler(async (req, res) => {
 });
 
 const acceptBid = asyncHandler(async (req, res) => {
-    // Atomically claim the bid — only succeeds if still pending
+    // Atomically claim the bid - only succeeds if still pending
     const bid = await Bid.findOneAndUpdate(
         { _id: req.params.id, status: 'pending' },
         { status: 'accepted' },
@@ -89,7 +89,7 @@ const acceptBid = asyncHandler(async (req, res) => {
     );
     if (!bid) throw new apiError(404, 'Bid not found or already processed');
 
-    // Atomically claim the trip — only succeeds if still pending
+    // Atomically claim the trip - only succeeds if still pending
     const trip = await Trip.findOneAndUpdate(
         { _id: bid.tripId, userId: req.user._id, status: 'pending' },
         {
@@ -101,7 +101,7 @@ const acceptBid = asyncHandler(async (req, res) => {
         { new: true }
     );
     if (!trip) {
-        // Trip already accepted by another bid — rollback our bid acceptance
+        // Trip already accepted by another bid - rollback our bid acceptance
         await Bid.findByIdAndUpdate(req.params.id, { status: 'pending' });
         throw new apiError(400, 'Trip is no longer available');
     }

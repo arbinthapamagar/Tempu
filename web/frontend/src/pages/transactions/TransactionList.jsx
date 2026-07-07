@@ -91,7 +91,7 @@ export default function TransactionList() {
       header: 'User',
       render: (val, row) => (
         <div>
-          <p className="text-sm font-medium text-gray-800">{val?.name || row.driverId?.userId?.name || '—'}</p>
+          <p className="text-sm font-medium text-gray-800">{val?.name || row.driverId?.userId?.name || '-'}</p>
           <p className="text-xs text-gray-400">{val ? 'Rider' : 'Driver'}</p>
         </div>
       ),
@@ -127,7 +127,7 @@ export default function TransactionList() {
     {
       key: 'gatewayRef',
       header: 'Gateway Ref',
-      render: (val) => val ? <span className="text-xs font-mono text-gray-400">{val}</span> : '—',
+      render: (val) => val ? <span className="text-xs font-mono text-gray-400">{val}</span> : '-',
     },
     {
       key: 'createdAt',

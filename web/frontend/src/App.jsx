@@ -46,8 +46,8 @@ export default function App() {
   const updateAdmin = useAuthStore((s) => s.updateAdmin)
 
   // Re-sync the logged-in admin (name, avatar, role AND permissions) on load.
-  // Permissions can change server-side after login — e.g. a superadmin grants a
-  // moderator more access — so without this the UI would keep showing stale,
+  // Permissions can change server-side after login - e.g. a superadmin grants a
+  // moderator more access - so without this the UI would keep showing stale,
   // login-time permissions until a full re-login.
   useEffect(() => {
     if (!isAuthenticated) return

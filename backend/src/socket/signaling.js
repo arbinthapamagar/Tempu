@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 
-// WebRTC signaling for in-app support calls. The backend never sees media — it
+// WebRTC signaling for in-app support calls. The backend never sees media - it
 // only relays SDP offers/answers and ICE candidates between the two peers that
 // share a ticket "room", plus the call lifecycle (invite/accept/reject/end).
 //

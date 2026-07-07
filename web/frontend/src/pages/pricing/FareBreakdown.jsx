@@ -39,7 +39,7 @@ export function FareBreakdown({ f }) {
         <Line label={`Distance cost (${f.billedDistance} km × ${rs(f.finalPerKm)})`} value={rs(f.distanceCost)} />
         {f.distFloored && (
           <p className="px-3 text-xs text-amber-600">
-            Ride is {f.actualDistance} km — billed as the {f.billedDistance} km minimum.
+            Ride is {f.actualDistance} km - billed as the {f.billedDistance} km minimum.
           </p>
         )}
         <Line label="Subtotal fare" value={rs(f.subtotalFare)} strong />
