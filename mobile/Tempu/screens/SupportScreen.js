@@ -97,7 +97,10 @@ export default function SupportScreen({ onBack, role }) {
   };
 
   const submitNew = async () => {
-    if (!subject.trim() || !message.trim()) return;
+    if (!subject.trim() || !message.trim()) {
+      Alert.alert('Missing details', 'Please add a subject and describe your issue before submitting.');
+      return;
+    }
     setBusy(true);
     try {
       const res = await userApi.createTicket({ subject: subject.trim(), category, message: message.trim() });
@@ -105,7 +108,9 @@ export default function SupportScreen({ onBack, role }) {
       await loadTickets();
       const created = res.data;
       if (created?._id) openTicket(created._id); else setView('list');
-    } catch { /* noop */ } finally { setBusy(false); }
+    } catch (e) {
+      Alert.alert('Could not submit', e?.message || 'Something went wrong. Please try again.');
+    } finally { setBusy(false); }
   };
 
   const sendReply = async () => {

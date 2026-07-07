@@ -218,6 +218,10 @@ export default function TicketChat() {
   if (!ticket) return <div className="flex-1 grid place-items-center text-gray-500">Ticket not found.</div>
 
   const person = ticket.userId || ticket.driverId
+  // Pre-login guests have no account — use their submitted name/email instead.
+  const isGuest = !ticket.userId && !ticket.driverId && !!ticket.guest?.email
+  const displayName = person?.name || ticket.guest?.name || ticket.guest?.email || '—'
+  const displayEmail = person?.email || ticket.guest?.email || null
   const currentAssignee = ticket.assignedTo?._id || ''
   const selectedAssignee = pendingAssignee ?? currentAssignee
   const assigneeChanged = !!selectedAssignee && selectedAssignee !== currentAssignee
@@ -312,21 +316,21 @@ export default function TicketChat() {
         {/* Submitter contact — always visible on open so support can verify the person */}
         <div className="px-4 py-2 border-b border-gray-100 flex items-center gap-x-4 gap-y-1 flex-wrap text-xs">
           <span className="flex items-center gap-1.5 font-medium text-gray-800">
-            <Avatar src={person?.avatarUrl} name={person?.name} size="xs" />
-            {person?.name || '—'}
+            <Avatar src={person?.avatarUrl} name={displayName} size="xs" />
+            {displayName}
           </span>
           <span className={cn('text-[9px] font-bold uppercase tracking-wide px-1.5 py-px rounded',
-            ticket.driverId ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600')}>
-            {ticket.driverId ? 'Driver' : 'Rider'}
+            ticket.driverId ? 'bg-blue-100 text-blue-700' : isGuest ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600')}>
+            {ticket.driverId ? 'Driver' : isGuest ? 'Guest' : 'Rider'}
           </span>
           {person?.phone && (
             <a href={`tel:${person.phone}`} className="flex items-center gap-1 text-gray-600 hover:text-gray-900">
               <Phone className="h-3.5 w-3.5 text-gray-400" /> {person.phone}
             </a>
           )}
-          {person?.email && (
-            <a href={`mailto:${person.email}`} className="flex items-center gap-1 text-gray-600 hover:text-gray-900 truncate max-w-[220px]">
-              <Mail className="h-3.5 w-3.5 text-gray-400 shrink-0" /> <span className="truncate">{person.email}</span>
+          {displayEmail && (
+            <a href={`mailto:${displayEmail}`} className="flex items-center gap-1 text-gray-600 hover:text-gray-900 truncate max-w-[220px]">
+              <Mail className="h-3.5 w-3.5 text-gray-400 shrink-0" /> <span className="truncate">{displayEmail}</span>
             </a>
           )}
           {ticket.driverId && (
@@ -406,7 +410,7 @@ export default function TicketChat() {
             const isAdmin = msg.senderType === 'admin'
             return (
               <div key={`m-${i}`} className={`flex gap-2.5 ${isAdmin ? 'flex-row-reverse' : ''}`}>
-                <Avatar name={isAdmin ? 'Admin' : person?.name} size="sm" />
+                <Avatar name={isAdmin ? 'Admin' : displayName} size="sm" />
                 <div className={`max-w-[75%] flex flex-col ${isAdmin ? 'items-end' : ''}`}>
                   <div className={`px-3 py-2 rounded-2xl text-sm ${isAdmin ? 'bg-orange-500 text-white rounded-tr-sm' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm'}`}>
                     {msg.message}

@@ -8,16 +8,17 @@ export const weight = {
 };
 
 // Font families (loaded in App.js). Display = Bricolage Grotesque (handcrafted,
-// irregular grotesque); body = Hanken Grotesk; data/labels = Spline Sans Mono.
+// irregular grotesque); body = Plus Jakarta Sans; data/prices/labels = JetBrains
+// Mono. Matches the Stitch design system.
 export const fonts = {
   display: 'BricolageGrotesque_800ExtraBold',
   displayBold: 'BricolageGrotesque_700Bold',
-  body: 'HankenGrotesk_500Medium',
-  bodyRegular: 'HankenGrotesk_400Regular',
-  bodySemibold: 'HankenGrotesk_600SemiBold',
-  bodyBold: 'HankenGrotesk_700Bold',
-  mono: 'SplineSansMono_500Medium',
-  monoSemibold: 'SplineSansMono_600SemiBold',
+  body: 'PlusJakartaSans_500Medium',
+  bodyRegular: 'PlusJakartaSans_400Regular',
+  bodySemibold: 'PlusJakartaSans_600SemiBold',
+  bodyBold: 'PlusJakartaSans_700Bold',
+  mono: 'JetBrainsMono_600SemiBold',
+  monoSemibold: 'JetBrainsMono_700Bold',
 };
 
 export const type = {
@@ -29,6 +30,9 @@ export const type = {
   bodyBold: { fontSize: 14, fontFamily: fonts.bodyBold },
   small: { fontSize: 13, fontFamily: fonts.body },
   caption: { fontSize: 12, fontFamily: fonts.bodySemibold },
+  // Prices / numeric data — JetBrains Mono, matches the design's price-lg / data-label.
+  price: { fontSize: 20, fontFamily: fonts.monoSemibold, letterSpacing: -0.2 },
+  dataLabel: { fontSize: 13, fontFamily: fonts.mono, letterSpacing: 0.4 },
   micro: { fontSize: 11, fontFamily: fonts.monoSemibold, letterSpacing: 0.4 },
   eyebrow: {
     fontSize: 11,

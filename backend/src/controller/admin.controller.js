@@ -10,6 +10,7 @@ import { Withdrawal } from '../models/withdrawal.model.js';
 import { Pricing, defaultPricing, VEHICLE_TYPES } from '../models/pricing.model.js';
 import { Emergency } from '../models/emergency.model.js';
 import { SupportTicket } from '../models/supportTicket.model.js';
+import { Supplier } from '../models/supplier.model.js';
 import { getSupportSettings } from '../models/supportSettings.model.js';
 import { AdminNotification } from '../models/adminNotification.model.js';
 import { Notification } from '../models/notification.model.js';
@@ -694,6 +695,82 @@ const getUserTransactions = asyncHandler(async (req, res) => {
     return res.status(200).json(
         new apiResponse(200, transactions, 'User transactions fetched', { total, page: parseInt(page), limit: limitNum, pages: Math.ceil(total / limitNum) })
     );
+});
+
+// Suppliers
+
+const getSuppliers = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.manageSuppliers) throw new apiError(403, 'Insufficient permissions');
+
+    const { page = 1, limit = 20, search, city, plan, verified } = req.query;
+    const limitNum = Math.min(parseInt(limit) || 20, 100);
+    const skip = (parseInt(page) - 1) * limitNum;
+
+    const filter = {};
+    if (city) filter.city = city;
+    if (plan) filter.plan = plan;
+    if (verified === 'true') filter.isVerified = true;
+    else if (verified === 'false') filter.isVerified = false;
+    if (search) {
+        filter.$or = [
+            { businessName: { $regex: escapeRegex(search), $options: 'i' } },
+            { contactPerson: { $regex: escapeRegex(search), $options: 'i' } },
+            { phone: { $regex: escapeRegex(search), $options: 'i' } },
+            { email: { $regex: escapeRegex(search), $options: 'i' } },
+        ];
+    }
+
+    const [suppliers, total] = await Promise.all([
+        Supplier.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limitNum),
+        Supplier.countDocuments(filter),
+    ]);
+
+    return res.status(200).json(
+        new apiResponse(200, suppliers, 'Suppliers fetched', { total, page: parseInt(page), limit: limitNum, pages: Math.ceil(total / limitNum) })
+    );
+});
+
+const getSupplierById = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.manageSuppliers) throw new apiError(403, 'Insufficient permissions');
+
+    const supplier = await Supplier.findById(req.params.id).populate('verifiedBy', 'name email');
+    if (!supplier) throw new apiError(404, 'Supplier not found');
+    return res.status(200).json(new apiResponse(200, supplier, 'Supplier fetched'));
+});
+
+const verifySupplier = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.manageSuppliers) throw new apiError(403, 'Insufficient permissions');
+
+    const supplier = await Supplier.findByIdAndUpdate(
+        req.params.id,
+        { isVerified: true, verifiedBy: req.admin._id },
+        { new: true }
+    );
+    if (!supplier) throw new apiError(404, 'Supplier not found');
+    return res.status(200).json(new apiResponse(200, supplier, 'Supplier verified'));
+});
+
+const updateSupplierPlan = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.manageSuppliers) throw new apiError(403, 'Insufficient permissions');
+
+    const { plan } = req.body;
+    const validPlans = ['basic', 'premium'];
+    if (!validPlans.includes(plan)) throw new apiError(400, `Plan must be one of: ${validPlans.join(', ')}`);
+
+    const supplier = await Supplier.findByIdAndUpdate(req.params.id, { plan }, { new: true });
+    if (!supplier) throw new apiError(404, 'Supplier not found');
+    return res.status(200).json(new apiResponse(200, supplier, `Supplier plan updated to ${plan}`));
+});
+
+const toggleSupplierStatus = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.manageSuppliers) throw new apiError(403, 'Insufficient permissions');
+
+    const { isActive } = req.body;
+    if (typeof isActive !== 'boolean') throw new apiError(400, 'isActive must be a boolean');
+
+    const supplier = await Supplier.findByIdAndUpdate(req.params.id, { isActive }, { new: true });
+    if (!supplier) throw new apiError(404, 'Supplier not found');
+    return res.status(200).json(new apiResponse(200, supplier, `Supplier ${isActive ? 'activated' : 'deactivated'}`));
 });
 
 // Drivers
@@ -1407,6 +1484,42 @@ const getTransactions = asyncHandler(async (req, res) => {
     );
 });
 
+const exportTransactions = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.managePayments) throw new apiError(403, 'Insufficient permissions');
+
+    const { status, type, method } = req.query;
+    const filter = {};
+    if (status) filter.status = status;
+    if (type) filter.type = type;
+    if (method) filter.method = method;
+
+    const transactions = await Transaction.find(filter)
+        .sort({ createdAt: -1 })
+        .limit(10000)
+        .populate('userId', 'name phone');
+
+    const escape = (v) => {
+        const s = v == null ? '' : String(v);
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const header = ['Transaction ID', 'Date', 'Type', 'Status', 'Method', 'Amount', 'User', 'Phone'];
+    const rows = transactions.map((t) => [
+        t._id,
+        t.createdAt ? new Date(t.createdAt).toISOString() : '',
+        t.type,
+        t.status,
+        t.method,
+        t.amount,
+        t.userId?.name,
+        t.userId?.phone,
+    ].map(escape).join(','));
+    const csv = [header.join(','), ...rows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="transactions.csv"');
+    return res.status(200).send(csv);
+});
+
 const getTransactionById = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.managePayments) throw new apiError(403, 'Insufficient permissions');
 
@@ -2023,13 +2136,14 @@ export {
     getDashboardStats, getDashboardRecentTrips, getNavCounts, markNavSeen,
     getAnalyticsOverview, getAnalyticsTrips, getAnalyticsUsers, getAnalyticsTopDrivers, getAnalyticsVehicleDistribution,
     getUsers, getUserById, updateUserStatus, getUserTrips, getUserTransactions,
+    getSuppliers, getSupplierById, verifySupplier, updateSupplierPlan, toggleSupplierStatus,
     getDrivers, getDriverById, updateDriverStatus, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
     grantDriverMoney, getWithdrawals, processWithdrawal,
     getPricing, updatePricing,
     getEmergencies, getEmergencyById, updateEmergency, assignEmergency, addEmergencyNote,
     getAllDocuments, verifyDocument, rejectDocument, updateDocument, deleteDocument, seedTestDocument,
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
-    getTransactions, getTransactionById, getTransactionSummary,
+    getTransactions, getTransactionById, getTransactionSummary, exportTransactions,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
     getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, deleteTicket, getSupportAgents, getSupportSettingsAdmin, updateSupportSettings,
     broadcastNotification, getNotificationHistory, getNotificationRecipients,
