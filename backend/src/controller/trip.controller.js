@@ -174,7 +174,7 @@ const updateTripStatusByDriver = asyncHandler(async (req, res) => {
     const trip = await Trip.findOne({ _id: req.params.id, driverId: driver._id });
     if (!trip) throw new apiError(404, 'Trip not found');
 
-    // Idempotency guard — prevent double-processing if same status re-submitted
+    // Idempotency guard - prevent double-processing if same status re-submitted
     if (trip.status === status) {
         return res.status(200).json(new apiResponse(200, trip, 'Trip status already set'));
     }

@@ -20,6 +20,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { uploadOnCloudinary, deleteFromCloudinary } from '../utils/cloudinary.js';
 import { sendEmail } from '../config/sendEmail.js';
 import { grantEmailTemplate } from '../utils/grantEmailTemplate.js';
+import { emergencyEmailTemplate } from '../utils/emergencyEmailTemplate.js';
 import { notificationEmailTemplate } from '../utils/notificationEmailTemplate.js';
 import jwt from 'jsonwebtoken';
 
@@ -989,7 +990,7 @@ const grantDriverMoney = asyncHandler(async (req, res) => {
     const grantNotification = new Notification({
         userId: driver.userId._id,
         title: 'Money Added to Your Wallet',
-        body: `NPR ${parsedAmount} has been credited to your wallet${trimmedNote ? ` — ${trimmedNote}` : ''}.`,
+        body: `NPR ${parsedAmount} has been credited to your wallet${trimmedNote ? ` - ${trimmedNote}` : ''}.`,
         type: 'payment',
         refId: transaction._id,
     });
@@ -1001,7 +1002,7 @@ const grantDriverMoney = asyncHandler(async (req, res) => {
         sendEmail({
             sendTo: driver.userId.email,
             subject: 'Funds added to your Tempu wallet',
-            html: grantEmailTemplate({ name: driver.userId.name, amount: parsedAmount, note: trimmedNote }),
+            html: grantEmailTemplate({ name: driver.userId.name, amount: parsedAmount, note: trimmedNote, balance: driver.walletBalance, reference: transaction._id }),
         }).catch((err) => console.error('Grant email error:', err?.message));
     }
 
@@ -1080,7 +1081,7 @@ const processWithdrawal = asyncHandler(async (req, res) => {
     if (driver) {
         const messages = {
             approve: `Your withdrawal of NPR ${withdrawal.amount} has been approved and is being processed.`,
-            reject: `Your withdrawal of NPR ${withdrawal.amount} was rejected and refunded to your wallet${adminNote ? ` — ${adminNote}` : ''}.`,
+            reject: `Your withdrawal of NPR ${withdrawal.amount} was rejected and refunded to your wallet${adminNote ? ` - ${adminNote}` : ''}.`,
             paid: `Your withdrawal of NPR ${withdrawal.amount} has been paid out.`,
         };
         await Notification.create({
@@ -1267,8 +1268,9 @@ const updateEmergency = asyncHandler(async (req, res) => {
     if (status === 'resolved') emergency.resolvedAt = new Date();
     await emergency.save();
 
-    // Reassure the person who raised it
-    await Notification.create({
+    // Reassure the person who raised it. Suppress the generic auto-email from
+    // the Notification hook - we send a dedicated, richer SOS email below.
+    const sosNotification = new Notification({
         userId: emergency.userId,
         title: status === 'resolved' ? 'Emergency Resolved' : 'Help Is On The Way',
         body: status === 'resolved'
@@ -1277,6 +1279,18 @@ const updateEmergency = asyncHandler(async (req, res) => {
         type: 'general',
         refId: emergency._id,
     });
+    sosNotification._skipEmail = true;
+    await sosNotification.save();
+
+    // Dedicated SOS email to the customer (fire-and-forget; won't block response).
+    const sosUser = await User.findById(emergency.userId).select('name email');
+    if (sosUser?.email) {
+        sendEmail({
+            sendTo: sosUser.email,
+            subject: status === 'resolved' ? 'Your Tempu SOS has been resolved' : 'Tempu is responding to your SOS',
+            html: emergencyEmailTemplate({ name: sosUser.name, status }),
+        }).catch((err) => console.error('SOS email error:', err?.message));
+    }
 
     return res.status(200).json(new apiResponse(200, emergency, `Emergency ${status}`));
 });
@@ -1681,8 +1695,8 @@ const getSupportTickets = asyncHandler(async (req, res) => {
 });
 
 // Fully-populated ticket. Shared by all support endpoints so they always return
-// the same shape to the admin UI. (Support capabilities are global now — see
-// getSupportSettingsAdmin — not per ticket/user.)
+// the same shape to the admin UI. (Support capabilities are global now - see
+// getSupportSettingsAdmin - not per ticket/user.)
 async function buildTicketPayload(id) {
     const ticket = await SupportTicket.findById(id)
         .populate('userId', 'name phone email avatarUrl')
@@ -1759,12 +1773,12 @@ const assignTicket = asyncHandler(async (req, res) => {
     const isSelfAssign = String(assigneeId) === String(req.admin._id);
     const assigneeName = ticket.assignedTo?.name || 'an agent';
 
-    // 1) Notify the assignee — including when they assign it to themselves.
+    // 1) Notify the assignee - including when they assign it to themselves.
     if (isSelfAssign) {
         await AdminNotification.create({
             adminId: assigneeId,
             title: 'You took a ticket',
-            body: `You self-assigned ticket #${ref} — "${ticket.subject}".`,
+            body: `You self-assigned ticket #${ref} - "${ticket.subject}".`,
             type: 'ticket_assigned',
             link,
             refId: ticket._id,
@@ -1773,7 +1787,7 @@ const assignTicket = asyncHandler(async (req, res) => {
         await AdminNotification.create({
             adminId: assigneeId,
             title: 'Ticket assigned to you',
-            body: `${req.admin.name} assigned ticket #${ref} — "${ticket.subject}".`,
+            body: `${req.admin.name} assigned ticket #${ref} - "${ticket.subject}".`,
             type: 'ticket_assigned',
             link,
             refId: ticket._id,
@@ -1804,8 +1818,8 @@ const assignTicket = asyncHandler(async (req, res) => {
                 adminId: s._id,
                 title: 'Ticket assigned by moderator',
                 body: isSelfAssign
-                    ? `${req.admin.name} self-assigned ticket #${ref} — "${ticket.subject}".`
-                    : `${req.admin.name} assigned ticket #${ref} to ${assigneeName} — "${ticket.subject}".`,
+                    ? `${req.admin.name} self-assigned ticket #${ref} - "${ticket.subject}".`
+                    : `${req.admin.name} assigned ticket #${ref} to ${assigneeName} - "${ticket.subject}".`,
                 type: 'ticket_assigned',
                 link,
                 refId: ticket._id,
@@ -1955,7 +1969,7 @@ const deleteTicketComment = asyncHandler(async (req, res) => {
 });
 
 // Permanently delete a ticket. Restricted to super admins, and only once the
-// ticket is closed — so an active conversation can never be wiped out.
+// ticket is closed - so an active conversation can never be wiped out.
 const deleteTicket = asyncHandler(async (req, res) => {
     if (req.admin.role !== 'superadmin') throw new apiError(403, 'Only a super admin can delete tickets');
 
@@ -2011,7 +2025,7 @@ const broadcastNotification = asyncHandler(async (req, res) => {
         return res.status(200).json(new apiResponse(200, { sent: 0 }, 'No recipients selected'));
     }
 
-    // insertMany is bulk + skips the per-doc email hook (in-app only — no email blast).
+    // insertMany is bulk + skips the per-doc email hook (in-app only - no email blast).
     await Promise.all([
         userDocs.length ? Notification.insertMany(userDocs, { ordered: false }) : null,
         driverDocs.length ? Notification.insertMany(driverDocs, { ordered: false }) : null,
