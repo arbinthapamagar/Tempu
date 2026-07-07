@@ -181,7 +181,9 @@ function ConversationList() {
       t.subject?.toLowerCase().includes(q) ||
       t.userId?.name?.toLowerCase().includes(q) ||
       t.userId?.phone?.toLowerCase().includes(q) ||
-      t.userId?.email?.toLowerCase().includes(q))
+      t.userId?.email?.toLowerCase().includes(q) ||
+      t.guest?.name?.toLowerCase().includes(q) ||
+      t.guest?.email?.toLowerCase().includes(q))
   }
 
   const heading = view === 'mine' ? 'Assigned to me'
@@ -231,6 +233,8 @@ function ConversationList() {
         ) : (
           tickets.map((t) => {
             const person = t.userId || t.driverId
+            // Pre-login guests have no account — fall back to their submitted identity.
+            const displayName = person?.name || t.guest?.name || t.guest?.email || 'Guest'
             const last = t.messages?.[t.messages.length - 1]
             const preview = last?.message || t.subject || 'No messages yet'
             const isActive = t._id === activeId
@@ -243,10 +247,10 @@ function ConversationList() {
                   isActive ? 'border-l-gray-900 bg-gray-50' : 'border-l-transparent hover:bg-gray-50/60'
                 )}
               >
-                <Avatar src={person?.avatarUrl} name={person?.name} size="sm" />
+                <Avatar src={person?.avatarUrl} name={displayName} size="sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{person?.name || 'Unknown'}</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
                     <span className="text-[10px] text-gray-400 shrink-0">{formatRelative(t.updatedAt || t.createdAt)}</span>
                   </div>
                   <p className="text-xs text-gray-500 truncate mt-0.5">{preview}</p>
