@@ -11,6 +11,7 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { JetBrainsMono_500Medium, JetBrainsMono_600SemiBold, JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
 import TabBar from './components/TabBar';
+import { userApi } from './api/user.api';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import DriverShell from './screens/driver/DriverShell';
 import ContactSupportScreen from './screens/ContactSupportScreen';
@@ -43,6 +44,7 @@ function AppShell() {
   const [tab, setTab] = useState('home');
   const [overlay, setOverlay] = useState(null);
   const [mode, setModeState] = useState('passenger'); // 'passenger' | 'driver'
+  const [driverApproved, setDriverApproved] = useState(false);
 
   // Restore last-used mode across restarts
   useEffect(() => {
@@ -51,13 +53,29 @@ function AppShell() {
     });
   }, []);
 
+  // The /users/profile payload doesn't always embed the driver profile, so
+  // fetch the driver record directly to know if the user may enter driver mode.
+  useEffect(() => {
+    if (!user) { setDriverApproved(false); return; }
+    let cancelled = false;
+    userApi.getMyDriverProfile()
+      .then((res) => {
+        const dp = res.data?.driver || res.data;
+        if (!cancelled) setDriverApproved(dp?.status === 'approved');
+      })
+      .catch(() => { if (!cancelled) setDriverApproved(false); });
+    return () => { cancelled = true; };
+  }, [user]);
+
   const setMode = (m) => {
     setModeState(m);
     AsyncStorage.setItem('shakti_mode', m).catch(() => {});
   };
 
-  // Only let a user enter driver mode if their driver profile is approved
-  const approvedDriver = user?.driverProfile?.status === 'approved';
+  // Only let a user enter driver mode if their driver profile is approved.
+  // Trust either the embedded profile or the directly-fetched driver record.
+  const approvedDriver =
+    user?.driverProfile?.status === 'approved' || driverApproved;
   const effectiveMode = mode === 'driver' && approvedDriver ? 'driver' : 'passenger';
 
   // After OTP verification the user becomes set in context.
