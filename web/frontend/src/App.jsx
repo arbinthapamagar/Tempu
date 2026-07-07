@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore, canSeeDashboard, homePath } from './store/authStore'
+import { authApi } from './api/auth.api'
 import Layout from './components/layout/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -40,6 +42,20 @@ function RequireDashboard({ children }) {
 }
 
 export default function App() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const updateAdmin = useAuthStore((s) => s.updateAdmin)
+
+  // Re-sync the logged-in admin (name, avatar, role AND permissions) on load.
+  // Permissions can change server-side after login — e.g. a superadmin grants a
+  // moderator more access — so without this the UI would keep showing stale,
+  // login-time permissions until a full re-login.
+  useEffect(() => {
+    if (!isAuthenticated) return
+    authApi.me()
+      .then((res) => { const fresh = res?.data; if (fresh) updateAdmin(fresh) })
+      .catch(() => { /* interceptor handles auth errors */ })
+  }, [isAuthenticated, updateAdmin])
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
