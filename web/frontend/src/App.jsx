@@ -52,8 +52,13 @@ export default function App() {
   useEffect(() => {
     if (!isAuthenticated) return
     authApi.me()
-      .then((res) => { const fresh = res?.data; if (fresh) updateAdmin(fresh) })
-      .catch(() => { /* interceptor handles auth errors */ })
+      .then((res) => {
+        const fresh = res?.data
+        // Guard against a race: if the user logged out while this request was
+        // in flight, don't resurrect the admin identity in the persisted store.
+        if (fresh && useAuthStore.getState().isAuthenticated) updateAdmin(fresh)
+      })
+      .catch(() => { /* interceptor handles auth/session failures */ })
   }, [isAuthenticated, updateAdmin])
 
   return (
