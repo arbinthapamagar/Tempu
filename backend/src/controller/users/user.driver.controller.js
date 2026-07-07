@@ -7,6 +7,8 @@ import { apiError } from '../../utils/apiError.js';
 import { apiResponse } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { uploadOnCloudinary } from '../../utils/cloudinary.js';
+import { sendEmail } from '../../config/sendEmail.js';
+import { welcomeDriverTemplate } from '../../utils/welcomeEmailTemplate.js';
 
 const COMPATIBLE_VEHICLE_TYPES = {
     bike: ['bike', 'scooter'],
@@ -44,6 +46,16 @@ const registerAsDriver = asyncHandler(async (req, res) => {
     });
 
     await User.findByIdAndUpdate(req.user._id, { driverProfile: driver._id, role: 'driver' });
+
+    // Driver application received - send a driver welcome email (best effort).
+    if (req.user.email) {
+        await sendEmail({
+            sendTo: req.user.email,
+            subject: 'Your Tempu driver application 🛺',
+            html: welcomeDriverTemplate({ name: req.user.name }),
+        });
+    }
+
     return res.status(201).json(new apiResponse(201, driver, 'Driver registered. Pending admin approval.'));
 });
 

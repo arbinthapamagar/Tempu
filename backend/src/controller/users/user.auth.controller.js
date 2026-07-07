@@ -4,7 +4,9 @@ import { apiResponse } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { verifyEmailTemplate } from '../../utils/verifyEmailTemplate.js';
 import { forgetPasswordTemplate } from '../../utils/forgetPasswordTemplete.js';
+import { welcomeUserTemplate } from '../../utils/welcomeEmailTemplate.js';
 import { sendEmail } from '../../config/sendEmail.js';
+import { sendSms } from '../../config/sendSms.js';
 import { generateOtp, otpExpireTime } from '../../utils/generateOtp.js';
 import jwt from 'jsonwebtoken';
 
@@ -13,6 +15,17 @@ const cookieOptions = {
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
 };
+
+// No SMS gateway is wired up yet, so outside production we print the OTP to the
+// server terminal for development/testing. This is intentionally suppressed in
+// production so codes never leak into logs.
+const logOtp = (label, phone, otpCode) => {
+    if (process.env.NODE_ENV === 'production') return;
+    console.log(`\n📲 [OTP] ${label} | phone: ${phone} | code: ${otpCode}\n`);
+};
+
+const otpSmsText = (otpCode) =>
+    `Your Tempu verification code is ${otpCode}. It expires in 10 minutes. Do not share it with anyone.`;
 
 const userRegister = asyncHandler(async (req, res) => {
     const { name, phone, email, password, confirmPassword, dateOfBirth, gender } = req.body;
@@ -46,6 +59,11 @@ const userRegister = asyncHandler(async (req, res) => {
         gender,
         otp: { code: otpCode, expiresAt: otpExpiry, attempts: 0 },
     });
+
+    // Deliver the SAME code to every channel: terminal (dev), SMS (phone), and
+    // email (if the user gave one).
+    logOtp('register', user.phone, otpCode);
+    await sendSms(user.phone, otpSmsText(otpCode));
 
     if (email) {
         await sendEmail({
@@ -104,6 +122,15 @@ const verifyOtp = asyncHandler(async (req, res) => {
     user.refreshToken = refreshToken;
     user.lastLoginAt = new Date();
     await user.save();
+
+    // Account is now verified - send a welcome email (best effort).
+    if (user.email) {
+        await sendEmail({
+            sendTo: user.email,
+            subject: 'Welcome to Tempu 🎉',
+            html: welcomeUserTemplate({ name: user.name }),
+        });
+    }
 
     const userResponse = await User.findById(user._id).select('-password -refreshToken -otp');
 
@@ -190,6 +217,9 @@ const forgotPassword = asyncHandler(async (req, res) => {
     user.otp = { code: otpCode, expiresAt: otpExpiry, attempts: 0 };
     await user.save();
 
+    logOtp('forgot-password', user.phone, otpCode);
+    await sendSms(user.phone, otpSmsText(otpCode));
+
     if (user.email) {
         await sendEmail({
             sendTo: user.email,
@@ -266,6 +296,9 @@ const resendOtp = asyncHandler(async (req, res) => {
     const otpExpiry = otpExpireTime();
     user.otp = { code: otpCode, expiresAt: otpExpiry, attempts: 0 };
     await user.save();
+
+    logOtp('resend', user.phone, otpCode);
+    await sendSms(user.phone, otpSmsText(otpCode));
 
     if (user.email) {
         await sendEmail({
