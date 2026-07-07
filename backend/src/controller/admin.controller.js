@@ -33,6 +33,12 @@ function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Permission gate with an implicit superadmin bypass: superadmins hold every
+// capability regardless of the stored permission flags (mirrors the frontend's
+// hasPermission), and it's resilient to admin docs that predate a permission
+// being added to the schema (flag === undefined would otherwise deny access).
+const can = (admin, key) => admin?.role === 'superadmin' || admin?.permissions?.[key] === true;
+
 function getPeriodStart(period) {
     const now = new Date();
     if (period === 'week') {
@@ -700,11 +706,12 @@ const getUserTransactions = asyncHandler(async (req, res) => {
 // Suppliers
 
 const getSuppliers = asyncHandler(async (req, res) => {
-    if (!req.admin.permissions.manageSuppliers) throw new apiError(403, 'Insufficient permissions');
+    if (!can(req.admin, 'manageSuppliers')) throw new apiError(403, 'Insufficient permissions');
 
     const { page = 1, limit = 20, search, city, plan, verified } = req.query;
     const limitNum = Math.min(parseInt(limit) || 20, 100);
-    const skip = (parseInt(page) - 1) * limitNum;
+    const pageNum = Math.max(parseInt(page) || 1, 1);
+    const skip = (pageNum - 1) * limitNum;
 
     const filter = {};
     if (city) filter.city = city;
@@ -726,12 +733,12 @@ const getSuppliers = asyncHandler(async (req, res) => {
     ]);
 
     return res.status(200).json(
-        new apiResponse(200, suppliers, 'Suppliers fetched', { total, page: parseInt(page), limit: limitNum, pages: Math.ceil(total / limitNum) })
+        new apiResponse(200, suppliers, 'Suppliers fetched', { total, page: pageNum, limit: limitNum, pages: Math.ceil(total / limitNum) })
     );
 });
 
 const getSupplierById = asyncHandler(async (req, res) => {
-    if (!req.admin.permissions.manageSuppliers) throw new apiError(403, 'Insufficient permissions');
+    if (!can(req.admin, 'manageSuppliers')) throw new apiError(403, 'Insufficient permissions');
 
     const supplier = await Supplier.findById(req.params.id).populate('verifiedBy', 'name email');
     if (!supplier) throw new apiError(404, 'Supplier not found');
@@ -739,7 +746,7 @@ const getSupplierById = asyncHandler(async (req, res) => {
 });
 
 const verifySupplier = asyncHandler(async (req, res) => {
-    if (!req.admin.permissions.manageSuppliers) throw new apiError(403, 'Insufficient permissions');
+    if (!can(req.admin, 'manageSuppliers')) throw new apiError(403, 'Insufficient permissions');
 
     const supplier = await Supplier.findByIdAndUpdate(
         req.params.id,
@@ -751,7 +758,7 @@ const verifySupplier = asyncHandler(async (req, res) => {
 });
 
 const updateSupplierPlan = asyncHandler(async (req, res) => {
-    if (!req.admin.permissions.manageSuppliers) throw new apiError(403, 'Insufficient permissions');
+    if (!can(req.admin, 'manageSuppliers')) throw new apiError(403, 'Insufficient permissions');
 
     const { plan } = req.body;
     const validPlans = ['basic', 'premium'];
@@ -763,7 +770,7 @@ const updateSupplierPlan = asyncHandler(async (req, res) => {
 });
 
 const toggleSupplierStatus = asyncHandler(async (req, res) => {
-    if (!req.admin.permissions.manageSuppliers) throw new apiError(403, 'Insufficient permissions');
+    if (!can(req.admin, 'manageSuppliers')) throw new apiError(403, 'Insufficient permissions');
 
     const { isActive } = req.body;
     if (typeof isActive !== 'boolean') throw new apiError(400, 'isActive must be a boolean');
@@ -1485,7 +1492,7 @@ const getTransactions = asyncHandler(async (req, res) => {
 });
 
 const exportTransactions = asyncHandler(async (req, res) => {
-    if (!req.admin.permissions.managePayments) throw new apiError(403, 'Insufficient permissions');
+    if (!can(req.admin, 'managePayments')) throw new apiError(403, 'Insufficient permissions');
 
     const { status, type, method } = req.query;
     const filter = {};
@@ -1493,31 +1500,42 @@ const exportTransactions = asyncHandler(async (req, res) => {
     if (type) filter.type = type;
     if (method) filter.method = method;
 
-    const transactions = await Transaction.find(filter)
-        .sort({ createdAt: -1 })
-        .limit(10000)
-        .populate('userId', 'name phone');
-
+    // Quote fields containing CSV-significant chars, and neutralize spreadsheet
+    // formula injection: a value beginning with = + - @ (or tab/CR) is prefixed
+    // with a single quote so Excel/Sheets render it as text, not a formula.
     const escape = (v) => {
-        const s = v == null ? '' : String(v);
-        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+        let s = v == null ? '' : String(v);
+        if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+        return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const header = ['Transaction ID', 'Date', 'Type', 'Status', 'Method', 'Amount', 'User', 'Phone'];
-    const rows = transactions.map((t) => [
-        t._id,
-        t.createdAt ? new Date(t.createdAt).toISOString() : '',
-        t.type,
-        t.status,
-        t.method,
-        t.amount,
-        t.userId?.name,
-        t.userId?.phone,
-    ].map(escape).join(','));
-    const csv = [header.join(','), ...rows].join('\n');
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="transactions.csv"');
-    return res.status(200).send(csv);
+    res.write(header.join(',') + '\r\n');
+
+    // Stream every matching row with a cursor so the full result set is neither
+    // truncated (no arbitrary cap) nor held in memory all at once.
+    const cursor = Transaction.find(filter)
+        .sort({ createdAt: -1 })
+        .populate('userId', 'name phone')
+        .cursor();
+
+    for await (const t of cursor) {
+        const row = [
+            t._id,
+            t.createdAt ? new Date(t.createdAt).toISOString() : '',
+            t.type,
+            t.status,
+            t.method,
+            t.amount,
+            t.userId?.name,
+            t.userId?.phone,
+        ].map(escape).join(',');
+        res.write(row + '\r\n');
+    }
+
+    return res.end();
 });
 
 const getTransactionById = asyncHandler(async (req, res) => {
