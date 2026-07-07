@@ -1038,11 +1038,27 @@ function TfaForm({ enabled, setEnabled, close }) {
 }
 
 function LinkedDevices({ close }) {
-  const devices = [
+  const [devices, setDevices] = useState([
     { id: 'd1', name: 'iPhone 14', meta: 'Kathmandu · last seen now', current: true },
     { id: 'd2', name: 'Pixel 8', meta: 'Lalitpur · 3 days ago' },
     { id: 'd3', name: 'Chrome (Mac)', meta: 'Kathmandu · 1 week ago' },
-  ];
+  ]);
+
+  const revoke = (device) => {
+    Alert.alert(
+      'Revoke access',
+      `Sign ${device.name} out of your account?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Revoke',
+          style: 'destructive',
+          onPress: () => setDevices((prev) => prev.filter((d) => d.id !== device.id)),
+        },
+      ],
+    );
+  };
+
   return (
     <>
       <ModalHeader title="Linked devices" close={close} />
@@ -1057,7 +1073,7 @@ function LinkedDevices({ close }) {
             <Text style={styles.deviceMeta}>{d.meta}</Text>
           </View>
           {!d.current && (
-            <Pressable hitSlop={6}>
+            <Pressable hitSlop={6} onPress={() => revoke(d)}>
               <Text style={styles.deviceRevoke}>Revoke</Text>
             </Pressable>
           )}
