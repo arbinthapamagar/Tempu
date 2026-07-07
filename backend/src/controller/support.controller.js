@@ -9,7 +9,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-// Public (no-auth) contact form for people who haven't signed up yet — they can
+// Public (no-auth) contact form for people who haven't signed up yet - they can
 // reach the team and we follow up over email. Mounted at POST /api/v1/support/contact.
 const contactSupport = asyncHandler(async (req, res) => {
     const name = (req.body.name || '').trim();
@@ -33,7 +33,7 @@ const contactSupport = asyncHandler(async (req, res) => {
             html: `
               <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111">
                 <h2 style="margin:0 0 12px">New pre-login support enquiry</h2>
-                <p style="margin:0 0 4px"><strong>Name:</strong> ${escapeHtml(name) || '—'}</p>
+                <p style="margin:0 0 4px"><strong>Name:</strong> ${escapeHtml(name) || '-'}</p>
                 <p style="margin:0 0 4px"><strong>Email:</strong> ${escapeHtml(email)}</p>
                 <p style="margin:12px 0 4px"><strong>Message:</strong></p>
                 <p style="white-space:pre-wrap;background:#f6f6f6;border-radius:8px;padding:12px;margin:0">${escapeHtml(message)}</p>
@@ -41,11 +41,11 @@ const contactSupport = asyncHandler(async (req, res) => {
               </div>`,
         });
     } else {
-        console.warn('contactSupport: no SUPPORT_EMAIL and no super admin email — enquiry not delivered.');
+        console.warn('contactSupport: no SUPPORT_EMAIL and no super admin email - enquiry not delivered.');
     }
 
     return res.status(200).json(
-        new apiResponse(200, { received: true }, 'Thanks for reaching out — our team will email you shortly.')
+        new apiResponse(200, { received: true }, 'Thanks for reaching out - our team will email you shortly.')
     );
 });
 
@@ -54,7 +54,7 @@ const contactSupport = asyncHandler(async (req, res) => {
 // in real time. The thread is gated by a random token (returned on creation)
 // instead of a JWT. Admins see and reply to these exactly like normal tickets.
 
-// Shape returned to the guest — never leak internal admin comments/assignment.
+// Shape returned to the guest - never leak internal admin comments/assignment.
 const publicTicket = (t) => ({
     _id: t._id,
     subject: t.subject,
@@ -73,7 +73,7 @@ const publicTicket = (t) => ({
     updatedAt: t.updatedAt,
 });
 
-// POST /api/v1/support/ticket — open a guest chat thread.
+// POST /api/v1/support/ticket - open a guest chat thread.
 const createGuestTicket = asyncHandler(async (req, res) => {
     const name = (req.body.name || '').trim();
     const email = (req.body.email || '').trim();
@@ -109,13 +109,13 @@ async function findGuestTicket(req) {
     return ticket;
 }
 
-// GET /api/v1/support/ticket/:id?token=… — fetch the guest thread (for polling).
+// GET /api/v1/support/ticket/:id?token=… - fetch the guest thread (for polling).
 const getGuestTicket = asyncHandler(async (req, res) => {
     const ticket = await findGuestTicket(req);
     return res.status(200).json(new apiResponse(200, publicTicket(ticket), 'Chat fetched'));
 });
 
-// POST /api/v1/support/ticket/:id/messages — guest sends a reply.
+// POST /api/v1/support/ticket/:id/messages - guest sends a reply.
 const addGuestMessage = asyncHandler(async (req, res) => {
     const message = (req.body.message || '').trim();
     if (!message) throw new apiError(400, 'A message is required');
