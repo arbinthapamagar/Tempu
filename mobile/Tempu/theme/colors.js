@@ -1,15 +1,15 @@
 import { resolveScheme } from './themeStore';
 
-// Simple, flat, "human-made" — neutral white/paper with near-black ink text and
+// Simple, flat, "human-made" - neutral white/paper with near-black ink text and
 // a calm ink accent (matches the redesigned admin: no bright brand orange, no
 // navy-tinted greys). Semantic colours (danger/warn/success) are kept.
-// UBER-STYLE LIGHT theme. Single active app theme (dark mode toggle disabled —
+// UBER-STYLE LIGHT theme. Single active app theme (dark mode toggle disabled -
 // see themeStore.resolveScheme). White backgrounds, near-black text, BLACK
-// buttons/CTAs (white text on them), light-grey fills. Monochrome — NO orange.
+// buttons/CTAs (white text on them), light-grey fills. Monochrome - NO orange.
 const lightColors = {
-  primary: '#000000',       // pure black — buttons / CTAs / active accents
+  primary: '#000000',       // pure black - buttons / CTAs / active accents
   primaryDark: '#1c1b1b',   // pressed states
-  primarySoft: '#eeeeee',   // surface-container — chips, active rows, icon bubbles
+  primarySoft: '#eeeeee',   // surface-container - chips, active rows, icon bubbles
 
   bg: '#f9f9f9',            // page background (surface)
   background: '#f9f9f9',
@@ -21,7 +21,7 @@ const lightColors = {
   textMuted: '#5d5e60',     // secondary
   textFaint: '#747878',     // outline
 
-  border: '#e2e2e2',        // surface-container-highest — hairline borders
+  border: '#e2e2e2',        // surface-container-highest - hairline borders
   divider: '#eeeeee',
 
   danger: '#ba1a1a',
@@ -57,7 +57,7 @@ const darkColors = {
   warnSoft: '#39290f',
   success: '#4ade80',
   accent: '#fb7a3c',
-  orange: '#fb7a3c',        // brand orange — used for the user's own reply bubble
+  orange: '#fb7a3c',        // brand orange - used for the user's own reply bubble
 };
 
 export const themeScheme = resolveScheme(); // 'light' | 'dark', resolved at load

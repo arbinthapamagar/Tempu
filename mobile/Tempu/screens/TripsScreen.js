@@ -38,7 +38,7 @@ const VEHICLE_LABELS = {
 };
 
 function formatDateTime(value) {
-  if (!value) return '—';
+  if (!value) return '-';
   const d = new Date(value);
   return d.toLocaleString('en-GB', {
     day: '2-digit',
@@ -164,7 +164,7 @@ export default function TripsScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardTitleSmall} numberOfLines={1}>
-                      {t.dropoff?.address || '—'}
+                      {t.dropoff?.address || '-'}
                     </Text>
                     <View style={styles.compactMetaRow}>
                       <View
@@ -209,13 +209,13 @@ export default function TripsScreen() {
                     <View style={styles.routeLine}>
                       <View style={styles.routePickupDot} />
                       <Text style={styles.cardMeta} numberOfLines={1}>
-                        {t.pickup?.address || '—'}
+                        {t.pickup?.address || '-'}
                       </Text>
                     </View>
                     <View style={styles.routeLine}>
                       <View style={styles.routeDestSquare} />
                       <Text style={styles.cardMeta} numberOfLines={1}>
-                        {t.dropoff?.address || '—'}
+                        {t.dropoff?.address || '-'}
                       </Text>
                     </View>
                     <View

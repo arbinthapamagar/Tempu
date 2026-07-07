@@ -57,7 +57,7 @@ export default function SubscriptionList() {
         <div className="flex items-center gap-2">
           <Avatar name={val?.name} size="sm" />
           <div>
-            <p className="text-sm font-medium text-gray-900">{val?.name || '—'}</p>
+            <p className="text-sm font-medium text-gray-900">{val?.name || '-'}</p>
             <p className="text-xs text-gray-400">{val?.phone}</p>
           </div>
         </div>
@@ -98,8 +98,8 @@ export default function SubscriptionList() {
       header: 'Times',
       render: (val, row) => (
         <div className="text-xs text-gray-600">
-          <p>Pickup: {val || '—'}</p>
-          <p>Drop: {row.dropoffTime || '—'}</p>
+          <p>Pickup: {val || '-'}</p>
+          <p>Drop: {row.dropoffTime || '-'}</p>
         </div>
       ),
     },
@@ -216,18 +216,18 @@ function SubscriptionDetail({ sub }) {
         ].map(({ label, value }) => (
           <div key={label} className="bg-gray-50 rounded-lg p-3">
             <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-            <div className="text-sm font-medium text-gray-800">{value || '—'}</div>
+            <div className="text-sm font-medium text-gray-800">{value || '-'}</div>
           </div>
         ))}
       </div>
       <div className="grid grid-cols-1 gap-2">
         <div className="bg-gray-50 rounded-lg p-3">
           <p className="text-xs text-gray-400 mb-0.5">Pickup Address</p>
-          <p className="text-sm text-gray-800">{sub.pickup?.address || '—'}</p>
+          <p className="text-sm text-gray-800">{sub.pickup?.address || '-'}</p>
         </div>
         <div className="bg-gray-50 rounded-lg p-3">
           <p className="text-xs text-gray-400 mb-0.5">Drop-off Address</p>
-          <p className="text-sm text-gray-800">{sub.dropoff?.address || '—'}</p>
+          <p className="text-sm text-gray-800">{sub.dropoff?.address || '-'}</p>
         </div>
       </div>
       {sub.missedDays?.length > 0 && (

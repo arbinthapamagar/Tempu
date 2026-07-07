@@ -47,7 +47,7 @@ const USER_TYPE_LABELS = {
 };
 
 function formatDate(value) {
-  if (!value) return '—';
+  if (!value) return '-';
   const d = new Date(value);
   return d.toLocaleDateString('en-GB', {
     day: '2-digit',
@@ -57,7 +57,7 @@ function formatDate(value) {
 }
 
 function formatDateTime(value) {
-  if (!value) return '—';
+  if (!value) return '-';
   const d = new Date(value);
   return d.toLocaleString('en-GB', {
     day: '2-digit',
@@ -97,7 +97,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
   const triggerSOS = () => setModal({ type: 'sos' });
 
   // Grab location and fire the emergency alert (it lands in the admin panel).
-  // The note is optional — we send the alert with or without it. Location is
+  // The note is optional - we send the alert with or without it. Location is
   // best-effort: we use the cached fix instantly and cap a fresh fix at 4s so
   // the SOS never hangs waiting for GPS (which can stall badly indoors).
   const sendSOS = async (note) => {
@@ -109,7 +109,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
         // Fast path: last known position is usually instant.
         let pos = await Location.getLastKnownPositionAsync();
         if (!pos) {
-          // No cache — try a fresh fix but don't wait more than 4s.
+          // No cache - try a fresh fix but don't wait more than 4s.
           pos = await Promise.race([
             Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
             new Promise((resolve) => setTimeout(() => resolve(null), 4000)),
@@ -326,7 +326,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
           />
           <Stat
             icon={<Ionicons name="calendar" size={16} color={colors.textMuted} />}
-            value={formatDate(user?.createdAt).split(' ')[2] || '—'}
+            value={formatDate(user?.createdAt).split(' ')[2] || '-'}
             label="Member since"
           />
         </View>
@@ -433,7 +433,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
           </View>
           <Row
             label="Preferred method"
-            value={PAYMENT_LABELS[user?.preferredPaymentMethod] || '—'}
+            value={PAYMENT_LABELS[user?.preferredPaymentMethod] || '-'}
             last
           />
         </Section>
@@ -513,11 +513,11 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
             </Section>
 
             <Section title="Vehicle" collapsible defaultOpen={false}>
-              <Row label="Type" value={driverProfile?.vehicleType || '—'} />
-              <Row label="Model" value={driverProfile?.vehicleModel || '—'} />
-              <Row label="Colour" value={driverProfile?.vehicleColor || '—'} />
-              <Row label="Year" value={driverProfile?.vehicleYear ? String(driverProfile.vehicleYear) : '—'} />
-              <Row label="Plate" value={driverProfile?.vehiclePlate || '—'} last />
+              <Row label="Type" value={driverProfile?.vehicleType || '-'} />
+              <Row label="Model" value={driverProfile?.vehicleModel || '-'} />
+              <Row label="Colour" value={driverProfile?.vehicleColor || '-'} />
+              <Row label="Year" value={driverProfile?.vehicleYear ? String(driverProfile.vehicleYear) : '-'} />
+              <Row label="Plate" value={driverProfile?.vehiclePlate || '-'} last />
             </Section>
 
             <Section title="Driving stats" collapsible defaultOpen={false}>
@@ -525,7 +525,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
                 <Metric label="Total rides" value={String(driverProfile?.totalRides ?? 0)} />
                 <Metric label="Earnings" value={`Rs ${(driverProfile?.earnings ?? 0).toLocaleString()}`} />
                 <Metric label="Rating" value={`${(driverProfile?.rating?.average ?? 0).toFixed(2)} / 5`} />
-                <Metric label="Status" value={driverProfile?.status || '—'} />
+                <Metric label="Status" value={driverProfile?.status || '-'} />
               </View>
             </Section>
           </>
@@ -795,7 +795,7 @@ function SosForm({ onSend, busy, close }) {
           value={note}
           onChangeText={setNote}
           style={[styles.formInput, styles.sosNoteInput]}
-          placeholder="What's happening? Anything that helps us respond — leave blank if you can't."
+          placeholder="What's happening? Anything that helps us respond - leave blank if you can't."
           placeholderTextColor={colors.textFaint}
           multiline
         />
@@ -1131,7 +1131,7 @@ function ContactSupport({ close }) {
 const THEME_OPTIONS = [
   { key: 'system', label: 'System', icon: 'phone-portrait-outline' },
   { key: 'light', label: 'Light', icon: 'sunny-outline' },
-  // Dark mode is disabled for now — it needs a redesign. Re-add this option and
+  // Dark mode is disabled for now - it needs a redesign. Re-add this option and
   // restore the dark branch in themeStore.resolveScheme() to bring it back.
 ];
 

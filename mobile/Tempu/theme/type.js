@@ -30,7 +30,7 @@ export const type = {
   bodyBold: { fontSize: 14, fontFamily: fonts.bodyBold },
   small: { fontSize: 13, fontFamily: fonts.body },
   caption: { fontSize: 12, fontFamily: fonts.bodySemibold },
-  // Prices / numeric data — JetBrains Mono, matches the design's price-lg / data-label.
+  // Prices / numeric data - JetBrains Mono, matches the design's price-lg / data-label.
   price: { fontSize: 20, fontFamily: fonts.monoSemibold, letterSpacing: -0.2 },
   dataLabel: { fontSize: 13, fontFamily: fonts.mono, letterSpacing: 0.4 },
   micro: { fontSize: 11, fontFamily: fonts.monoSemibold, letterSpacing: 0.4 },

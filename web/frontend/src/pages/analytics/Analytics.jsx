@@ -17,7 +17,7 @@ const PERIODS = [
   { value: 'custom', label: 'Custom' },
 ]
 
-// Soft, floating tooltip — replaces recharts' boxy default for a nicer feel.
+// Soft, floating tooltip - replaces recharts' boxy default for a nicer feel.
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
@@ -96,7 +96,7 @@ export default function Analytics() {
         description="Platform-wide insights and performance metrics"
       />
 
-      {/* Period dropdown + (when custom) date range — on its own row so nothing is hidden */}
+      {/* Period dropdown + (when custom) date range - on its own row so nothing is hidden */}
       <div className="flex flex-wrap items-center justify-end gap-2 mb-5">
         <select
           value={period}
@@ -131,7 +131,7 @@ export default function Analytics() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-3 mb-6">
         <StatsCard
           title="Total Trips"
-          value={overview.totalTrips?.toLocaleString() ?? '—'}
+          value={overview.totalTrips?.toLocaleString() ?? '-'}
           icon={Navigation}
           color="indigo"
           subtitle={`${overview.completedTrips?.toLocaleString() ?? 0} completed`}
@@ -139,7 +139,7 @@ export default function Analytics() {
         />
         <StatsCard
           title="Total Revenue"
-          value={overview.totalRevenue != null ? formatCurrency(overview.totalRevenue) : '—'}
+          value={overview.totalRevenue != null ? formatCurrency(overview.totalRevenue) : '-'}
           icon={DollarSign}
           color="emerald"
           subtitle="Platform fees"
@@ -147,7 +147,7 @@ export default function Analytics() {
         />
         <StatsCard
           title="New Users"
-          value={overview.newUsers?.toLocaleString() ?? '—'}
+          value={overview.newUsers?.toLocaleString() ?? '-'}
           icon={Users}
           color="blue"
           subtitle={`${overview.activeUsers?.toLocaleString() ?? 0} active total`}
@@ -155,7 +155,7 @@ export default function Analytics() {
         />
         <StatsCard
           title="Active Drivers"
-          value={overview.activeDrivers?.toLocaleString() ?? '—'}
+          value={overview.activeDrivers?.toLocaleString() ?? '-'}
           icon={Car}
           color="purple"
           subtitle="Approved drivers"

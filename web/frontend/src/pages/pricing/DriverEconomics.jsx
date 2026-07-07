@@ -39,7 +39,7 @@ export function DriverEconomics({ f, config, city, vehicleKey, pickup, drop, slo
   const vlabel = VEHICLE_META[vehicleKey]?.label || vehicleKey
 
   return (
-    <Card title={`Driver Economics & Profit — ${vlabel}`}>
+    <Card title={`Driver Economics & Profit - ${vlabel}`}>
       <p className="text-xs text-gray-400 -mt-1 mb-3">
         Commission is the platform's cut (it's built into the per-km rate, not the flat base fare).
         VAT is pass-through to the government. "Profit" is what the driver keeps after their own electricity + maintenance.

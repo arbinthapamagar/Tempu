@@ -5,7 +5,7 @@ import { io } from 'socket.io-client';
 
 // react-native-webrtc is a native module; guard the import so the app doesn't
 // crash on a binary that doesn't include it (Expo Go). If the require succeeds
-// and the API is present, treat it as available — don't probe NativeModules,
+// and the API is present, treat it as available - don't probe NativeModules,
 // which is unreliable under the New Architecture (TurboModules).
 let RTCPeerConnection, RTCSessionDescription, RTCIceCandidate, RTCView, mediaDevices;
 let webrtcAvailable = false;
@@ -16,7 +16,7 @@ try {
   webrtcAvailable = !!RTCPeerConnection && typeof mediaDevices?.getUserMedia === 'function';
 } catch (e) {
   webrtcAvailable = false;
-  console.warn('[CallScreen] react-native-webrtc not available — calls disabled:', e?.message);
+  console.warn('[CallScreen] react-native-webrtc not available - calls disabled:', e?.message);
 }
 import { tokenStore } from '../api/tokenStore';
 import { ICE_SERVERS, SOCKET_URL } from '../utils/webrtc';

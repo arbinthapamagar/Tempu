@@ -32,7 +32,7 @@ export const hasPermission = (admin, key) => {
   return admin.permissions?.[key] === true
 }
 
-// Dashboard is for superadmin/admin only — moderators and headmasters don't get it.
+// Dashboard is for superadmin/admin only - moderators and headmasters don't get it.
 export const canSeeDashboard = (admin) =>
   admin?.role === 'superadmin' || admin?.role === 'admin'
 

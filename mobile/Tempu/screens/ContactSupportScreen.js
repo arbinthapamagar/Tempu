@@ -13,7 +13,7 @@ import { fonts } from '../theme/type';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const STORE_KEY = 'guest_support_chat'; // { id, token }
 
-// Pre-login support live chat — anyone (no account) can start a thread and chat
+// Pre-login support live chat - anyone (no account) can start a thread and chat
 // with the team in real time. The thread is remembered on-device so they can
 // come back to it; we identify it by a token, not a login.
 export default function ContactSupportScreen({ onBack }) {
@@ -44,7 +44,7 @@ export default function ContactSupportScreen({ onBack }) {
           setPhase('chat');
           return;
         }
-      } catch { /* stale/closed token — fall back to a fresh enquiry */ }
+      } catch { /* stale/closed token - fall back to a fresh enquiry */ }
       setPhase('intro');
     })();
   }, []);
@@ -170,7 +170,7 @@ export default function ContactSupportScreen({ onBack }) {
           {closed && (
             <View style={styles.reopenBar}>
               <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
-              <Text style={styles.reopenText}>This chat is closed — send a message to reopen it.</Text>
+              <Text style={styles.reopenText}>This chat is closed - send a message to reopen it.</Text>
             </View>
           )}
 
@@ -202,7 +202,7 @@ export default function ContactSupportScreen({ onBack }) {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={styles.lead}>
-            Have a question before signing up? Start a chat with our team — no account needed.
+            Have a question before signing up? Start a chat with our team - no account needed.
           </Text>
 
           <FormField label="Your name (optional)" value={name} onChangeText={setName} placeholder="e.g. Aarav Shrestha" />

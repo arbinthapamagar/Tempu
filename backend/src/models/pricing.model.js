@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 // and analytics are computed client-side from it. See utils/fareCalc on the
 // frontend for the exact formula.
 
-// Booking vehicle types — these match the trip/driver `vehicleType` enum so the
+// Booking vehicle types - these match the trip/driver `vehicleType` enum so the
 // pricing config maps 1:1 to what riders actually book.
 export const VEHICLE_TYPES = ['tuktuk', 'scooter', 'bike', 'taxi', 'comfort'];
 

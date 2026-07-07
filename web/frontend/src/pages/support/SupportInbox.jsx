@@ -233,7 +233,7 @@ function ConversationList() {
         ) : (
           tickets.map((t) => {
             const person = t.userId || t.driverId
-            // Pre-login guests have no account — fall back to their submitted identity.
+            // Pre-login guests have no account - fall back to their submitted identity.
             const displayName = person?.name || t.guest?.name || t.guest?.email || 'Guest'
             const last = t.messages?.[t.messages.length - 1]
             const preview = last?.message || t.subject || 'No messages yet'

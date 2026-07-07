@@ -103,7 +103,7 @@ export default function DriverDetail() {
     {
       key: 'expiresAt',
       header: 'Expiry',
-      render: (val) => <span className="text-xs text-gray-500">{val ? formatDate(val) : '—'}</span>,
+      render: (val) => <span className="text-xs text-gray-500">{val ? formatDate(val) : '-'}</span>,
     },
     {
       key: 'status',
@@ -216,7 +216,7 @@ export default function DriverDetail() {
           <div className="flex-1">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">{user?.name || '—'}</h2>
+                <h2 className="text-xl font-bold text-gray-900">{user?.name || '-'}</h2>
                 <p className="text-sm text-gray-500">{user?.phone}</p>
                 {user?.email && <p className="text-sm text-gray-400">{user.email}</p>}
               </div>
@@ -263,7 +263,7 @@ export default function DriverDetail() {
               ].map(({ label, value }) => (
                 <div key={label} className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-                  <p className="text-sm font-medium text-gray-800">{value || '—'}</p>
+                  <p className="text-sm font-medium text-gray-800">{value || '-'}</p>
                 </div>
               ))}
             </div>
@@ -281,7 +281,7 @@ export default function DriverDetail() {
               ].map(({ label, value }) => (
                 <div key={label} className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-                  <p className="text-sm font-medium text-gray-800 capitalize">{value || '—'}</p>
+                  <p className="text-sm font-medium text-gray-800 capitalize">{value || '-'}</p>
                 </div>
               ))}
               {driver.documents?.vehicleImage && (
@@ -331,10 +331,10 @@ export default function DriverDetail() {
         </div>
       </div>
 
-      {/* Lightbox — opens PDFs as PDF, images inline */}
+      {/* Lightbox - opens PDFs as PDF, images inline */}
       <DocumentLightbox doc={lightboxDoc} onClose={() => setLightboxDoc(null)} />
 
-      {/* Reject reason modal — the note is required so the driver knows what to fix */}
+      {/* Reject reason modal - the note is required so the driver knows what to fix */}
       <Modal open={!!rejectTarget} onClose={() => { setRejectTarget(null); setRejectReason('') }} title="Reject Document" size="sm">
         <div className="space-y-3">
           <p className="text-sm text-gray-600">
@@ -410,7 +410,7 @@ function GrantMoneyForm({ driverName, walletBalance, loading, onCancel, onSubmit
 
       <Textarea
         label="Note (optional)"
-        placeholder="e.g. Festival promotion bonus — sent to the driver's notification and email"
+        placeholder="e.g. Festival promotion bonus - sent to the driver's notification and email"
         value={note}
         onChange={(e) => setNote(e.target.value)}
       />
