@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { useFonts, BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque';
 import {
   PlusJakartaSans_400Regular,
@@ -10,7 +10,8 @@ import {
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { JetBrainsMono_500Medium, JetBrainsMono_600SemiBold, JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
-import TabBar from './components/TabBar';
+import NavDrawer from './components/NavDrawer';
+import { MenuIcon } from './components/Icons';
 import { userApi } from './api/user.api';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import DriverShell from './screens/driver/DriverShell';
@@ -29,9 +30,21 @@ import SupportScreen from './screens/SupportScreen';
 import TripsScreen from './screens/TripsScreen';
 import WalletScreen from './screens/WalletScreen';
 import { colors, isDark } from './theme/colors';
+import { STATUS_TOP_PAD } from './theme';
 
 // App is a white (Uber-style light) theme, so the status bar needs dark icons.
 const STATUS_BAR_STYLE = 'dark-content';
+
+// Titles shown in the top bar next to the hamburger, per active nav tab.
+const TAB_TITLES = {
+  home: 'Home',
+  trips: 'Trips',
+  wallet: 'Wallet',
+  subscribe: 'Subscribe',
+  inbox: 'Inbox',
+  support: 'Support',
+  account: 'Account',
+};
 
 // authScreen values:
 // 'role-select' | 'login' | 'register' | 'otp' - unauthenticated
@@ -42,6 +55,7 @@ function AppShell() {
   const [role, setRole] = useState('passenger'); // 'passenger' | 'driver'
   const [pendingPhone, setPendingPhone] = useState('');
   const [tab, setTab] = useState('home');
+  const [menuOpen, setMenuOpen] = useState(false);
   const [overlay, setOverlay] = useState(null);
   const [mode, setModeState] = useState('passenger'); // 'passenger' | 'driver'
   const [driverApproved, setDriverApproved] = useState(false);
@@ -204,6 +218,16 @@ function AppShell() {
 
       {!overlay && (
         <View style={styles.body}>
+          <View style={styles.topbar}>
+            <Pressable
+              style={styles.menuBtn}
+              onPress={() => setMenuOpen(true)}
+              hitSlop={8}
+            >
+              <MenuIcon size={26} color={colors.text} />
+            </Pressable>
+            <Text style={styles.topbarTitle}>{TAB_TITLES[tab] || ''}</Text>
+          </View>
           <View style={styles.content}>
             {tab === 'home' && <HomeScreen />}
             {tab === 'trips' && <TripsScreen />}
@@ -220,7 +244,13 @@ function AppShell() {
               />
             )}
           </View>
-          <TabBar active={tab} onChange={setTab} isDriver={approvedDriver} />
+          <NavDrawer
+            open={menuOpen}
+            onClose={() => setMenuOpen(false)}
+            active={tab}
+            onChange={setTab}
+            isDriver={approvedDriver}
+          />
         </View>
       )}
     </SafeAreaView>
@@ -262,4 +292,23 @@ const styles = StyleSheet.create({
   splash: { flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
   body: { flex: 1 },
   content: { flex: 1 },
+  topbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingTop: STATUS_TOP_PAD + 6,
+    paddingBottom: 10,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  menuBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topbarTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
 });

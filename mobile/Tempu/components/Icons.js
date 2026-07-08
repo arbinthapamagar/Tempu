@@ -154,6 +154,10 @@ export function HomeOutlineIcon({ size = 22, color }) {
   return <Ionicons name="home-outline" size={size} color={color} />;
 }
 
+export function MenuIcon({ size = 24, color = colors.text }) {
+  return <Ionicons name="menu" size={size} color={color} />;
+}
+
 export function BackpackIcon({ size = 28, color = '#5c6fff' }) {
   return <MaterialCommunityIcons name="bag-personal" size={size} color={color} />;
 }
