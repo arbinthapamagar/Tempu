@@ -5,6 +5,7 @@ import { uploadOnCloudinary } from '../../utils/cloudinary.js';
 import { apiError } from '../../utils/apiError.js';
 import { apiResponse } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
+import { maybeAppendAiReply } from '../../utils/supportAi.js';
 
 // Global support capabilities, for the mobile app to show/hide controls.
 const getSupportConfig = asyncHandler(async (req, res) => {
@@ -34,6 +35,10 @@ const createTicket = asyncHandler(async (req, res) => {
         tripId: tripId || null,
         messages: [{ senderId: req.user._id, senderType: 'user', message }],
     });
+
+    // Non-blocking AI first response from the knowledge base (shows on refetch).
+    maybeAppendAiReply(ticket, message).catch(() => {});
+
     return res.status(201).json(new apiResponse(201, ticket, 'Support ticket created'));
 });
 
@@ -95,6 +100,9 @@ const addMessage = asyncHandler(async (req, res) => {
         ticket.resolvedAt = null;
     }
     await ticket.save();
+
+    // Non-blocking AI reply for text messages (not attachment-only), from the KB.
+    if (message) maybeAppendAiReply(ticket, message).catch(() => {});
 
     return res.status(200).json(new apiResponse(200, ticket, reopened ? 'Ticket reopened' : 'Message added'));
 });

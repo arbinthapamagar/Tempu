@@ -23,6 +23,7 @@ import SupplierList from './pages/suppliers/SupplierList'
 import AdminList from './pages/admins/AdminList'
 import Analytics from './pages/analytics/Analytics'
 import Notifications from './pages/notifications/Notifications'
+import KnowledgeBase from './pages/knowledge/KnowledgeBase'
 
 function PrivateRoute({ children }) {
   const { isAuthenticated } = useAuthStore()
@@ -94,6 +95,7 @@ export default function App() {
         <Route path="admins" element={<AdminList />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="notifications" element={<Notifications />} />
+        <Route path="knowledge" element={<KnowledgeBase />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
