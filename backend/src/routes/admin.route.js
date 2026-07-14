@@ -2,6 +2,10 @@ import { Router } from 'express';
 import { verifyAdminJwt } from '../middlewares/admin.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
 import {
+    ingestDocuments, ingestRawText, getSources, removeSource, searchKnowledge, askKnowledge, chatKnowledge,
+} from '../controller/rag.controller.js';
+import { apiError } from '../utils/apiError.js';
+import {
     login, logout, refreshAdminToken, getMe, updateMyProfile, uploadMyAvatar, deleteMyAvatar,
     createAdmin, listAdmins, updateAdminPermissions, toggleAdminStatus, deleteAdmin,
     getDashboardStats, getDashboardRecentTrips, getNavCounts, markNavSeen,
@@ -148,5 +152,19 @@ adminRouter.get('/notifications/recipients', getNotificationRecipients);
 adminRouter.get('/notifications/mine', getMyAdminNotifications);
 adminRouter.patch('/notifications/mine/read-all', markAllMyNotificationsRead);
 adminRouter.patch('/notifications/:id/read', markMyNotificationRead);
+
+// Knowledge Base (RAG). Superadmin always allowed; others need manageKnowledge.
+// (Mirrors the frontend hasPermission() rule, which auto-grants superadmin.)
+const requireKnowledge = (req, res, next) => {
+    if (req.admin?.role === 'superadmin' || req.admin?.permissions?.manageKnowledge) return next();
+    throw new apiError(403, 'Insufficient permissions');
+};
+adminRouter.get('/knowledge/sources', requireKnowledge, getSources);
+adminRouter.post('/knowledge/ingest', requireKnowledge, upload.array('files', 10), ingestDocuments);
+adminRouter.post('/knowledge/text', requireKnowledge, ingestRawText);
+adminRouter.post('/knowledge/search', requireKnowledge, searchKnowledge);
+adminRouter.post('/knowledge/ask', requireKnowledge, askKnowledge);
+adminRouter.post('/knowledge/chat', requireKnowledge, chatKnowledge);
+adminRouter.delete('/knowledge/sources/:source', requireKnowledge, removeSource);
 
 export { adminRouter };

@@ -4,7 +4,7 @@ import {
   Plus, Edit, Trash2, ToggleLeft, ToggleRight, Shield,
   Users, Car, Navigation, CreditCard, FileText, MessageSquare,
   ShieldCheck, BarChart2, Repeat, Building2, CheckCircle, XCircle, Info,
-  Mail, Phone, Calendar, Clock, Eye, Bell, Send, X
+  Mail, Phone, Calendar, Clock, Eye, Bell, Send, X, BookOpen
 } from '@/components/ui/icons'
 import { SendNotificationModal } from '../../components/shared/SendNotificationModal'
 import { useForm } from 'react-hook-form'
@@ -130,6 +130,14 @@ const PERMISSIONS = [
     color: 'orange',
     description: 'Verify and manage vehicle supplier accounts',
     allows: ['View all suppliers', 'Verify suppliers', 'Manage plans', 'Activate/deactivate'],
+  },
+  {
+    key: 'manageKnowledge',
+    label: 'Manage Knowledge Base',
+    icon: BookOpen,
+    color: 'teal',
+    description: 'Manage the AI assistant’s knowledge base (RAG)',
+    allows: ['Upload documents', 'Paste reference text', 'Delete sources', 'Test retrieval & ask'],
   },
 ]
 

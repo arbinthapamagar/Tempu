@@ -5,6 +5,7 @@ import { sendEmail } from '../config/sendEmail.js';
 import { apiError } from '../utils/apiError.js';
 import { apiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { maybeAppendAiReply } from '../utils/supportAi.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -63,6 +64,7 @@ const publicTicket = (t) => ({
     guest: { name: t.guest?.name || null, email: t.guest?.email || null },
     messages: (t.messages || []).map((m) => ({
         senderType: m.senderType,
+        isAI: m.isAI || false,
         message: m.message,
         attachmentUrl: m.attachmentUrl,
         attachmentType: m.attachmentType,
@@ -94,6 +96,10 @@ const createGuestTicket = asyncHandler(async (req, res) => {
         status: 'open',
         messages: [{ senderId: null, senderType: 'guest', message }],
     });
+
+    // Non-blocking AI first response from the knowledge base (appears on the
+    // guest's next poll). Never blocks or fails the reply if the AI is down.
+    maybeAppendAiReply(ticket, message).catch(() => {});
 
     return res.status(201).json(
         new apiResponse(201, { token: guestToken, ticket: publicTicket(ticket) }, 'Support chat started')
@@ -128,6 +134,9 @@ const addGuestMessage = asyncHandler(async (req, res) => {
         ticket.resolvedAt = null;
     }
     await ticket.save();
+
+    // Non-blocking AI reply from the knowledge base (appears on next poll).
+    maybeAppendAiReply(ticket, message).catch(() => {});
 
     return res.status(200).json(new apiResponse(200, publicTicket(ticket), 'Message sent'));
 });
