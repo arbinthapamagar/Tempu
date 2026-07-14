@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Send, CheckCircle, Lock, AtSign, Paperclip, Mic, Pencil, Trash2,
-  Phone, Video, CornerUpLeft, MessageSquare, Info, X, Mail, Car, Sparkles,
+  Phone, Video, CornerUpLeft, MessageSquare, Info, X, Mail, Car, Sparkles, Star,
 } from '@/components/ui/icons'
 import CallPanel from './CallPanel'
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
@@ -580,6 +580,16 @@ export default function TicketChat() {
                 { label: 'Updated', value: formatRelative(ticket.updatedAt) },
                 ticket.resolvedAt && { label: 'Resolved', value: formatDateTime(ticket.resolvedAt) },
                 ticket.tripId && { label: 'Trip Ref', value: `#${ticket.tripId?.slice(-8).toUpperCase()}` },
+                ticket.rating?.score && {
+                  label: 'Rating',
+                  value: (
+                    <span className="inline-flex items-center gap-0.5 text-amber-500" title={ticket.rating.comment || ''}>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <Star key={n} className={`h-3.5 w-3.5 ${n <= ticket.rating.score ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
+                      ))}
+                    </span>
+                  ),
+                },
               ].filter(Boolean).map(({ label, value }) => (
                 <div key={label} className="flex justify-between items-start gap-2">
                   <span className="text-gray-400 shrink-0">{label}</span>

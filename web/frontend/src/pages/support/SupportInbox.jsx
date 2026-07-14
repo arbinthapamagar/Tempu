@@ -146,6 +146,40 @@ function FolderRail() {
           )
         })}
       </div>
+
+      {/* Auto-assignment (round-robin) */}
+      <div className="border-t border-gray-200 p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Auto-assign</p>
+        <p className="text-[11px] text-gray-400 mb-2">Round-robin new tickets across agents.</p>
+        <div className="flex items-center gap-2 py-1">
+          <span className="flex-1 text-xs text-gray-600">Enabled</span>
+          <button
+            type="button"
+            onClick={() => updateMutation.mutate({ autoAssign: !settings.autoAssign })}
+            disabled={updateMutation.isPending}
+            title={settings.autoAssign ? 'Disable' : 'Enable'}
+            className="disabled:opacity-50"
+          >
+            <span className={cn('relative inline-flex h-4 w-7 items-center rounded-full transition-colors', settings.autoAssign ? 'bg-emerald-500' : 'bg-gray-300')}>
+              <span className={cn('inline-block h-3 w-3 transform rounded-full bg-white transition-transform', settings.autoAssign ? 'translate-x-3.5' : 'translate-x-0.5')} />
+            </span>
+          </button>
+        </div>
+        <div className="flex items-center gap-2 py-1">
+          <span className="flex-1 text-xs text-gray-600">Tickets / agent</span>
+          <input
+            type="number"
+            min={1}
+            defaultValue={settings.agentCapacity ?? 5}
+            key={settings.agentCapacity}
+            onBlur={(e) => {
+              const v = Math.max(1, parseInt(e.target.value) || 1)
+              if (v !== settings.agentCapacity) updateMutation.mutate({ agentCapacity: v })
+            }}
+            className="w-14 rounded border border-gray-300 px-2 py-1 text-xs text-gray-800 focus:border-orange-500 focus:outline-none"
+          />
+        </div>
+      </div>
     </aside>
   )
 }

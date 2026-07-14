@@ -6,6 +6,7 @@ import { apiError } from '../utils/apiError.js';
 import { apiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { maybeAppendAiReply } from '../utils/supportAi.js';
+import { autoAssignTicket } from '../utils/supportAssign.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -62,6 +63,9 @@ const publicTicket = (t) => ({
     category: t.category,
     status: t.status,
     guest: { name: t.guest?.name || null, email: t.guest?.email || null },
+    // The assigned support agent's name, so the guest sees who's helping them.
+    assignedTo: t.assignedTo ? { name: t.assignedTo.name || 'Support' } : null,
+    rating: t.rating?.score ? { score: t.rating.score, comment: t.rating.comment || '' } : null,
     messages: (t.messages || []).map((m) => ({
         senderType: m.senderType,
         isAI: m.isAI || false,
@@ -100,6 +104,8 @@ const createGuestTicket = asyncHandler(async (req, res) => {
     // Non-blocking AI first response from the knowledge base (appears on the
     // guest's next poll). Never blocks or fails the reply if the AI is down.
     maybeAppendAiReply(ticket, message).catch(() => {});
+    // Round-robin auto-assign to a support agent (non-blocking).
+    autoAssignTicket(ticket._id).catch(() => {});
 
     return res.status(201).json(
         new apiResponse(201, { token: guestToken, ticket: publicTicket(ticket) }, 'Support chat started')
@@ -110,7 +116,8 @@ const createGuestTicket = asyncHandler(async (req, res) => {
 async function findGuestTicket(req) {
     const token = (req.query.token || req.body.token || '').trim();
     if (!token) throw new apiError(401, 'Missing chat token');
-    const ticket = await SupportTicket.findOne({ _id: req.params.id, guestToken: token });
+    const ticket = await SupportTicket.findOne({ _id: req.params.id, guestToken: token })
+        .populate('assignedTo', 'name');
     if (!ticket) throw new apiError(404, 'Chat not found');
     return ticket;
 }
@@ -137,8 +144,28 @@ const addGuestMessage = asyncHandler(async (req, res) => {
 
     // Non-blocking AI reply from the knowledge base (appears on next poll).
     maybeAppendAiReply(ticket, message).catch(() => {});
+    // A reopened thread with no agent should re-enter the assignment rotation.
+    autoAssignTicket(ticket._id).catch(() => {});
 
     return res.status(200).json(new apiResponse(200, publicTicket(ticket), 'Message sent'));
 });
 
-export { contactSupport, createGuestTicket, getGuestTicket, addGuestMessage };
+// POST /api/v1/support/ticket/:id/rate - guest rates the support service.
+// Allowed only once the ticket has been resolved or closed.
+const rateGuestTicket = asyncHandler(async (req, res) => {
+    const score = Number(req.body.score);
+    const comment = (req.body.comment || '').trim();
+    if (!(score >= 1 && score <= 5)) throw new apiError(400, 'Rating must be between 1 and 5');
+
+    const ticket = await findGuestTicket(req);
+    if (!['resolved', 'closed'].includes(ticket.status)) {
+        throw new apiError(400, 'You can rate support once your issue is resolved');
+    }
+
+    ticket.rating = { score, comment, ratedAt: new Date(), agentId: ticket.assignedTo?._id || ticket.assignedTo || null };
+    await ticket.save();
+
+    return res.status(200).json(new apiResponse(200, publicTicket(ticket), 'Thanks for your feedback'));
+});
+
+export { contactSupport, createGuestTicket, getGuestTicket, addGuestMessage, rateGuestTicket };

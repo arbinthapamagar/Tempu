@@ -4,6 +4,7 @@ import {
     createGuestTicket,
     getGuestTicket,
     addGuestMessage,
+    rateGuestTicket,
 } from '../controller/support.controller.js';
 
 // Support tickets are handled via /api/v1/users/support and /api/v1/admin/support.
@@ -16,5 +17,6 @@ supportRouter.post('/contact', contactSupport);
 supportRouter.post('/ticket', createGuestTicket);
 supportRouter.get('/ticket/:id', getGuestTicket);
 supportRouter.post('/ticket/:id/messages', addGuestMessage);
+supportRouter.post('/ticket/:id/rate', rateGuestTicket);
 
 export { supportRouter };

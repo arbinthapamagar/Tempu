@@ -11,7 +11,7 @@ import {
     getMySubscriptions, createSubscription, getSubscriptionById,
     cancelSubscription, pauseSubscription, resumeSubscription,
 } from '../controller/users/user.subscription.controller.js';
-import { createTicket, getMyTickets, getTicketById, addMessage, getSupportConfig } from '../controller/users/user.support.controller.js';
+import { createTicket, getMyTickets, getTicketById, addMessage, getSupportConfig, rateTicket } from '../controller/users/user.support.controller.js';
 import {
     registerAsDriver, getMyDriverProfile, updateDriverProfile, uploadDriverDocument,
     goOnline, goOffline, updateDriverLocation, getNearbyTrips, getMyEarnings,
@@ -73,6 +73,7 @@ userRouter.get('/support', getMyTickets);
 userRouter.post('/support', createTicket);
 userRouter.get('/support/:id', getTicketById);
 userRouter.post('/support/:id/messages', upload.single('attachment'), addMessage);
+userRouter.post('/support/:id/rate', rateTicket);
 
 // Emergency / SOS
 userRouter.post('/emergency', triggerEmergency);

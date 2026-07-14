@@ -6,6 +6,7 @@ import { apiError } from '../../utils/apiError.js';
 import { apiResponse } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { maybeAppendAiReply } from '../../utils/supportAi.js';
+import { autoAssignTicket } from '../../utils/supportAssign.js';
 
 // Global support capabilities, for the mobile app to show/hide controls.
 const getSupportConfig = asyncHandler(async (req, res) => {
@@ -38,6 +39,8 @@ const createTicket = asyncHandler(async (req, res) => {
 
     // Non-blocking AI first response from the knowledge base (shows on refetch).
     maybeAppendAiReply(ticket, message).catch(() => {});
+    // Round-robin auto-assign to a support agent (non-blocking).
+    autoAssignTicket(ticket._id).catch(() => {});
 
     return res.status(201).json(new apiResponse(201, ticket, 'Support ticket created'));
 });
@@ -103,8 +106,29 @@ const addMessage = asyncHandler(async (req, res) => {
 
     // Non-blocking AI reply for text messages (not attachment-only), from the KB.
     if (message) maybeAppendAiReply(ticket, message).catch(() => {});
+    // A reopened thread with no agent re-enters the assignment rotation.
+    if (reopened) autoAssignTicket(ticket._id).catch(() => {});
 
     return res.status(200).json(new apiResponse(200, ticket, reopened ? 'Ticket reopened' : 'Message added'));
 });
 
-export { createTicket, getMyTickets, getTicketById, addMessage, getSupportConfig };
+// POST /users/support/:id/rate - customer rates the support service. Allowed
+// only after the ticket is resolved/closed. One rating per ticket.
+const rateTicket = asyncHandler(async (req, res) => {
+    const score = Number(req.body.score);
+    const comment = (req.body.comment || '').trim();
+    if (!(score >= 1 && score <= 5)) throw new apiError(400, 'Rating must be between 1 and 5');
+
+    const ticket = await SupportTicket.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!ticket) throw new apiError(404, 'Ticket not found');
+    if (!['resolved', 'closed'].includes(ticket.status)) {
+        throw new apiError(400, 'You can rate support once your issue is resolved');
+    }
+
+    ticket.rating = { score, comment, ratedAt: new Date(), agentId: ticket.assignedTo || null };
+    await ticket.save();
+
+    return res.status(200).json(new apiResponse(200, ticket, 'Thanks for your feedback'));
+});
+
+export { createTicket, getMyTickets, getTicketById, addMessage, getSupportConfig, rateTicket };

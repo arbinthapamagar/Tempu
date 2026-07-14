@@ -102,6 +102,19 @@ export default function ContactSupportScreen({ onBack }) {
     }
   };
 
+  const submitRating = async (score) => {
+    if (!chat || busy) return;
+    setBusy(true);
+    try {
+      const res = await supportPublicApi.rateChat(chat.id, chat.token, score, '');
+      setTicket(res.data);
+    } catch (e) {
+      Alert.alert('Could not submit rating', e?.message || 'Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const endChat = () => {
     Alert.alert('Start a new chat?', 'This clears the current conversation from this device.', [
       { text: 'Cancel', style: 'cancel' },
@@ -135,6 +148,9 @@ export default function ContactSupportScreen({ onBack }) {
   if (phase === 'chat') {
     const messages = ticket?.messages || [];
     const closed = ticket?.status === 'closed';
+    const agentName = ticket?.assignedTo?.name || null;
+    const resolvedOrClosed = ticket?.status === 'resolved' || ticket?.status === 'closed';
+    const canRate = resolvedOrClosed && !ticket?.rating;
     return (
       <View style={styles.root}>
         <ScreenHeader
@@ -151,20 +167,46 @@ export default function ContactSupportScreen({ onBack }) {
             <View style={styles.introNote}>
               <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.textMuted} />
               <Text style={styles.introNoteText}>
-                You're chatting with the Tempu team as {ticket?.guest?.email || 'a guest'}. Replies appear here in real time.
+                {agentName
+                  ? `You're chatting with ${agentName} from the Tempu team. Replies appear here in real time.`
+                  : `You're chatting with the Tempu team as ${ticket?.guest?.email || 'a guest'}. Replies appear here in real time.`}
               </Text>
             </View>
             {messages.map((m, i) => {
               const mine = m.senderType !== 'admin';
+              const senderLabel = mine ? 'You' : m.isAI ? 'AI Assistant' : (agentName || 'Support');
               return (
                 <View key={i} style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleAdmin]}>
                   <Text style={[styles.bubbleSender, mine && { color: 'rgba(255,255,255,0.85)' }]}>
-                    {mine ? 'You' : 'Support'}
+                    {senderLabel}
                   </Text>
                   <Text style={[styles.bubbleText, mine && { color: '#fff' }]}>{m.message}</Text>
                 </View>
               );
             })}
+
+            {ticket?.rating && (
+              <View style={styles.ratedNote}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+                <Text style={styles.ratedText}>
+                  You rated this support {ticket.rating.score}/5. Thank you!
+                </Text>
+              </View>
+            )}
+
+            {canRate && (
+              <View style={styles.rateCard}>
+                <Text style={styles.rateTitle}>How was our support?</Text>
+                <View style={styles.starRow}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Pressable key={n} onPress={() => submitRating(n)} disabled={busy} hitSlop={6}>
+                      <Ionicons name="star-outline" size={30} color={colors.primary} style={{ marginHorizontal: 3 }} />
+                    </Pressable>
+                  ))}
+                </View>
+                <Text style={styles.rateHint}>Tap a star to rate</Text>
+              </View>
+            )}
           </ScrollView>
 
           {closed && (
@@ -264,6 +306,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, backgroundColor: colors.primarySoft,
   },
   reopenText: { ...type.caption, color: colors.primary, fontWeight: '700', flexShrink: 1 },
+
+  ratedNote: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    marginTop: spacing.md, paddingVertical: spacing.sm,
+  },
+  ratedText: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
+
+  rateCard: {
+    marginTop: spacing.lg, padding: spacing.lg, alignItems: 'center',
+    backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+  },
+  rateTitle: { ...type.body, color: colors.text, fontWeight: '700', marginBottom: spacing.md },
+  starRow: { flexDirection: 'row', alignItems: 'center' },
+  rateHint: { ...type.micro, color: colors.textFaint, marginTop: spacing.sm },
 
   replyBar: {
     flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, padding: spacing.md,

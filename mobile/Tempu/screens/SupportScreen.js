@@ -123,6 +123,17 @@ export default function SupportScreen({ onBack, role }) {
     } catch { /* noop */ } finally { setBusy(false); }
   };
 
+  const submitRating = async (score) => {
+    if (!active?._id || busy) return;
+    setBusy(true);
+    try {
+      const res = await userApi.rateTicket(active._id, score);
+      setActive(res.data || active);
+    } catch (e) {
+      Alert.alert('Could not submit rating', e?.message || 'Please try again.');
+    } finally { setBusy(false); }
+  };
+
   // Send everything staged in the preview, one attachment per message.
   const sendPending = async () => {
     if (!pending?.items?.length || !active?._id) return;
@@ -271,6 +282,7 @@ export default function SupportScreen({ onBack, role }) {
               <Text style={styles.threadSubject}>{active.subject}</Text>
               <Text style={[styles.status, { color: STATUS_COLOR[active.status] || colors.textMuted, marginBottom: spacing.md }]}>
                 {(active.status || '').replace(/_/g, ' ')}
+                {active.assignedTo?.name ? `  ·  ${active.assignedTo.name}` : ''}
               </Text>
               {active.status !== 'closed' && (canAudioCall || canVideoCall) && (
                 <View style={styles.callRow}>
@@ -293,7 +305,7 @@ export default function SupportScreen({ onBack, role }) {
                 return (
                   <View key={i} style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleAdmin]}>
                     <Text style={[styles.bubbleSender, mine && { color: 'rgba(255,255,255,0.85)' }]}>
-                      {m.senderType === 'admin' ? 'Support' : 'You'}
+                      {m.senderType === 'admin' ? (m.isAI ? 'AI Assistant' : (active.assignedTo?.name || 'Support')) : 'You'}
                     </Text>
                     {!!m.message && (
                       <Text style={[styles.bubbleText, mine && { color: '#fff' }]}>{m.message}</Text>
@@ -321,6 +333,27 @@ export default function SupportScreen({ onBack, role }) {
                   </View>
                 );
               })}
+
+              {active.rating && (
+                <View style={styles.ratedNote}>
+                  <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
+                  <Text style={styles.ratedText}>You rated this support {active.rating.score}/5. Thank you!</Text>
+                </View>
+              )}
+
+              {['resolved', 'closed'].includes(active.status) && !active.rating && (
+                <View style={styles.rateCard}>
+                  <Text style={styles.rateTitle}>How was our support?</Text>
+                  <View style={styles.starRow}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Pressable key={n} onPress={() => submitRating(n)} disabled={busy} hitSlop={6}>
+                        <Ionicons name="star-outline" size={30} color={colors.primary} style={{ marginHorizontal: 3 }} />
+                      </Pressable>
+                    ))}
+                  </View>
+                  <Text style={styles.rateHint}>Tap a star to rate</Text>
+                </View>
+              )}
             </ScrollView>
             {active.status === 'closed' && (
               <View style={styles.reopenBar}>
@@ -488,4 +521,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, backgroundColor: colors.primarySoft,
   },
   reopenText: { ...type.caption, color: colors.primary, fontWeight: '700', flexShrink: 1 },
+
+  ratedNote: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
+  ratedText: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
+  rateCard: {
+    marginTop: spacing.lg, padding: spacing.lg, alignItems: 'center',
+    backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+  },
+  rateTitle: { ...type.body, color: colors.text, fontWeight: '700', marginBottom: spacing.md },
+  starRow: { flexDirection: 'row', alignItems: 'center' },
+  rateHint: { ...type.micro, color: colors.textFaint, marginTop: spacing.sm },
 });
