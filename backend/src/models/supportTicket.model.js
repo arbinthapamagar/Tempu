@@ -131,6 +131,20 @@ const supportTicketSchema = new mongoose.Schema(
             type: Date,
             default: null,
         },
+        closedAt: {
+            type: Date,
+            default: null,
+        },
+
+        // Customer's rating of the support service, captured after the ticket is
+        // resolved/closed. One rating per ticket; score is 1-5.
+        rating: {
+            score: { type: Number, min: 1, max: 5, default: null },
+            comment: { type: String, default: '' },
+            ratedAt: { type: Date, default: null },
+            // Snapshot of who handled it, so per-agent stats survive re-assignment.
+            agentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
+        },
     },
     { timestamps: true }
 );

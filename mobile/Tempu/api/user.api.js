@@ -68,6 +68,7 @@ export const userApi = {
   getTicketById: (id) => api.get(`/users/support/${id}`),
   createTicket: (data) => api.post('/users/support', data),
   addTicketMessage: (id, message) => api.post(`/users/support/${id}/messages`, { message }),
+  rateTicket: (id, score, comment = '') => api.post(`/users/support/${id}/rate`, { score, comment }),
   // Voice note / document attachment on a ticket. `file` = { uri, name, type }.
   sendTicketAttachment: async (id, { message, file }) => {
     const { tokenStore } = await import('./tokenStore');

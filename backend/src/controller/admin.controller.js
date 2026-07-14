@@ -22,6 +22,7 @@ import { sendEmail } from '../config/sendEmail.js';
 import { grantEmailTemplate } from '../utils/grantEmailTemplate.js';
 import { emergencyEmailTemplate } from '../utils/emergencyEmailTemplate.js';
 import { notificationEmailTemplate } from '../utils/notificationEmailTemplate.js';
+import { processQueue } from '../utils/supportAssign.js';
 import jwt from 'jsonwebtoken';
 
 const cookieOptions = {
@@ -1666,13 +1667,16 @@ const assignDriverToSubscription = asyncHandler(async (req, res) => {
 const getSupportTickets = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
 
-    const { page = 1, limit = 20, status, category } = req.query;
+    const { page = 1, limit = 20, status, category, assigned } = req.query;
     const limitNum = Math.min(parseInt(limit) || 20, 100);
     const skip = (parseInt(page) - 1) * limitNum;
 
     const filter = {};
     if (status) filter.status = status;
     if (category) filter.category = category;
+    // Queue view = unassigned tickets; 'me' = assigned to the current agent.
+    if (assigned === 'unassigned') filter.assignedTo = null;
+    else if (assigned === 'me') filter.assignedTo = req.admin._id;
 
     const [tickets, total, byStatus] = await Promise.all([
         SupportTicket.find(filter)
@@ -1721,11 +1725,30 @@ const updateTicketStatus = asyncHandler(async (req, res) => {
     const validStatuses = ['open', 'in_progress', 'resolved', 'closed'];
     if (!validStatuses.includes(status)) throw new apiError(400, `Status must be one of: ${validStatuses.join(', ')}`);
 
-    const updates = { status };
-    if (status === 'resolved') updates.resolvedAt = new Date();
-
-    const ticket = await SupportTicket.findByIdAndUpdate(req.params.id, updates, { new: true });
+    const ticket = await SupportTicket.findById(req.params.id);
     if (!ticket) throw new apiError(404, 'Ticket not found');
+
+    // A ticket can only be CLOSED once it has been resolved (fulfilled) - never
+    // straight from open/in_progress. Reopening (back to open) is always allowed.
+    if (status === 'closed' && ticket.status !== 'resolved' && ticket.status !== 'closed') {
+        throw new apiError(400, 'Resolve the ticket before closing it');
+    }
+
+    const wasActive = ['open', 'in_progress'].includes(ticket.status);
+    ticket.status = status;
+    if (status === 'resolved') ticket.resolvedAt = ticket.resolvedAt || new Date();
+    if (status === 'closed') ticket.closedAt = new Date();
+    if (status === 'open' || status === 'in_progress') {
+        // Reopened: clear resolution/closure timestamps.
+        ticket.resolvedAt = null;
+        ticket.closedAt = null;
+    }
+    await ticket.save();
+
+    // Resolving/closing an active ticket frees an agent slot - pull the queue.
+    const nowInactive = ['resolved', 'closed'].includes(status);
+    if (wasActive && nowInactive) processQueue().catch(() => {});
+
     return res.status(200).json(new apiResponse(200, ticket, 'Ticket updated'));
 });
 
@@ -1864,8 +1887,18 @@ const updateSupportSettings = asyncHandler(async (req, res) => {
     SUPPORT_PERMISSION_KEYS.forEach((k) => {
         if (typeof req.body[k] === 'boolean') s[k] = req.body[k];
     });
+    // Auto-assignment controls.
+    if (typeof req.body.autoAssign === 'boolean') s.autoAssign = req.body.autoAssign;
+    if (req.body.agentCapacity != null) {
+        const cap = Number(req.body.agentCapacity);
+        if (Number.isFinite(cap) && cap >= 1) s.agentCapacity = Math.floor(cap);
+    }
     s.updatedBy = req.admin._id;
     await s.save();
+
+    // Raising capacity / turning auto-assign on may let queued tickets flow.
+    processQueue().catch(() => {});
+
     return res.status(200).json(new apiResponse(200, s, 'Support settings updated'));
 });
 
@@ -1875,8 +1908,33 @@ const getSupportAgents = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
     const agents = await Admin.find({ isActive: { $ne: false }, 'permissions.handleSupport': true })
         .select('name email role')
-        .sort({ name: 1 });
-    return res.status(200).json(new apiResponse(200, agents, 'Support agents fetched'));
+        .sort({ name: 1 })
+        .lean();
+
+    // Per-agent active load (open/in_progress) and support rating (avg + count).
+    const [loads, ratings] = await Promise.all([
+        SupportTicket.aggregate([
+            { $match: { assignedTo: { $ne: null }, status: { $in: ['open', 'in_progress'] } } },
+            { $group: { _id: '$assignedTo', n: { $sum: 1 } } },
+        ]),
+        SupportTicket.aggregate([
+            { $match: { 'rating.score': { $gte: 1 }, 'rating.agentId': { $ne: null } } },
+            { $group: { _id: '$rating.agentId', avg: { $avg: '$rating.score' }, count: { $sum: 1 } } },
+        ]),
+    ]);
+    const loadMap = new Map(loads.map((l) => [String(l._id), l.n]));
+    const ratingMap = new Map(ratings.map((r) => [String(r._id), r]));
+
+    const enriched = agents.map((a) => {
+        const r = ratingMap.get(String(a._id));
+        return {
+            ...a,
+            activeTickets: loadMap.get(String(a._id)) || 0,
+            avgRating: r ? Math.round(r.avg * 10) / 10 : null,
+            ratingCount: r ? r.count : 0,
+        };
+    });
+    return res.status(200).json(new apiResponse(200, enriched, 'Support agents fetched'));
 });
 
 // Internal note on a ticket (admin-only), with optional @mentions of other admins.
