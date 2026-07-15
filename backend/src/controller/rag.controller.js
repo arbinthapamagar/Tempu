@@ -3,7 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { apiError } from '../utils/apiError.js';
 import { apiResponse } from '../utils/apiResponse.js';
 import {
-    extractText,
+    ingestFiles,
     ingestText,
     search,
     ask,
@@ -23,26 +23,16 @@ const ingestDocuments = asyncHandler(async (req, res) => {
     const files = req.files || [];
     if (!files.length) throw new apiError(400, 'No files uploaded');
 
-    const results = [];
     try {
-        for (const file of files) {
-            const text = await extractText(file.path, file.originalname);
-            if (!text.trim()) {
-                results.push({ source: file.originalname, chunks: 0, skipped: 'no readable text' });
-                continue;
-            }
-            const chunks = await ingestText(text, file.originalname, req.admin?._id);
-            results.push({ source: file.originalname, chunks });
-        }
+        // The Python RAG service extracts (LangChain loaders), chunks and embeds.
+        const { chunks = 0, results = [] } = await ingestFiles(files);
+        return res
+            .status(201)
+            .json(new apiResponse(201, { results, totalChunks: chunks }, `Ingested ${chunks} chunk(s)`));
     } finally {
         // Always clean up the temp uploads, success or failure.
         await Promise.all(files.map((f) => fs.unlink(f.path).catch(() => {})));
     }
-
-    const total = results.reduce((n, r) => n + (r.chunks || 0), 0);
-    return res
-        .status(201)
-        .json(new apiResponse(201, { results, totalChunks: total }, `Ingested ${total} chunk(s)`));
 });
 
 // POST /knowledge/text  { text, label }
