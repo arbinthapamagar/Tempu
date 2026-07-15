@@ -79,10 +79,10 @@ function FolderRail() {
   const unansweredCount = (unansweredRes?.data?.tickets || []).filter(isUnanswered).length
 
   const folders = [
-    { to: '/support?view=unanswered', label: 'Unanswered', icon: Mail, count: unansweredCount, isActive: view === 'unanswered' },
     { to: '/support', label: 'All', icon: Inbox, count: counts.all, isActive: !status && !view },
     { to: '/support?status=open', label: 'New', icon: Mail, count: counts.open, isActive: status === 'open' },
     { to: '/support?status=in_progress', label: 'In progress', icon: Clock, count: counts.in_progress, isActive: status === 'in_progress' },
+    { to: '/support?view=unanswered', label: 'Unanswered', icon: Mail, count: unansweredCount, isActive: view === 'unanswered' },
     { to: '/support?status=resolved', label: 'Resolved', icon: CheckCircle2, count: counts.resolved, isActive: status === 'resolved' },
     { to: '/support?status=closed', label: 'Closed', icon: Archive, count: counts.closed, isActive: status === 'closed' },
   ]

@@ -22,7 +22,7 @@ import { sendEmail } from '../config/sendEmail.js';
 import { grantEmailTemplate } from '../utils/grantEmailTemplate.js';
 import { emergencyEmailTemplate } from '../utils/emergencyEmailTemplate.js';
 import { notificationEmailTemplate } from '../utils/notificationEmailTemplate.js';
-import { processQueue } from '../utils/supportAssign.js';
+import { processQueue, postAgentGreeting } from '../utils/supportAssign.js';
 import jwt from 'jsonwebtoken';
 
 const cookieOptions = {
@@ -191,6 +191,7 @@ const updateMyProfile = asyncHandler(async (req, res) => {
         admin.phone = phone;
     }
     if (name) admin.name = name;
+    if (typeof req.body.supportGreeting === 'string') admin.supportGreeting = req.body.supportGreeting.trim();
 
     if (newPassword) {
         if (!currentPassword) throw new apiError(400, 'Current password is required to change password');
@@ -1864,6 +1865,9 @@ const assignTicket = asyncHandler(async (req, res) => {
             }));
         if (notes.length) await AdminNotification.insertMany(notes);
     }
+
+    // Post the agent's personal intro line to the thread (if they set one).
+    postAgentGreeting(ticket._id, assigneeId).catch(() => {});
 
     return res.status(200).json(new apiResponse(200, ticket, 'Ticket assigned'));
 });
