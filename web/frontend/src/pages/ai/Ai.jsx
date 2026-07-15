@@ -287,9 +287,13 @@ function RagDocuments({ qc }) {
   )
 }
 
-// ── Agentic: a single grounded chat. Placeholder surface — real agentic tools
-// (actions, per-user auth, custom prompts) come later. ────────────────────────
+// ── Agentic: a tool-calling chat over LIVE app data (users, drivers, trips,
+// payments, etc.) — separate from the RAG knowledge base. Gated by the
+// useAgenticAI permission since it can surface personal data. ───────────────
 function AgenticSection() {
+  const admin = useAuthStore((s) => s.admin)
+  const canUse = hasPermission(admin, 'useAgenticAI')
+
   const [messages, setMessages] = useState([]) // { role: 'user' | 'model', text }
   const [input, setInput] = useState('')
   const scrollRef = useRef(null)
@@ -300,7 +304,7 @@ function AgenticSection() {
 
   const send = useMutation({
     // History is everything already exchanged; the new message is sent separately.
-    mutationFn: ({ text, history }) => knowledgeApi.chat(text, history),
+    mutationFn: ({ text, history }) => knowledgeApi.agenticChat(text, history),
     onSuccess: (res) => {
       setMessages((prev) => [...prev, { role: 'model', text: res?.data?.reply || '…' }])
     },
@@ -310,6 +314,18 @@ function AgenticSection() {
       setMessages((prev) => prev.slice(0, -1))
     },
   })
+
+  if (!canUse) {
+    return (
+      <section className="bg-white rounded-xl border border-gray-200 p-10">
+        <EmptyState
+          icon={MessageSquare}
+          title="No access to the Agentic assistant"
+          description="Ask a superadmin to grant you the “Use Agentic AI” permission to query live app data through chat."
+        />
+      </section>
+    )
+  }
 
   const submit = (e) => {
     e.preventDefault()
@@ -326,7 +342,7 @@ function AgenticSection() {
       <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100">
         <MessageSquare className="h-4 w-4 text-orange-500" />
         <h2 className="text-sm font-semibold text-gray-900">Agentic chat</h2>
-        <span className="ml-auto text-[11px] text-gray-400">Preview — more tools coming soon</span>
+        <span className="ml-auto text-[11px] text-gray-400">Queries live app data — users, drivers, trips, payments</span>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin p-5 space-y-3">

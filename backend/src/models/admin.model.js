@@ -100,6 +100,14 @@ const adminSchema = new mongoose.Schema(
                 type: Boolean,
                 default: false,
             },
+            // Agentic AI data assistant — can ask natural-language questions that
+            // query live app data (users, drivers, trips, payments, etc.) via
+            // whitelisted read-only tools. Off by default; superadmin auto-passes
+            // (see requireAgenticAI in admin.route.js), same pattern as manageKnowledge.
+            useAgenticAI: {
+                type: Boolean,
+                default: false,
+            },
         },
 
         isActive: {
