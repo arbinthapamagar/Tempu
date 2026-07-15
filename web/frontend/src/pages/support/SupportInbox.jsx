@@ -3,11 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { NavLink, Outlet, useParams, useSearchParams } from 'react-router-dom'
 import {
   Inbox, Mail, Clock, CheckCircle2, Archive, UserCheck, UserX,
-  Search, Mic, Paperclip, Phone, Video, MessageSquare, ChevronDown,
+  Search, Mic, Paperclip, Phone, Video, MessageSquare, Settings,
 } from '@/components/ui/icons'
 import { cn } from '../../utils/cn'
 import { PageHeader } from '../../components/shared/PageHeader'
 import { Avatar } from '../../components/ui/Avatar'
+import { Button } from '../../components/ui/Button'
+import { Modal } from '../../components/ui/Modal'
 import { supportApi } from '../../api/support.api'
 import { useAuthStore } from '../../store/authStore'
 import { formatRelative } from '../../utils/format'
@@ -51,7 +53,6 @@ export function EmptyConversation() {
 
 // Left rail: status folders, personal filters, and the global permission toggles.
 function FolderRail() {
-  const qc = useQueryClient()
   const [params] = useSearchParams()
   const status = params.get('status') || ''
   const view = params.get('view') || ''
@@ -60,9 +61,6 @@ function FolderRail() {
   // Moderators are scoped to their own tickets, so the "All" folder already
   // shows exactly their tickets and a queue view would be meaningless.
   const isSupervisor = ['admin', 'superadmin'].includes(admin?.role)
-  // Collapsible settings sections (collapsed by default to keep the rail tidy).
-  const [openPerms, setOpenPerms] = useState(false)
-  const [openAuto, setOpenAuto] = useState(false)
 
   const { data: countsRes } = useQuery({
     queryKey: ['support-counts'],
@@ -79,15 +77,6 @@ function FolderRail() {
     refetchInterval: 10000,
   })
   const unansweredCount = (unansweredRes?.data?.tickets || []).filter(isUnanswered).length
-
-  const { data: settingsRes } = useQuery({ queryKey: ['support-settings'], queryFn: () => supportApi.settings() })
-  const settings = settingsRes?.data || {}
-
-  const updateMutation = useMutation({
-    mutationFn: (patch) => supportApi.updateSettings(patch),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['support-settings'] }); toast.success('Permissions updated') },
-    onError: (err) => toast.error(err?.message || 'Failed to update'),
-  })
 
   const folders = [
     { to: '/support?view=unanswered', label: 'Unanswered', icon: Mail, count: unansweredCount, isActive: view === 'unanswered' },
@@ -131,93 +120,6 @@ function FolderRail() {
             {personal.map((f) => <Item key={f.label} {...f} />)}
           </>
         )}
-      </div>
-
-      {/* Global permissions (apply to every ticket) */}
-      <div className="border-t border-gray-200 p-3">
-        <button type="button" onClick={() => setOpenPerms((o) => !o)} className="flex w-full items-center">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Permissions</span>
-          <ChevronDown className={cn('h-3.5 w-3.5 text-gray-400 ml-auto transition-transform', openPerms ? '' : '-rotate-90')} />
-        </button>
-        {openPerms && <>
-        <p className="text-[11px] text-gray-400 mb-2 mt-1">Applies to all tickets. Text chat is always on.</p>
-        {PERMISSION_ROWS.map(({ key, label, icon: Icon }) => {
-          const on = !!settings[key]
-          return (
-            <div key={key} className="flex items-center gap-2 py-1">
-              <Icon className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-              <span className="flex-1 text-xs text-gray-600">{label}</span>
-              <button
-                type="button"
-                onClick={() => updateMutation.mutate({ [key]: !on })}
-                disabled={updateMutation.isPending}
-                title={on ? 'Disable' : 'Enable'}
-                className="disabled:opacity-50"
-              >
-                <span className={cn('relative inline-flex h-4 w-7 items-center rounded-full transition-colors', on ? 'bg-emerald-500' : 'bg-gray-300')}>
-                  <span className={cn('inline-block h-3 w-3 transform rounded-full bg-white transition-transform', on ? 'translate-x-3.5' : 'translate-x-0.5')} />
-                </span>
-              </button>
-            </div>
-          )
-        })}
-        </>}
-      </div>
-
-      {/* Auto-assignment (round-robin) */}
-      <div className="border-t border-gray-200 p-3">
-        <button type="button" onClick={() => setOpenAuto((o) => !o)} className="flex w-full items-center">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Auto-assign</span>
-          <ChevronDown className={cn('h-3.5 w-3.5 text-gray-400 ml-auto transition-transform', openAuto ? '' : '-rotate-90')} />
-        </button>
-        {openAuto && <>
-        <p className="text-[11px] text-gray-400 mb-2 mt-1">Round-robin new tickets across agents.</p>
-        <div className="flex items-center gap-2 py-1">
-          <span className="flex-1 text-xs text-gray-600">Enabled</span>
-          <button
-            type="button"
-            onClick={() => updateMutation.mutate({ autoAssign: !settings.autoAssign })}
-            disabled={updateMutation.isPending}
-            title={settings.autoAssign ? 'Disable' : 'Enable'}
-            className="disabled:opacity-50"
-          >
-            <span className={cn('relative inline-flex h-4 w-7 items-center rounded-full transition-colors', settings.autoAssign ? 'bg-emerald-500' : 'bg-gray-300')}>
-              <span className={cn('inline-block h-3 w-3 transform rounded-full bg-white transition-transform', settings.autoAssign ? 'translate-x-3.5' : 'translate-x-0.5')} />
-            </span>
-          </button>
-        </div>
-        <div className="flex items-center gap-2 py-1">
-          <span className="flex-1 text-xs text-gray-600">Tickets / agent</span>
-          <input
-            type="number"
-            min={1}
-            defaultValue={settings.agentCapacity ?? 5}
-            key={settings.agentCapacity}
-            onBlur={(e) => {
-              const v = Math.max(1, parseInt(e.target.value) || 1)
-              if (v !== settings.agentCapacity) updateMutation.mutate({ agentCapacity: v })
-            }}
-            className="w-14 rounded border border-gray-300 px-2 py-1 text-xs text-gray-800 focus:border-orange-500 focus:outline-none"
-          />
-        </div>
-        </>}
-      </div>
-
-      {/* Working hours — shown to customers in the AI's opening greeting. */}
-      <div className="border-t border-gray-200 p-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Working hours</p>
-        <p className="text-[11px] text-gray-400 mb-2">The AI shares this when a customer opens a chat.</p>
-        <textarea
-          rows={3}
-          defaultValue={settings.workingHours ?? ''}
-          key={settings.workingHours}
-          onBlur={(e) => {
-            const v = e.target.value.trim()
-            if (v !== (settings.workingHours || '').trim()) updateMutation.mutate({ workingHours: v })
-          }}
-          placeholder="e.g. Our team is available Sun–Fri, 9 AM–6 PM."
-          className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs text-gray-800 focus:border-orange-500 focus:outline-none resize-none"
-        />
       </div>
     </aside>
   )
@@ -350,15 +252,105 @@ function ConversationList() {
   )
 }
 
+function SettingToggle({ on, onClick, disabled }) {
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} className="disabled:opacity-50">
+      <span className={cn('relative inline-flex h-5 w-9 items-center rounded-full transition-colors', on ? 'bg-emerald-500' : 'bg-gray-300')}>
+        <span className={cn('inline-block h-4 w-4 transform rounded-full bg-white transition-transform', on ? 'translate-x-4' : 'translate-x-0.5')} />
+      </span>
+    </button>
+  )
+}
+
+// Global support settings (permissions, auto-assign, working hours) in a modal,
+// so they don't clutter the conversation rail.
+function SupportSettings({ open, onClose }) {
+  const qc = useQueryClient()
+  const { data: settingsRes } = useQuery({
+    queryKey: ['support-settings'],
+    queryFn: () => supportApi.settings(),
+    enabled: open,
+  })
+  const settings = settingsRes?.data || {}
+  const updateMutation = useMutation({
+    mutationFn: (patch) => supportApi.updateSettings(patch),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['support-settings'] }); toast.success('Settings updated') },
+    onError: (err) => toast.error(err?.message || 'Failed to update'),
+  })
+
+  return (
+    <Modal open={open} onClose={onClose} title="Support settings" size="md">
+      <div className="space-y-5">
+        <section>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Permissions</p>
+          <p className="text-[11px] text-gray-400 mb-2">Applies to all tickets. Text chat is always on.</p>
+          {PERMISSION_ROWS.map(({ key, label, icon: Icon }) => (
+            <div key={key} className="flex items-center gap-2 py-1.5">
+              <Icon className="h-4 w-4 text-gray-400 shrink-0" />
+              <span className="flex-1 text-sm text-gray-700">{label}</span>
+              <SettingToggle on={!!settings[key]} onClick={() => updateMutation.mutate({ [key]: !settings[key] })} disabled={updateMutation.isPending} />
+            </div>
+          ))}
+        </section>
+
+        <section className="border-t border-gray-100 pt-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Auto-assign</p>
+          <p className="text-[11px] text-gray-400 mb-2">Round-robin new tickets across moderators.</p>
+          <div className="flex items-center gap-2 py-1.5">
+            <span className="flex-1 text-sm text-gray-700">Enabled</span>
+            <SettingToggle on={!!settings.autoAssign} onClick={() => updateMutation.mutate({ autoAssign: !settings.autoAssign })} disabled={updateMutation.isPending} />
+          </div>
+          <div className="flex items-center gap-2 py-1.5">
+            <span className="flex-1 text-sm text-gray-700">Tickets / agent</span>
+            <input
+              type="number"
+              min={1}
+              defaultValue={settings.agentCapacity ?? 5}
+              key={settings.agentCapacity}
+              onBlur={(e) => {
+                const v = Math.max(1, parseInt(e.target.value) || 1)
+                if (v !== settings.agentCapacity) updateMutation.mutate({ agentCapacity: v })
+              }}
+              className="w-16 rounded border border-gray-300 px-2 py-1 text-sm text-gray-800 focus:border-orange-500 focus:outline-none"
+            />
+          </div>
+        </section>
+
+        <section className="border-t border-gray-100 pt-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Working hours</p>
+          <p className="text-[11px] text-gray-400 mb-2">The AI shares this when a customer opens a chat.</p>
+          <textarea
+            rows={3}
+            defaultValue={settings.workingHours ?? ''}
+            key={settings.workingHours}
+            onBlur={(e) => {
+              const v = e.target.value.trim()
+              if (v !== (settings.workingHours || '').trim()) updateMutation.mutate({ workingHours: v })
+            }}
+            placeholder="e.g. Our team is available Sun–Fri, 9 AM–6 PM."
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-orange-500 focus:outline-none resize-none"
+          />
+        </section>
+      </div>
+    </Modal>
+  )
+}
+
 export default function SupportInbox() {
+  const [showSettings, setShowSettings] = useState(false)
   return (
     <div>
-      <PageHeader title="Support" description="Help riders and drivers, and keep every conversation in one place." />
+      <PageHeader
+        title="Support"
+        description="Help riders and drivers, and keep every conversation in one place."
+        actions={<Button variant="secondary" size="sm" icon={Settings} onClick={() => setShowSettings(true)}>Settings</Button>}
+      />
       <div className="h-[calc(100vh-9rem)] min-h-[480px] flex border border-gray-200 overflow-hidden bg-white">
         <FolderRail />
         <ConversationList />
         <Outlet />
       </div>
+      <SupportSettings open={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   )
 }
