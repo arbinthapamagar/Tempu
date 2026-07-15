@@ -7,6 +7,7 @@
 // To add more data to the assistant, add a new entry to TOOLS (schema) and a
 // matching handler in HANDLERS — same shape as the ones below.
 import { User } from '../models/user.model.js';
+import { Admin } from '../models/admin.model.js';
 import { Driver } from '../models/driver.model.js';
 import { Trip } from '../models/trip.model.js';
 import { Transaction } from '../models/transaction.model.js';
@@ -24,6 +25,34 @@ import { CallLog } from '../models/callLog.model.js';
 
 const MAX_LIMIT = 20;
 const clampLimit = (n, def = 5) => Math.max(1, Math.min(MAX_LIMIT, Number(n) || def));
+
+// Ollama's tool-calling sometimes sends the literal string "null"/"undefined"
+// (or "") for an omitted optional argument instead of leaving it out entirely.
+// Treat those the same as "not provided" so an optional filter like `status` or
+// `role` doesn't silently turn into a filter that matches nothing.
+const clean = (v) => (v === undefined || v === null || v === 'null' || v === 'undefined' || v === '' ? undefined : v);
+const cleanBool = (v) => {
+    if (v === true || v === 'true') return true;
+    if (v === false || v === 'false') return false;
+    return undefined;
+};
+
+// Support ticket status is stored as open/in_progress/resolved/closed, but
+// admins naturally say "pending", "new", "ongoing", "done", etc. The model
+// doesn't reliably stick to the schema enum, so normalize common synonyms
+// before they hit the query — otherwise a real-looking status silently
+// matches zero tickets instead of the ones the admin actually means.
+const TICKET_STATUS_SYNONYMS = {
+    pending: 'open', new: 'open', unanswered: 'open', unresolved: 'open', waiting: 'open',
+    progress: 'in_progress', ongoing: 'in_progress', active: 'in_progress', working: 'in_progress',
+    done: 'resolved', complete: 'resolved', completed: 'resolved', fixed: 'resolved', solved: 'resolved',
+};
+const normalizeTicketStatus = (s) => {
+    const v = clean(s);
+    if (!v) return v;
+    const key = String(v).toLowerCase().trim();
+    return TICKET_STATUS_SYNONYMS[key] || v;
+};
 
 const USER_FIELDS = 'name phone email rating accountStatus userType walletBalance createdAt';
 const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -195,6 +224,21 @@ export const TOOLS = [
     {
         type: 'function',
         function: {
+            name: 'list_support_tickets',
+            description: 'List support tickets across the WHOLE platform (not one user) - use this for "all pending tickets", "how many open tickets", "list closed tickets", etc. Optionally filter by status or category. Status "open" means new/pending/unanswered tickets.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    status: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'closed'] },
+                    category: { type: 'string' },
+                    limit: { type: 'integer' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
             name: 'get_user_subscription',
             description: "Get a user's subscription plan(s) (parent/business), status and dates.",
             parameters: {
@@ -312,6 +356,32 @@ export const TOOLS = [
     {
         type: 'function',
         function: {
+            name: 'list_admins',
+            description: 'List admin/staff accounts (name, email, role, active status) — use this for "all admin names", "list our moderators", etc. Optionally filter by role.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    role: { type: 'string', enum: ['superadmin', 'admin', 'headmaster', 'moderator'] },
+                    limit: { type: 'integer' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'find_admin',
+            description: 'Find a specific admin/staff account by name, email, or phone.',
+            parameters: {
+                type: 'object',
+                properties: { query: { type: 'string' } },
+                required: ['query'],
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
             name: 'get_trip_call_logs',
             description: 'Get the in-app call history for a specific trip (rider/driver calls, duration, status).',
             parameters: {
@@ -372,6 +442,7 @@ export const HANDLERS = {
     },
 
     async list_recent_trips({ status, limit = 10 } = {}) {
+        status = clean(status);
         const filter = status ? { status } : {};
         const trips = await Trip.find(filter)
             .sort({ createdAt: -1 })
@@ -399,6 +470,7 @@ export const HANDLERS = {
     },
 
     async get_driver_withdrawals({ driverQuery, status, limit = 5 }) {
+        status = clean(status);
         const driver = await findBestDriver(driverQuery);
         if (!driver) return { found: false };
         const filter = { driverId: driver._id, ...(status ? { status } : {}) };
@@ -422,6 +494,25 @@ export const HANDLERS = {
             tickets: tickets.map((t) => ({
                 id: t._id, subject: t.subject, category: t.category, status: t.status,
                 ratingGiven: t.rating?.score ?? null, createdAt: t.createdAt,
+            })),
+        };
+    },
+
+    async list_support_tickets({ status, category, limit = 10 } = {}) {
+        status = normalizeTicketStatus(status);
+        category = clean(category);
+        const filter = { ...(status ? { status } : {}), ...(category ? { category } : {}) };
+        const tickets = await SupportTicket.find(filter)
+            .sort({ createdAt: -1 })
+            .limit(clampLimit(limit, 10))
+            .populate('userId', 'name phone')
+            .populate('assignedTo', 'name')
+            .select('subject category status rating.score createdAt userId assignedTo guest');
+        return {
+            tickets: tickets.map((t) => ({
+                id: t._id, subject: t.subject, category: t.category, status: t.status,
+                customer: t.userId?.name || t.guest?.name || 'Guest',
+                assignedTo: t.assignedTo?.name || null, createdAt: t.createdAt,
             })),
         };
     },
@@ -451,7 +542,8 @@ export const HANDLERS = {
         };
     },
 
-    async list_active_emergencies({ status = 'active', limit = 10 } = {}) {
+    async list_active_emergencies({ status, limit = 10 } = {}) {
+        status = clean(status) || 'active';
         const emergencies = await Emergency.find({ status })
             .sort({ createdAt: -1 })
             .limit(clampLimit(limit, 10))
@@ -480,6 +572,8 @@ export const HANDLERS = {
     },
 
     async list_suppliers({ verified, city, limit = 10 } = {}) {
+        verified = cleanBool(verified);
+        city = clean(city);
         const filter = {};
         if (typeof verified === 'boolean') filter.isVerified = verified;
         if (city) filter.city = city;
@@ -531,6 +625,24 @@ export const HANDLERS = {
         if (!driver) return { found: false };
         const docs = await Document.find({ driverId: driver._id }).select('type status rejectionReason createdAt');
         return { found: true, driver: shapeDriver(driver), documents: docs };
+    },
+
+    async list_admins({ role, limit = 20 } = {}) {
+        role = clean(role);
+        const filter = role ? { role } : {};
+        const admins = await Admin.find(filter)
+            .sort({ name: 1 })
+            .limit(clampLimit(limit, 20))
+            .select('name email phone role isActive createdAt');
+        return { admins };
+    },
+
+    async find_admin({ query }) {
+        if (!query) return { found: false };
+        const rx = new RegExp(escapeRegex(query), 'i');
+        const a = await Admin.findOne({ $or: [{ name: rx }, { email: rx }, { phone: rx }] })
+            .select('name email phone role isActive createdAt');
+        return a ? { found: true, admin: a } : { found: false };
     },
 
     async get_trip_call_logs({ tripId }) {
