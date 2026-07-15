@@ -1978,6 +1978,7 @@ const getSupportAgentRatings = asyncHandler(async (req, res) => {
         subject: t.subject,
         score: t.rating.score,
         comment: t.rating.comment || '',
+        tags: t.rating.tags || [],
         ratedAt: t.rating.ratedAt,
         customer: t.userId?.name || t.guest?.name || 'Customer',
     }));

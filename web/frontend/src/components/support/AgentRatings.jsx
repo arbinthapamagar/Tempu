@@ -63,7 +63,14 @@ export function AgentRatings({ agentId, title = 'Support ratings' }) {
                   </span>
                   <span className="text-[11px] text-gray-400 truncate">{it.customer}</span>
                 </div>
-                {it.comment && <p className="text-sm text-gray-700 mt-1 italic">“{it.comment}”</p>}
+                {it.tags?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {it.tags.map((tag) => (
+                      <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{tag}</span>
+                    ))}
+                  </div>
+                )}
+                {it.comment && <p className="text-sm text-gray-700 mt-1.5 italic">“{it.comment}”</p>}
                 <p className="text-[11px] text-gray-400 mt-1 truncate">{it.subject}</p>
               </div>
             ))}
