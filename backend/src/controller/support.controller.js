@@ -63,9 +63,13 @@ const publicTicket = (t) => ({
     category: t.category,
     status: t.status,
     guest: { name: t.guest?.name || null, email: t.guest?.email || null },
-    // The assigned support agent's name, so the guest sees who's helping them.
-    assignedTo: t.assignedTo ? { name: t.assignedTo.name || 'Support' } : null,
-    rating: t.rating?.score ? { score: t.rating.score, comment: t.rating.comment || '' } : null,
+    // The assigned support agent's name/role/photo, so the guest sees who's helping.
+    assignedTo: t.assignedTo
+        ? { name: t.assignedTo.name || 'Support', role: t.assignedTo.role || null, avatarUrl: t.assignedTo.avatarUrl || null }
+        : null,
+    rating: t.rating?.score
+        ? { score: t.rating.score, comment: t.rating.comment || '', tags: t.rating.tags || [] }
+        : null,
     messages: (t.messages || []).map((m) => ({
         senderType: m.senderType,
         isAI: m.isAI || false,
@@ -117,7 +121,7 @@ async function findGuestTicket(req) {
     const token = (req.query.token || req.body.token || '').trim();
     if (!token) throw new apiError(401, 'Missing chat token');
     const ticket = await SupportTicket.findOne({ _id: req.params.id, guestToken: token })
-        .populate('assignedTo', 'name');
+        .populate('assignedTo', 'name role avatarUrl');
     if (!ticket) throw new apiError(404, 'Chat not found');
     return ticket;
 }
@@ -162,7 +166,10 @@ const rateGuestTicket = asyncHandler(async (req, res) => {
         throw new apiError(400, 'You can rate support once your issue is resolved');
     }
 
-    ticket.rating = { score, comment, ratedAt: new Date(), agentId: ticket.assignedTo?._id || ticket.assignedTo || null };
+    const tags = Array.isArray(req.body.tags)
+        ? [...new Set(req.body.tags.map((t) => String(t).trim()).filter(Boolean))].slice(0, 8)
+        : [];
+    ticket.rating = { score, comment, tags, ratedAt: new Date(), agentId: ticket.assignedTo?._id || ticket.assignedTo || null };
     await ticket.save();
 
     return res.status(200).json(new apiResponse(200, publicTicket(ticket), 'Thanks for your feedback'));

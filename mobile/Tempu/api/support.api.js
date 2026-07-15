@@ -12,6 +12,6 @@ export const supportPublicApi = {
   sendChatMessage: (id, token, message) =>
     api.post(`/support/ticket/${id}/messages`, { token, message }, { skipAuth: true }),
   // Rate the support service (1-5) once the chat is resolved/closed.
-  rateChat: (id, token, score, comment) =>
-    api.post(`/support/ticket/${id}/rate`, { token, score, comment }, { skipAuth: true }),
+  rateChat: (id, token, score, comment, tags = []) =>
+    api.post(`/support/ticket/${id}/rate`, { token, score, comment, tags }, { skipAuth: true }),
 };
