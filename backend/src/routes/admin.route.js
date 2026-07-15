@@ -159,12 +159,16 @@ const requireKnowledge = (req, res, next) => {
     if (req.admin?.role === 'superadmin' || req.admin?.permissions?.manageKnowledge) return next();
     throw new apiError(403, 'Insufficient permissions');
 };
+// Managing documents (list/ingest/delete) + raw search stay gated to superadmin
+// or the manageKnowledge permission.
 adminRouter.get('/knowledge/sources', requireKnowledge, getSources);
 adminRouter.post('/knowledge/ingest', requireKnowledge, upload.array('files', 10), ingestDocuments);
 adminRouter.post('/knowledge/text', requireKnowledge, ingestRawText);
 adminRouter.post('/knowledge/search', requireKnowledge, searchKnowledge);
-adminRouter.post('/knowledge/ask', requireKnowledge, askKnowledge);
-adminRouter.post('/knowledge/chat', requireKnowledge, chatKnowledge);
 adminRouter.delete('/knowledge/sources/:source', requireKnowledge, removeSource);
+// Asking / chatting against the KB is read-only and available to ANY authenticated
+// admin (support agents included) — this powers the admin "AI" section.
+adminRouter.post('/knowledge/ask', askKnowledge);
+adminRouter.post('/knowledge/chat', chatKnowledge);
 
 export { adminRouter };
