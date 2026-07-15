@@ -16,10 +16,14 @@ import { SupportSettings, getSupportSettings } from '../models/supportSettings.m
 
 const ACTIVE = ['open', 'in_progress'];
 
-// Support agents = active admins with the handleSupport permission, in a stable
-// order so the round-robin rotation is deterministic.
+// Auto-assign pool = active MODERATORS with the handleSupport permission, in a
+// stable order so the round-robin rotation is deterministic. Admins/superadmins
+// are deliberately excluded — the bot never auto-hands tickets to them; they
+// only ever pick up work manually (e.g. a superadmin assigning from the queue
+// when a ticket needs escalating). If there are no moderators, tickets simply
+// wait in the queue for a manual assignment.
 async function getAgents() {
-    return Admin.find({ isActive: { $ne: false }, 'permissions.handleSupport': true })
+    return Admin.find({ isActive: { $ne: false }, role: 'moderator', 'permissions.handleSupport': true })
         .select('_id name email')
         .sort({ _id: 1 })
         .lean();
