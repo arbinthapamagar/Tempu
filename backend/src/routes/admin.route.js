@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { verifyAdminJwt } from '../middlewares/admin.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
 import {
-    ingestDocuments, ingestRawText, getSources, removeSource, searchKnowledge, askKnowledge, chatKnowledge,
+    ingestDocuments, ingestRawText, getSources, removeSource, searchKnowledge, askKnowledge, chatKnowledge, agenticChat,
 } from '../controller/rag.controller.js';
 import { apiError } from '../utils/apiError.js';
 import {
@@ -171,5 +171,14 @@ adminRouter.delete('/knowledge/sources/:source', requireKnowledge, removeSource)
 // admin (support agents included) — this powers the admin "AI" section.
 adminRouter.post('/knowledge/ask', askKnowledge);
 adminRouter.post('/knowledge/chat', chatKnowledge);
+
+// Agentic AI data assistant — queries LIVE app data (users, drivers, trips,
+// payments, etc.) via whitelisted tools. Gated separately from the knowledge
+// permission since it reaches personal data (phone numbers, ratings, etc.).
+const requireAgenticAI = (req, res, next) => {
+    if (req.admin?.role === 'superadmin' || req.admin?.permissions?.useAgenticAI) return next();
+    throw new apiError(403, 'Insufficient permissions');
+};
+adminRouter.post('/agentic/chat', requireAgenticAI, agenticChat);
 
 export { adminRouter };

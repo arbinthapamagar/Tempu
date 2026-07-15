@@ -4,7 +4,7 @@ import {
   Plus, Edit, Trash2, ToggleLeft, ToggleRight, Shield,
   Users, Car, Navigation, CreditCard, FileText, MessageSquare,
   ShieldCheck, BarChart2, Repeat, Building2, CheckCircle, XCircle, Info,
-  Mail, Phone, Calendar, Clock, Eye, Bell, Send, X, BookOpen
+  Mail, Phone, Calendar, Clock, Eye, Bell, Send, X, BookOpen, Zap
 } from '@/components/ui/icons'
 import { SendNotificationModal } from '../../components/shared/SendNotificationModal'
 import { useForm } from 'react-hook-form'
@@ -139,6 +139,14 @@ const PERMISSIONS = [
     color: 'teal',
     description: 'Manage the AI assistant’s knowledge base (RAG)',
     allows: ['Upload documents', 'Paste reference text', 'Delete sources', 'Test retrieval & ask'],
+  },
+  {
+    key: 'useAgenticAI',
+    label: 'Use Agentic AI',
+    icon: Zap,
+    color: 'violet',
+    description: 'Ask the AI natural-language questions over live app data (users, drivers, trips, payments)',
+    allows: ['Look up users & drivers', 'Rank by rating', 'View trips & transactions', 'View platform stats'],
   },
 ]
 

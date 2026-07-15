@@ -38,6 +38,8 @@ const PERMISSION_LABELS = {
   viewAnalytics: 'View Analytics',
   manageSubscriptions: 'Manage Subscriptions',
   manageSuppliers: 'Manage Suppliers',
+  manageKnowledge: 'Manage Knowledge Base',
+  useAgenticAI: 'Use Agentic AI',
 }
 
 const THEME_OPTIONS = [
