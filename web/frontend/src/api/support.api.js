@@ -19,6 +19,7 @@ export const supportApi = {
   editComment: (id, commentId, { body, mentions }) => api.patch(`/admin/support/${id}/comments/${commentId}`, { body, mentions }),
   deleteComment: (id, commentId) => api.delete(`/admin/support/${id}/comments/${commentId}`),
   agents: () => api.get('/admin/support-agents'),
+  agentRatings: (id) => api.get(`/admin/support-agents/${id}/ratings`),
   settings: () => api.get('/admin/support-settings'),
   updateSettings: (data) => api.patch('/admin/support-settings', data),
 }

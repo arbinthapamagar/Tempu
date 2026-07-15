@@ -9,6 +9,7 @@ import { StatusBadge } from '../components/shared/StatusBadge'
 import { Avatar } from '../components/ui/Avatar'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { AgentRatings } from '../components/support/AgentRatings'
 import { authApi } from '../api/auth.api'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
@@ -100,6 +101,7 @@ export default function Profile() {
 
   const isSuper = admin?.role === 'superadmin'
   const activePerms = Object.entries(PERMISSION_LABELS).filter(([key]) => isSuper || admin?.permissions?.[key])
+  const handlesSupport = isSuper || !!admin?.permissions?.handleSupport
 
   return (
     <div>
@@ -212,6 +214,13 @@ export default function Profile() {
                   <p className="text-sm text-gray-400 col-span-2">No permissions assigned.</p>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* My support ratings — only for support-handling admins */}
+          {!editing && handlesSupport && admin?._id && (
+            <div className="bg-white border border-gray-200 p-4">
+              <AgentRatings agentId={admin._id} title="My support ratings" />
             </div>
           )}
 
