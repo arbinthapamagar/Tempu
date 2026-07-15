@@ -16,10 +16,14 @@ import { SupportSettings, getSupportSettings } from '../models/supportSettings.m
 
 const ACTIVE = ['open', 'in_progress'];
 
-// Support agents = active admins with the handleSupport permission, in a stable
-// order so the round-robin rotation is deterministic.
+// Auto-assign pool = active MODERATORS with the handleSupport permission, in a
+// stable order so the round-robin rotation is deterministic. Admins/superadmins
+// are deliberately excluded — the bot never auto-hands tickets to them; they
+// only ever pick up work manually (e.g. a superadmin assigning from the queue
+// when a ticket needs escalating). If there are no moderators, tickets simply
+// wait in the queue for a manual assignment.
 async function getAgents() {
-    return Admin.find({ isActive: { $ne: false }, 'permissions.handleSupport': true })
+    return Admin.find({ isActive: { $ne: false }, role: 'moderator', 'permissions.handleSupport': true })
         .select('_id name email')
         .sort({ _id: 1 })
         .lean();
@@ -71,7 +75,7 @@ export async function autoAssignTicket(ticketId) {
         const settings = await getSupportSettings();
         if (!settings.autoAssign) return null;
 
-        const ticket = await SupportTicket.findById(ticketId);
+        const ticket = await SupportTicket.findById(ticketId).select('_id assignedTo status subject');
         if (!ticket || ticket.assignedTo || !ACTIVE.includes(ticket.status)) return null;
 
         const agents = await getAgents();
@@ -79,8 +83,14 @@ export async function autoAssignTicket(ticketId) {
         const agent = pickNext(agents, counts, settings.agentCapacity, settings.lastAssignedAgent);
         if (!agent) return null; // all at capacity → stays queued
 
-        ticket.assignedTo = agent._id;
-        await ticket.save();
+        // Atomic claim: only assign while still unassigned, so this can't clobber
+        // a concurrent AI-greeting save on the same document (or another caller
+        // racing to assign the same ticket).
+        const upd = await SupportTicket.updateOne(
+            { _id: ticketId, assignedTo: null },
+            { assignedTo: agent._id },
+        );
+        if (!upd.modifiedCount) return null; // something else assigned it first
 
         // Advance the rotation pointer.
         await SupportSettings.updateOne({ key: 'global' }, { lastAssignedAgent: agent._id });
