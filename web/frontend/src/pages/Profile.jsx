@@ -20,6 +20,7 @@ const profileSchema = z.object({
   name: z.string().min(2, 'Name required'),
   email: z.string().email('Invalid email'),
   phone: z.string().min(10, 'Invalid phone'),
+  supportGreeting: z.string().optional().or(z.literal('')),
   currentPassword: z.string().optional().or(z.literal('')),
   newPassword: z.string().optional().or(z.literal('')),
 })
@@ -82,16 +83,16 @@ export default function Profile() {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(profileSchema),
-    defaultValues: { name: admin?.name || '', email: admin?.email || '', phone: admin?.phone || '', currentPassword: '', newPassword: '' },
+    defaultValues: { name: admin?.name || '', email: admin?.email || '', phone: admin?.phone || '', supportGreeting: admin?.supportGreeting || '', currentPassword: '', newPassword: '' },
   })
 
   const startEdit = () => {
-    reset({ name: admin?.name || '', email: admin?.email || '', phone: admin?.phone || '', currentPassword: '', newPassword: '' })
+    reset({ name: admin?.name || '', email: admin?.email || '', phone: admin?.phone || '', supportGreeting: admin?.supportGreeting || '', currentPassword: '', newPassword: '' })
     setEditing(true)
   }
 
   const submit = handleSubmit((values) => {
-    const payload = { name: values.name, email: values.email, phone: values.phone }
+    const payload = { name: values.name, email: values.email, phone: values.phone, supportGreeting: values.supportGreeting }
     if (values.newPassword) {
       payload.currentPassword = values.currentPassword
       payload.newPassword = values.newPassword
@@ -181,6 +182,19 @@ export default function Profile() {
                   <Input label="Phone" error={errors.phone?.message} {...register('phone')} />
                 </div>
                 <Input label="Email" type="email" error={errors.email?.message} {...register('email')} />
+
+                {handlesSupport && (
+                  <div className="pt-2 border-t border-gray-100">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Support intro message</p>
+                    <p className="text-[11px] text-gray-400 mb-2">Auto-posted to a ticket when it&apos;s assigned to you. Use {'{name}'} and {'{designation}'}. Leave blank for none.</p>
+                    <textarea
+                      rows={3}
+                      {...register('supportGreeting')}
+                      placeholder="Hi, this is {name}, a {designation} — please hold on, I'll be right with you."
+                      className="w-full rounded border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-orange-500 focus:outline-none resize-none"
+                    />
+                  </div>
+                )}
 
                 <div className="pt-2 border-t border-gray-100">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Change Password (optional)</p>

@@ -68,6 +68,34 @@ async function notifyAssignee(agent, ticket) {
     }).catch((e) => console.error('[supportAssign] notify failed:', e.message));
 }
 
+const ROLE_LABEL = {
+    moderator: 'Support Agent',
+    admin: 'Support Lead',
+    headmaster: 'Support Lead',
+    superadmin: 'Support Manager',
+};
+
+// Post the assigned agent's personal intro line to the ticket, so the customer
+// knows who has it (e.g. "Hi, this is {name}, a {designation} — please hold on").
+// {name}/{designation} are filled in; a blank greeting posts nothing. Race-safe
+// via $push. Best-effort.
+export async function postAgentGreeting(ticketId, agentId) {
+    try {
+        const agent = await Admin.findById(agentId).select('name role supportGreeting');
+        const tmpl = (agent?.supportGreeting || '').trim();
+        if (!tmpl) return;
+        const message = tmpl
+            .replace(/\{name\}/gi, agent.name || 'our agent')
+            .replace(/\{designation\}/gi, ROLE_LABEL[agent.role] || 'Support Agent');
+        await SupportTicket.updateOne(
+            { _id: ticketId },
+            { $push: { messages: { senderId: agent._id, senderType: 'admin', isAI: false, message, createdAt: new Date() } } },
+        );
+    } catch (e) {
+        console.error('[supportAssign] agent greeting failed:', e.message);
+    }
+}
+
 // Try to auto-assign a single unassigned ticket. Returns the assigned agent doc
 // or null (queued). Best-effort: never throws to a caller.
 export async function autoAssignTicket(ticketId) {
@@ -96,6 +124,7 @@ export async function autoAssignTicket(ticketId) {
         await SupportSettings.updateOne({ key: 'global' }, { lastAssignedAgent: agent._id });
 
         await notifyAssignee(agent, ticket);
+        await postAgentGreeting(ticketId, agent._id);
         return agent;
     } catch (e) {
         console.error('[supportAssign] autoAssign failed:', e.message);
@@ -135,6 +164,7 @@ export async function processQueue() {
             counts.set(String(agent._id), (counts.get(String(agent._id)) || 0) + 1);
             pointer = agent._id;
             await notifyAssignee(agent, ticket);
+            await postAgentGreeting(ticket._id, agent._id);
             assigned++;
         }
         if (assigned) await SupportSettings.updateOne({ key: 'global' }, { lastAssignedAgent: pointer });
