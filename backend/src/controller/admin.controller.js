@@ -1675,22 +1675,23 @@ const getSupportTickets = asyncHandler(async (req, res) => {
     if (status) filter.status = status;
     if (category) filter.category = category;
 
-    // Role-based visibility. Supervisors (admin/superadmin) see every ticket;
-    // front-line moderators only ever see their OWN tickets plus the unassigned
-    // queue, so one agent can never read another agent's conversations. This is
-    // enforced here on the server — never trusted to the client.
+    // Role-based visibility, enforced on the server (never trusted to the client):
+    //   - Moderators are HARD-scoped to their own assigned tickets. They never
+    //     see the unassigned queue, and never another agent's conversations.
+    //   - Supervisors (admin/superadmin) see everything, and can additionally
+    //     view just the queue (assigned=unassigned) or just their own (=me).
     const isSupervisor = ['admin', 'superadmin'].includes(req.admin.role);
-    const visibility = isSupervisor
-        ? null
-        : { $or: [{ assignedTo: req.admin._id }, { assignedTo: null }] };
 
-    // Queue view = unassigned tickets; 'me' = assigned to the current agent.
-    if (assigned === 'unassigned') filter.assignedTo = null;
-    else if (assigned === 'me') filter.assignedTo = req.admin._id;
-    else if (visibility) Object.assign(filter, visibility);
+    if (!isSupervisor) {
+        filter.assignedTo = req.admin._id;
+    } else if (assigned === 'unassigned') {
+        filter.assignedTo = null;              // the queue — supervisors only
+    } else if (assigned === 'me') {
+        filter.assignedTo = req.admin._id;
+    }
 
     // Status-tab counts are scoped to what this admin is allowed to see.
-    const countMatch = visibility || {};
+    const countMatch = isSupervisor ? {} : { assignedTo: req.admin._id };
 
     const [tickets, total, byStatus] = await Promise.all([
         SupportTicket.find(filter)

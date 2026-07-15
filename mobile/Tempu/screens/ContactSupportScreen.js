@@ -102,12 +102,17 @@ export default function ContactSupportScreen({ onBack }) {
     }
   };
 
-  const submitRating = async (score) => {
-    if (!chat || busy) return;
+  const [ratingScore, setRatingScore] = useState(0);
+  const [ratingNote, setRatingNote] = useState('');
+
+  const submitRating = async () => {
+    if (!chat || busy || ratingScore < 1) return;
     setBusy(true);
     try {
-      const res = await supportPublicApi.rateChat(chat.id, chat.token, score, '');
+      const res = await supportPublicApi.rateChat(chat.id, chat.token, ratingScore, ratingNote.trim());
       setTicket(res.data);
+      setRatingScore(0);
+      setRatingNote('');
     } catch (e) {
       Alert.alert('Could not submit rating', e?.message || 'Please try again.');
     } finally {
@@ -199,12 +204,25 @@ export default function ContactSupportScreen({ onBack }) {
                 <Text style={styles.rateTitle}>How was our support?</Text>
                 <View style={styles.starRow}>
                   {[1, 2, 3, 4, 5].map((n) => (
-                    <Pressable key={n} onPress={() => submitRating(n)} disabled={busy} hitSlop={6}>
-                      <Ionicons name="star-outline" size={30} color={colors.primary} style={{ marginHorizontal: 3 }} />
+                    <Pressable key={n} onPress={() => setRatingScore(n)} disabled={busy} hitSlop={6}>
+                      <Ionicons name={n <= ratingScore ? 'star' : 'star-outline'} size={30} color={colors.primary} style={{ marginHorizontal: 3 }} />
                     </Pressable>
                   ))}
                 </View>
-                <Text style={styles.rateHint}>Tap a star to rate</Text>
+                <TextInput
+                  value={ratingNote}
+                  onChangeText={setRatingNote}
+                  placeholder="Add a note for the support team (optional)"
+                  placeholderTextColor={colors.textFaint}
+                  style={styles.rateNote}
+                  multiline
+                />
+                <Button
+                  label={busy ? 'Submitting…' : 'Submit rating'}
+                  onPress={submitRating}
+                  disabled={busy || ratingScore < 1}
+                  style={{ marginTop: spacing.md, alignSelf: 'stretch' }}
+                />
               </View>
             )}
           </ScrollView>
@@ -320,6 +338,12 @@ const styles = StyleSheet.create({
   rateTitle: { ...type.body, color: colors.text, fontWeight: '700', marginBottom: spacing.md },
   starRow: { flexDirection: 'row', alignItems: 'center' },
   rateHint: { ...type.micro, color: colors.textFaint, marginTop: spacing.sm },
+  rateNote: {
+    marginTop: spacing.md, alignSelf: 'stretch', minHeight: 64,
+    backgroundColor: colors.surfaceMuted, borderRadius: radius.sm,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    ...type.body, color: colors.text, textAlignVertical: 'top',
+  },
 
   replyBar: {
     flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, padding: spacing.md,
