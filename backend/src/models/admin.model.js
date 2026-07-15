@@ -33,6 +33,14 @@ const adminSchema = new mongoose.Schema(
             default: null,
         },
 
+        // Per-agent intro line auto-posted to a ticket when it's assigned to this
+        // agent (e.g. "Hi, this is {name}, a {designation} — please hold on").
+        // Supports {name} and {designation} placeholders. Empty = post nothing.
+        supportGreeting: {
+            type: String,
+            default: '',
+        },
+
         role: {
             type: String,
             enum: ['superadmin', 'admin', 'headmaster', 'moderator'],
