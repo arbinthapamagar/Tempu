@@ -17,6 +17,7 @@ import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
 import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
+import { AgentRatings } from '../../components/support/AgentRatings'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Badge } from '../../components/ui/Badge'
@@ -543,6 +544,11 @@ function AdminDetail({ admin, isSelf, canManage, onEditProfile, onEdit, onToggle
           </div>
         ))}
       </div>
+
+      {/* Support ratings — only meaningful for support-handling admins */}
+      {(isSuper || admin.permissions?.handleSupport) && (
+        <AgentRatings agentId={admin._id} />
+      )}
 
       {/* Permissions */}
       <div>

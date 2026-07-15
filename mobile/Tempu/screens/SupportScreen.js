@@ -8,6 +8,7 @@ import {
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { userApi } from '../api/user.api';
+import RatingCard from '../components/RatingCard';
 import { Button, Chip, FormField, ScreenHeader } from '../components/ui';
 import CallScreen from './CallScreen';
 import { colors, radius, spacing, type } from '../theme';
@@ -123,17 +124,12 @@ export default function SupportScreen({ onBack, role }) {
     } catch { /* noop */ } finally { setBusy(false); }
   };
 
-  const [ratingScore, setRatingScore] = useState(0);
-  const [ratingNote, setRatingNote] = useState('');
-
-  const submitRating = async () => {
-    if (!active?._id || busy || ratingScore < 1) return;
+  const submitRating = async ({ score, note, tags }) => {
+    if (!active?._id || busy) return;
     setBusy(true);
     try {
-      const res = await userApi.rateTicket(active._id, ratingScore, ratingNote.trim());
+      const res = await userApi.rateTicket(active._id, score, note, tags);
       setActive(res.data || active);
-      setRatingScore(0);
-      setRatingNote('');
     } catch (e) {
       Alert.alert('Could not submit rating', e?.message || 'Please try again.');
     } finally { setBusy(false); }
@@ -339,39 +335,14 @@ export default function SupportScreen({ onBack, role }) {
                 );
               })}
 
-              {active.rating && (
+              {active.rating?.score ? (
                 <View style={styles.ratedNote}>
                   <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
                   <Text style={styles.ratedText}>You rated this support {active.rating.score}/5. Thank you!</Text>
                 </View>
-              )}
-
-              {['resolved', 'closed'].includes(active.status) && !active.rating && (
-                <View style={styles.rateCard}>
-                  <Text style={styles.rateTitle}>How was our support?</Text>
-                  <View style={styles.starRow}>
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <Pressable key={n} onPress={() => setRatingScore(n)} disabled={busy} hitSlop={6}>
-                        <Ionicons name={n <= ratingScore ? 'star' : 'star-outline'} size={30} color={colors.primary} style={{ marginHorizontal: 3 }} />
-                      </Pressable>
-                    ))}
-                  </View>
-                  <TextInput
-                    value={ratingNote}
-                    onChangeText={setRatingNote}
-                    placeholder="Add a note for the support team (optional)"
-                    placeholderTextColor={colors.textFaint}
-                    style={styles.rateNote}
-                    multiline
-                  />
-                  <Button
-                    label={busy ? 'Submitting…' : 'Submit rating'}
-                    onPress={submitRating}
-                    disabled={busy || ratingScore < 1}
-                    style={{ marginTop: spacing.md, alignSelf: 'stretch' }}
-                  />
-                </View>
-              )}
+              ) : ['resolved', 'closed'].includes(active.status) ? (
+                <RatingCard agent={active.assignedTo} busy={busy} onSubmit={submitRating} />
+              ) : null}
             </ScrollView>
             {active.status === 'closed' && (
               <View style={styles.reopenBar}>

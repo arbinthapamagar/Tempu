@@ -53,13 +53,13 @@ const getMyTickets = asyncHandler(async (req, res) => {
 
     const tickets = await SupportTicket.find(filter)
         .sort({ createdAt: -1 })
-        .populate('assignedTo', 'name');
+        .populate('assignedTo', 'name role avatarUrl');
     return res.status(200).json(new apiResponse(200, tickets, 'Tickets fetched'));
 });
 
 const getTicketById = asyncHandler(async (req, res) => {
     const ticket = await SupportTicket.findOne({ _id: req.params.id, userId: req.user._id })
-        .populate('assignedTo', 'name');
+        .populate('assignedTo', 'name role avatarUrl');
     if (!ticket) throw new apiError(404, 'Ticket not found');
     return res.status(200).json(new apiResponse(200, ticket, 'Ticket fetched'));
 });
@@ -126,7 +126,10 @@ const rateTicket = asyncHandler(async (req, res) => {
         throw new apiError(400, 'You can rate support once your issue is resolved');
     }
 
-    ticket.rating = { score, comment, ratedAt: new Date(), agentId: ticket.assignedTo || null };
+    const tags = Array.isArray(req.body.tags)
+        ? [...new Set(req.body.tags.map((t) => String(t).trim()).filter(Boolean))].slice(0, 8)
+        : [];
+    ticket.rating = { score, comment, tags, ratedAt: new Date(), agentId: ticket.assignedTo || null };
     await ticket.save();
 
     return res.status(200).json(new apiResponse(200, ticket, 'Thanks for your feedback'));
