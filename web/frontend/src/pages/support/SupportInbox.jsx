@@ -55,6 +55,11 @@ function FolderRail() {
   const [params] = useSearchParams()
   const status = params.get('status') || ''
   const view = params.get('view') || ''
+  const admin = useAuthStore((s) => s.admin)
+  // Only supervisors (admin/superadmin) get the queue + personal filters.
+  // Moderators are scoped to their own tickets, so the "All" folder already
+  // shows exactly their tickets and a queue view would be meaningless.
+  const isSupervisor = ['admin', 'superadmin'].includes(admin?.role)
 
   const { data: countsRes } = useQuery({
     queryKey: ['support-counts'],
@@ -90,10 +95,10 @@ function FolderRail() {
     { to: '/support?status=closed', label: 'Closed', icon: Archive, count: counts.closed, isActive: status === 'closed' },
   ]
 
-  const personal = [
+  const personal = isSupervisor ? [
     { to: '/support?view=mine', label: 'Assigned to me', icon: UserCheck, isActive: view === 'mine' },
-    { to: '/support?view=unassigned', label: 'Unassigned', icon: UserX, isActive: view === 'unassigned' },
-  ]
+    { to: '/support?view=unassigned', label: 'Queue (unassigned)', icon: UserX, isActive: view === 'unassigned' },
+  ] : []
 
   const Item = ({ to, label, icon: Icon, count, isActive }) => (
     <NavLink
@@ -117,8 +122,12 @@ function FolderRail() {
     <aside className="w-52 shrink-0 border-r border-gray-200 flex flex-col bg-gray-50">
       <div className="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-0.5">
         {folders.map((f) => <Item key={f.label} {...f} />)}
-        <p className="px-3 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Personal</p>
-        {personal.map((f) => <Item key={f.label} {...f} />)}
+        {personal.length > 0 && (
+          <>
+            <p className="px-3 pt-4 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Queue</p>
+            {personal.map((f) => <Item key={f.label} {...f} />)}
+          </>
+        )}
       </div>
 
       {/* Global permissions (apply to every ticket) */}
