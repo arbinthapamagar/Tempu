@@ -14,6 +14,13 @@ import { Withdrawal } from '../models/withdrawal.model.js';
 import { Subscription } from '../models/subscription.model.js';
 import { SupportTicket } from '../models/supportTicket.model.js';
 import { Emergency } from '../models/emergency.model.js';
+import { Review } from '../models/review.model.js';
+import { Supplier } from '../models/supplier.model.js';
+import { Bid } from '../models/bid.model.js';
+import { Pricing } from '../models/pricing.model.js';
+import { Notification } from '../models/notification.model.js';
+import { Document } from '../models/doeument.model.js';
+import { CallLog } from '../models/callLog.model.js';
 
 const MAX_LIMIT = 20;
 const clampLimit = (n, def = 5) => Math.max(1, Math.min(MAX_LIMIT, Number(n) || def));
@@ -205,6 +212,115 @@ export const TOOLS = [
             parameters: { type: 'object', properties: {} },
         },
     },
+    {
+        type: 'function',
+        function: {
+            name: 'get_driver_reviews',
+            description: "Get a driver's rider reviews (rating, comment) — who reviewed them and what they said.",
+            parameters: {
+                type: 'object',
+                properties: { driverQuery: { type: 'string' }, limit: { type: 'integer' } },
+                required: ['driverQuery'],
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_active_emergencies',
+            description: 'List active/unresolved SOS emergency alerts, optionally filtered by status.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    status: { type: 'string', enum: ['active', 'acknowledged', 'resolved'] },
+                    limit: { type: 'integer' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'find_supplier',
+            description: 'Find a vehicle supplier by business name, contact person, phone, or email.',
+            parameters: {
+                type: 'object',
+                properties: { query: { type: 'string' } },
+                required: ['query'],
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_suppliers',
+            description: 'List vehicle suppliers, optionally filtered by verification status or city.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    verified: { type: 'boolean' },
+                    city: { type: 'string' },
+                    limit: { type: 'integer' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_trip_bids',
+            description: 'Get the bids drivers placed on a specific trip (by trip id).',
+            parameters: {
+                type: 'object',
+                properties: { tripId: { type: 'string' } },
+                required: ['tripId'],
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_pricing_config',
+            description: 'Get the current global fare/pricing configuration (electricity cost, VAT, commission, premium multiplier, per-vehicle base fares, time-slot multipliers).',
+            parameters: { type: 'object', properties: {} },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_user_notifications',
+            description: "Get a user's or driver's recent in-app notifications.",
+            parameters: {
+                type: 'object',
+                properties: { userQuery: { type: 'string' }, limit: { type: 'integer' } },
+                required: ['userQuery'],
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_driver_documents',
+            description: "Get a driver's uploaded verification documents and their status (pending/approved/rejected).",
+            parameters: {
+                type: 'object',
+                properties: { driverQuery: { type: 'string' } },
+                required: ['driverQuery'],
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_trip_call_logs',
+            description: 'Get the in-app call history for a specific trip (rider/driver calls, duration, status).',
+            parameters: {
+                type: 'object',
+                properties: { tripId: { type: 'string' } },
+                required: ['tripId'],
+            },
+        },
+    },
 ];
 
 // ── Handlers ─────────────────────────────────────────────────────────────────
@@ -318,6 +434,109 @@ export const HANDLERS = {
             .limit(3)
             .select('plan status createdAt');
         return { found: true, user: shapeUser(user), subscriptions: subs };
+    },
+
+    async get_driver_reviews({ driverQuery, limit = 5 }) {
+        const driver = await findBestDriver(driverQuery);
+        if (!driver) return { found: false };
+        const reviews = await Review.find({ toDriver: driver._id })
+            .sort({ createdAt: -1 })
+            .limit(clampLimit(limit))
+            .populate('fromUser', 'name')
+            .select('rating comment createdAt fromUser');
+        return {
+            found: true,
+            driver: shapeDriver(driver),
+            reviews: reviews.map((r) => ({ rating: r.rating, comment: r.comment, from: r.fromUser?.name, createdAt: r.createdAt })),
+        };
+    },
+
+    async list_active_emergencies({ status = 'active', limit = 10 } = {}) {
+        const emergencies = await Emergency.find({ status })
+            .sort({ createdAt: -1 })
+            .limit(clampLimit(limit, 10))
+            .populate('userId', 'name phone')
+            .select('role status address contactPhone createdAt userId');
+        return {
+            emergencies: emergencies.map((e) => ({
+                id: e._id, role: e.role, status: e.status, address: e.address,
+                contactPhone: e.contactPhone || e.userId?.phone, reportedBy: e.userId?.name, createdAt: e.createdAt,
+            })),
+        };
+    },
+
+    async find_supplier({ query }) {
+        if (!query) return { found: false };
+        const rx = new RegExp(escapeRegex(query), 'i');
+        const s = await Supplier.findOne({ $or: [{ businessName: rx }, { contactPerson: rx }, { phone: rx }, { email: rx }] });
+        if (!s) return { found: false };
+        return {
+            found: true,
+            supplier: {
+                id: s._id, businessName: s.businessName, contactPerson: s.contactPerson,
+                phone: s.phone, email: s.email, city: s.city, isVerified: s.isVerified, plan: s.plan,
+            },
+        };
+    },
+
+    async list_suppliers({ verified, city, limit = 10 } = {}) {
+        const filter = {};
+        if (typeof verified === 'boolean') filter.isVerified = verified;
+        if (city) filter.city = city;
+        const suppliers = await Supplier.find(filter)
+            .sort({ createdAt: -1 })
+            .limit(clampLimit(limit, 10))
+            .select('businessName contactPerson phone city isVerified plan');
+        return { suppliers };
+    },
+
+    async get_trip_bids({ tripId }) {
+        if (!tripId) return { found: false };
+        const bids = await Bid.find({ tripId })
+            .populate({ path: 'driverId', select: 'vehiclePlate rating', populate: { path: 'userId', select: 'name phone' } })
+            .select('amount message status expiresAt driverId');
+        return {
+            bids: bids.map((b) => ({
+                amount: b.amount, message: b.message, status: b.status,
+                driverName: b.driverId?.userId?.name, driverPlate: b.driverId?.vehiclePlate, driverRating: b.driverId?.rating,
+            })),
+        };
+    },
+
+    async get_pricing_config() {
+        const p = await Pricing.findOne({ key: 'global' })
+            .select('electricityCost vatPercent commissionPercent profitMarginPercent premium timeSlots vehicles longDistanceDiscount');
+        if (!p) return { found: false };
+        return {
+            found: true,
+            electricityCost: p.electricityCost, vatPercent: p.vatPercent,
+            commissionPercent: p.commissionPercent, profitMarginPercent: p.profitMarginPercent,
+            premium: p.premium, timeSlots: p.timeSlots, vehicles: p.vehicles,
+            longDistanceDiscount: p.longDistanceDiscount,
+        };
+    },
+
+    async get_user_notifications({ userQuery, limit = 5 }) {
+        const user = await findBestUser(userQuery);
+        if (!user) return { found: false };
+        const notifs = await Notification.find({ userId: user._id })
+            .sort({ createdAt: -1 })
+            .limit(clampLimit(limit))
+            .select('title body type isRead createdAt');
+        return { found: true, user: shapeUser(user), notifications: notifs };
+    },
+
+    async get_driver_documents({ driverQuery }) {
+        const driver = await findBestDriver(driverQuery);
+        if (!driver) return { found: false };
+        const docs = await Document.find({ driverId: driver._id }).select('type status rejectionReason createdAt');
+        return { found: true, driver: shapeDriver(driver), documents: docs };
+    },
+
+    async get_trip_call_logs({ tripId }) {
+        if (!tripId) return { found: false };
+        const logs = await CallLog.find({ tripId }).select('callerType status duration createdAt');
+        return { callLogs: logs };
     },
 
     async platform_stats() {
