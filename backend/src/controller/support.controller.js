@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { Admin } from '../models/admin.model.js';
 import { SupportTicket } from '../models/supportTicket.model.js';
+import { AdminNotification } from '../models/adminNotification.model.js';
 import { sendEmail } from '../config/sendEmail.js';
 import { apiError } from '../utils/apiError.js';
 import { apiResponse } from '../utils/apiResponse.js';
@@ -140,11 +141,25 @@ const addGuestMessage = asyncHandler(async (req, res) => {
     const ticket = await findGuestTicket(req);
     ticket.messages.push({ senderId: null, senderType: 'guest', message });
     // A reply on a resolved/closed thread reopens it, mirroring the in-app flow.
-    if (['resolved', 'closed'].includes(ticket.status)) {
+    const reopened = ['resolved', 'closed'].includes(ticket.status);
+    if (reopened) {
         ticket.status = 'open';
         ticket.resolvedAt = null;
     }
     await ticket.save();
+
+    // Notify the assigned agent that the customer reopened the chat.
+    const reopenAgentId = ticket.assignedTo?._id || ticket.assignedTo;
+    if (reopened && reopenAgentId) {
+        AdminNotification.create({
+            adminId: reopenAgentId,
+            title: 'Chat reopened',
+            body: `A customer reopened chat “${ticket.subject}”.`,
+            type: 'ticket_reopened',
+            link: `/support/${ticket._id}`,
+            refId: ticket._id,
+        }).catch((e) => console.error('[addGuestMessage] reopen notify failed:', e.message));
+    }
 
     // Non-blocking AI reply from the knowledge base (appears on next poll).
     maybeAppendAiReply(ticket, message).catch(() => {});
@@ -171,6 +186,18 @@ const rateGuestTicket = asyncHandler(async (req, res) => {
         : [];
     ticket.rating = { score, comment, tags, ratedAt: new Date(), agentId: ticket.assignedTo?._id || ticket.assignedTo || null };
     await ticket.save();
+
+    // Notify the handling agent about their new rating (best-effort).
+    if (ticket.rating.agentId) {
+        AdminNotification.create({
+            adminId: ticket.rating.agentId,
+            title: 'You received a support rating',
+            body: `A customer rated you ${score}/5${comment ? `: “${comment}”` : ''}.`,
+            type: 'ticket_rated',
+            link: `/support/${ticket._id}`,
+            refId: ticket._id,
+        }).catch((e) => console.error('[rateGuestTicket] notify failed:', e.message));
+    }
 
     return res.status(200).json(new apiResponse(200, publicTicket(ticket), 'Thanks for your feedback'));
 });
