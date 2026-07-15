@@ -1954,6 +1954,42 @@ const getSupportAgents = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, enriched, 'Support agents fetched'));
 });
 
+// One agent's rating summary + individual customer feedback, for their profile.
+// An agent may view their OWN ratings; supervisors (admin/superadmin) any agent's.
+const getSupportAgentRatings = asyncHandler(async (req, res) => {
+    const isSupervisor = ['admin', 'superadmin'].includes(req.admin.role);
+    if (!isSupervisor && !req.admin.permissions?.handleSupport) {
+        throw new apiError(403, 'Insufficient permissions');
+    }
+    const agentId = req.params.id;
+    if (!isSupervisor && String(agentId) !== String(req.admin._id)) {
+        throw new apiError(403, 'You can only view your own ratings');
+    }
+
+    const tickets = await SupportTicket.find({ 'rating.agentId': agentId, 'rating.score': { $gte: 1 } })
+        .select('subject rating userId guest')
+        .populate('userId', 'name')
+        .sort({ 'rating.ratedAt': -1 })
+        .limit(100)
+        .lean();
+
+    const items = tickets.map((t) => ({
+        ticketId: t._id,
+        subject: t.subject,
+        score: t.rating.score,
+        comment: t.rating.comment || '',
+        ratedAt: t.rating.ratedAt,
+        customer: t.userId?.name || t.guest?.name || 'Customer',
+    }));
+    const count = items.length;
+    const avg = count ? Math.round((items.reduce((s, i) => s + i.score, 0) / count) * 10) / 10 : 0;
+    const distribution = [5, 4, 3, 2, 1].reduce((m, n) => { m[n] = items.filter((i) => i.score === n).length; return m; }, {});
+
+    return res.status(200).json(
+        new apiResponse(200, { summary: { avg, count, distribution }, items }, 'Agent ratings')
+    );
+});
+
 // Internal note on a ticket (admin-only), with optional @mentions of other admins.
 const addTicketComment = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
@@ -2252,7 +2288,7 @@ export {
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
     getTransactions, getTransactionById, getTransactionSummary, exportTransactions,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
-    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, deleteTicket, getSupportAgents, getSupportSettingsAdmin, updateSupportSettings,
+    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, deleteTicket, getSupportAgents, getSupportAgentRatings, getSupportSettingsAdmin, updateSupportSettings,
     broadcastNotification, getNotificationHistory, getNotificationRecipients,
     getMyAdminNotifications, markMyNotificationRead, markAllMyNotificationsRead,
 };

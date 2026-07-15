@@ -20,7 +20,7 @@ import {
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
     getTransactions, getTransactionById, getTransactionSummary, exportTransactions,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
-    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, deleteTicket, getSupportAgents, getSupportSettingsAdmin, updateSupportSettings,
+    getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, deleteTicket, getSupportAgents, getSupportAgentRatings, getSupportSettingsAdmin, updateSupportSettings,
     broadcastNotification, getNotificationHistory, getNotificationRecipients,
     getMyAdminNotifications, markMyNotificationRead, markAllMyNotificationsRead,
 } from '../controller/admin.controller.js';
@@ -130,6 +130,7 @@ adminRouter.patch('/subscriptions/:id/assign-driver', assignDriverToSubscription
 
 // Support
 adminRouter.get('/support-agents', getSupportAgents);
+adminRouter.get('/support-agents/:id/ratings', getSupportAgentRatings);
 adminRouter.get('/support-settings', getSupportSettingsAdmin);
 adminRouter.patch('/support-settings', updateSupportSettings);
 adminRouter.get('/support', getSupportTickets);
