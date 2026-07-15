@@ -12,6 +12,7 @@ import {
     deleteSource,
     EMBED_MODEL,
 } from '../utils/rag.js';
+import { runAgenticChat } from '../utils/agenticAgent.js';
 
 // Knowledge Base (RAG) admin endpoints. Ported from the BOT project's rag/.
 // All routes are mounted under /api/v1/admin/knowledge and gated by
@@ -86,6 +87,16 @@ const chatKnowledge = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, result, 'Chat reply'));
 });
 
+// POST /agentic/chat  { message, history }  → tool-calling agent over live app data
+// Gated by requireAgenticAI (see admin.route.js) - separate from the RAG knowledge
+// permission, since this reaches live user/driver/trip/payment data.
+const agenticChat = asyncHandler(async (req, res) => {
+    const { message, history = [] } = req.body;
+    if (!message || !message.trim()) throw new apiError(400, 'Message is required');
+    const result = await runAgenticChat(message.trim(), Array.isArray(history) ? history : []);
+    return res.status(200).json(new apiResponse(200, result, 'Agentic reply'));
+});
+
 export {
     ingestDocuments,
     ingestRawText,
@@ -94,4 +105,5 @@ export {
     searchKnowledge,
     askKnowledge,
     chatKnowledge,
+    agenticChat,
 };

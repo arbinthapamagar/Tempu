@@ -16,4 +16,7 @@ export const knowledgeApi = {
   ask: (question, k) => api.post('/admin/knowledge/ask', { question, k }),
   chat: (message, history) => api.post('/admin/knowledge/chat', { message, history }),
   removeSource: (source) => api.delete(`/admin/knowledge/sources/${encodeURIComponent(source)}`),
+  // Agentic AI — tool-calling agent over LIVE app data (users, drivers, trips,
+  // payments, etc.), gated by the separate useAgenticAI permission.
+  agenticChat: (message, history) => api.post('/admin/agentic/chat', { message, history }),
 }
