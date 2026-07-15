@@ -19,15 +19,15 @@ export default function Ai() {
   return (
     <div className="max-w-5xl mx-auto">
       <PageHeader
-        title="AI"
-        description="Ask the knowledge base or chat with the assistant. Powered by your Tempu knowledge base."
+        title="Ultron"
+        description="Ask the knowledge base or chat with the agent. Powered by your Tempu knowledge base."
       />
 
       {/* Section switcher */}
       <div className="flex gap-1.5 mb-5">
         {[
-          { key: 'rag', label: 'RAG', icon: Sparkles },
-          { key: 'agentic', label: 'Agentic', icon: MessageSquare },
+          { key: 'rag', label: 'Ultron RAG', icon: Sparkles },
+          { key: 'agentic', label: 'Ultron Agent', icon: MessageSquare },
         ].map((t) => (
           <button
             key={t.key}
@@ -74,7 +74,7 @@ function RagSection() {
       {/* Ask — available to every admin */}
       <section className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-3">
-          <Sparkles className="h-4 w-4 text-orange-500" /> Ask the knowledge base
+          <Sparkles className="h-4 w-4 text-orange-500" /> Ultron RAG — ask the knowledge base
         </h2>
         <form onSubmit={submitAsk} className="flex gap-2 items-start">
           <div className="flex-1">
@@ -320,7 +320,7 @@ function AgenticSection() {
       <section className="bg-white rounded-xl border border-gray-200 p-10">
         <EmptyState
           icon={MessageSquare}
-          title="No access to the Agentic assistant"
+          title="No access to Ultron Agent"
           description="Ask a superadmin to grant you the “Use Agentic AI” permission to query live app data through chat."
         />
       </section>
@@ -341,7 +341,7 @@ function AgenticSection() {
     <section className="bg-white rounded-xl border border-gray-200 flex flex-col" style={{ height: '65vh' }}>
       <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100">
         <MessageSquare className="h-4 w-4 text-orange-500" />
-        <h2 className="text-sm font-semibold text-gray-900">Agentic chat</h2>
+        <h2 className="text-sm font-semibold text-gray-900">Ultron Agent</h2>
         <span className="ml-auto text-[11px] text-gray-400">Queries live app data — users, drivers, trips, payments</span>
       </div>
 
