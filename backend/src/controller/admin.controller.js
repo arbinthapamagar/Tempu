@@ -1674,9 +1674,23 @@ const getSupportTickets = asyncHandler(async (req, res) => {
     const filter = {};
     if (status) filter.status = status;
     if (category) filter.category = category;
+
+    // Role-based visibility. Supervisors (admin/superadmin) see every ticket;
+    // front-line moderators only ever see their OWN tickets plus the unassigned
+    // queue, so one agent can never read another agent's conversations. This is
+    // enforced here on the server — never trusted to the client.
+    const isSupervisor = ['admin', 'superadmin'].includes(req.admin.role);
+    const visibility = isSupervisor
+        ? null
+        : { $or: [{ assignedTo: req.admin._id }, { assignedTo: null }] };
+
     // Queue view = unassigned tickets; 'me' = assigned to the current agent.
     if (assigned === 'unassigned') filter.assignedTo = null;
     else if (assigned === 'me') filter.assignedTo = req.admin._id;
+    else if (visibility) Object.assign(filter, visibility);
+
+    // Status-tab counts are scoped to what this admin is allowed to see.
+    const countMatch = visibility || {};
 
     const [tickets, total, byStatus] = await Promise.all([
         SupportTicket.find(filter)
@@ -1687,7 +1701,7 @@ const getSupportTickets = asyncHandler(async (req, res) => {
             .populate('driverId', 'vehicleType vehiclePlate')
             .populate('assignedTo', 'name'),
         SupportTicket.countDocuments(filter),
-        SupportTicket.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+        SupportTicket.aggregate([{ $match: countMatch }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
     ]);
 
     const counts = { all: 0, open: 0, in_progress: 0, resolved: 0, closed: 0 };
@@ -1893,6 +1907,8 @@ const updateSupportSettings = asyncHandler(async (req, res) => {
         const cap = Number(req.body.agentCapacity);
         if (Number.isFinite(cap) && cap >= 1) s.agentCapacity = Math.floor(cap);
     }
+    // Working hours shown to customers in the AI's opening greeting.
+    if (typeof req.body.workingHours === 'string') s.workingHours = req.body.workingHours.trim();
     s.updatedBy = req.admin._id;
     await s.save();
 

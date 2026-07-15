@@ -5,7 +5,7 @@ import { uploadOnCloudinary } from '../../utils/cloudinary.js';
 import { apiError } from '../../utils/apiError.js';
 import { apiResponse } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
-import { maybeAppendAiReply } from '../../utils/supportAi.js';
+import { maybeAppendAiReply, greetAndMaybeAnswer } from '../../utils/supportAi.js';
 import { autoAssignTicket } from '../../utils/supportAssign.js';
 
 // Global support capabilities, for the mobile app to show/hide controls.
@@ -37,8 +37,9 @@ const createTicket = asyncHandler(async (req, res) => {
         messages: [{ senderId: req.user._id, senderType: 'user', message }],
     });
 
-    // Non-blocking AI first response from the knowledge base (shows on refetch).
-    maybeAppendAiReply(ticket, message).catch(() => {});
+    // AI greets first (welcome + working hours) and tries a KB answer; it goes
+    // silent later once a human agent replies. Non-blocking (shows on refetch).
+    greetAndMaybeAnswer(ticket, message).catch(() => {});
     // Round-robin auto-assign to a support agent (non-blocking).
     autoAssignTicket(ticket._id).catch(() => {});
 
