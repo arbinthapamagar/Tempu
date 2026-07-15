@@ -3,7 +3,6 @@ import { Outlet } from 'react-router-dom'
 import { Menu } from '@/components/ui/icons'
 import { cn } from '../../utils/cn'
 import { Sidebar } from './Sidebar'
-import AssistantWidget from '../AssistantWidget'
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)   // mobile drawer
@@ -43,9 +42,6 @@ export default function Layout() {
           </div>
         </main>
       </div>
-
-      {/* Floating RAG-powered AI assistant (knowledge-base access only) */}
-      <AssistantWidget />
     </div>
   )
 }
