@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable,
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { supportPublicApi } from '../api/support.api';
@@ -103,17 +103,42 @@ export default function ContactSupportScreen({ onBack }) {
     }
   };
 
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewDismissed, setReviewDismissed] = useState(false);
+  const [reopening, setReopening] = useState(false);
+
+  // A closed, unrated chat prompts for a review (once, unless dismissed).
+  useEffect(() => {
+    if (ticket?.status === 'closed' && !ticket?.rating?.score && !reviewDismissed) {
+      setReviewOpen(true);
+    }
+  }, [ticket?.status, ticket?.rating?.score, reviewDismissed]);
+
   const submitRating = async ({ score, note, tags }) => {
     if (!chat || busy) return;
     setBusy(true);
     try {
       const res = await supportPublicApi.rateChat(chat.id, chat.token, score, note, tags);
       setTicket(res.data);
+      setReviewOpen(false);
     } catch (e) {
       Alert.alert('Could not submit rating', e?.message || 'Please try again.');
     } finally {
       setBusy(false);
     }
+  };
+
+  const dismissReview = () => { setReviewOpen(false); setReviewDismissed(true); };
+
+  const confirmReopen = () => {
+    const agentName = ticket?.assignedTo?.name || 'support';
+    const msg = ticket?.rating?.score
+      ? `You rated ${agentName} ${ticket.rating.score}/5${ticket.rating.comment ? ` — “${ticket.rating.comment}”` : ''}.\n\nDo you want to reopen this chat?`
+      : 'Do you want to reopen this chat?';
+    Alert.alert('Reopen chat', msg, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Reopen', onPress: () => setReopening(true) },
+    ]);
   };
 
   const endChat = () => {
@@ -150,8 +175,6 @@ export default function ContactSupportScreen({ onBack }) {
     const messages = ticket?.messages || [];
     const closed = ticket?.status === 'closed';
     const agentName = ticket?.assignedTo?.name || null;
-    const resolvedOrClosed = ticket?.status === 'resolved' || ticket?.status === 'closed';
-    const canRate = resolvedOrClosed && !ticket?.rating?.score;
     return (
       <View style={styles.root}>
         <ScreenHeader
@@ -186,40 +209,55 @@ export default function ContactSupportScreen({ onBack }) {
               );
             })}
 
-            {ticket?.rating?.score ? (
-              <View style={styles.ratedNote}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-                <Text style={styles.ratedText}>
-                  You rated this support {ticket.rating.score}/5. Thank you!
-                </Text>
-              </View>
-            ) : null}
-
-            {canRate && (
-              <RatingCard agent={ticket?.assignedTo} busy={busy} onSubmit={submitRating} />
-            )}
           </ScrollView>
 
-          {closed && (
-            <View style={styles.reopenBar}>
-              <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
-              <Text style={styles.reopenText}>This chat is closed - send a message to reopen it.</Text>
+          {closed && !reopening ? (
+            <View style={styles.closedBar}>
+              <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.closedTitle}>This conversation is closed</Text>
+                {ticket?.rating?.score ? (
+                  <Text style={styles.closedSub}>You rated {ticket.assignedTo?.name || 'support'} {ticket.rating.score}/5</Text>
+                ) : null}
+              </View>
+              {!ticket?.rating?.score && (
+                <Pressable onPress={() => setReviewOpen(true)} style={styles.closedGhostBtn} hitSlop={6}>
+                  <Text style={styles.closedGhostText}>Review</Text>
+                </Pressable>
+              )}
+              <Pressable onPress={confirmReopen} style={styles.closedBtn} hitSlop={6}>
+                <Text style={styles.closedBtnText}>Reopen</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.replyBar}>
+              <TextInput
+                value={reply}
+                onChangeText={setReply}
+                placeholder="Type a message…"
+                placeholderTextColor={colors.textFaint}
+                style={styles.replyInput}
+                multiline
+              />
+              <Pressable onPress={sendReply} disabled={busy || !reply.trim()} style={[styles.sendBtn, (busy || !reply.trim()) && { opacity: 0.5 }]}>
+                <Ionicons name="send" size={18} color="#fff" />
+              </Pressable>
             </View>
           )}
 
-          <View style={styles.replyBar}>
-            <TextInput
-              value={reply}
-              onChangeText={setReply}
-              placeholder="Type a message…"
-              placeholderTextColor={colors.textFaint}
-              style={styles.replyInput}
-              multiline
-            />
-            <Pressable onPress={sendReply} disabled={busy || !reply.trim()} style={[styles.sendBtn, (busy || !reply.trim()) && { opacity: 0.5 }]}>
-              <Ionicons name="send" size={18} color="#fff" />
-            </Pressable>
-          </View>
+          <Modal visible={reviewOpen} transparent animationType="slide" onRequestClose={dismissReview}>
+            <View style={styles.modalBackdrop}>
+              <View style={styles.modalSheet}>
+                <View style={styles.modalHandle} />
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <RatingCard agent={ticket?.assignedTo} busy={busy} onSubmit={submitRating} />
+                  <Pressable onPress={dismissReview} style={styles.modalCancel} hitSlop={6}>
+                    <Text style={styles.modalCancelText}>Not now</Text>
+                  </Pressable>
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
         </KeyboardAvoidingView>
       </View>
     );
@@ -328,4 +366,23 @@ const styles = StyleSheet.create({
     maxHeight: 120,
   },
   sendBtn: { backgroundColor: colors.primary, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+
+  closedBar: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md,
+    backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  closedTitle: { ...type.caption, color: colors.text, fontWeight: '700' },
+  closedSub: { ...type.micro, color: colors.textMuted, marginTop: 2 },
+  closedBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  closedBtnText: { ...type.caption, color: '#fff', fontWeight: '700' },
+  closedGhostBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  closedGhostText: { ...type.caption, color: colors.textMuted, fontWeight: '700' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: colors.surfaceMuted, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
+    paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl, maxHeight: '90%',
+  },
+  modalHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: spacing.sm },
+  modalCancel: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },
+  modalCancelText: { ...type.caption, color: colors.textMuted, fontWeight: '700' },
 });

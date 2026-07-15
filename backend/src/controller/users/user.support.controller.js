@@ -1,5 +1,6 @@
 import { SupportTicket } from '../../models/supportTicket.model.js';
 import { Driver } from '../../models/driver.model.js';
+import { AdminNotification } from '../../models/adminNotification.model.js';
 import { getSupportSettings } from '../../models/supportSettings.model.js';
 import { uploadOnCloudinary } from '../../utils/cloudinary.js';
 import { apiError } from '../../utils/apiError.js';
@@ -105,6 +106,18 @@ const addMessage = asyncHandler(async (req, res) => {
     }
     await ticket.save();
 
+    // Notify the assigned agent that the customer reopened the ticket.
+    if (reopened && ticket.assignedTo) {
+        AdminNotification.create({
+            adminId: ticket.assignedTo,
+            title: 'Ticket reopened',
+            body: `A customer reopened ticket “${ticket.subject}”.`,
+            type: 'ticket_reopened',
+            link: `/support/${ticket._id}`,
+            refId: ticket._id,
+        }).catch((e) => console.error('[addMessage] reopen notify failed:', e.message));
+    }
+
     // Non-blocking AI reply for text messages (not attachment-only), from the KB.
     if (message) maybeAppendAiReply(ticket, message).catch(() => {});
     // A reopened thread with no agent re-enters the assignment rotation.
@@ -131,6 +144,18 @@ const rateTicket = asyncHandler(async (req, res) => {
         : [];
     ticket.rating = { score, comment, tags, ratedAt: new Date(), agentId: ticket.assignedTo || null };
     await ticket.save();
+
+    // Notify the handling agent about their new rating (best-effort).
+    if (ticket.rating.agentId) {
+        AdminNotification.create({
+            adminId: ticket.rating.agentId,
+            title: 'You received a support rating',
+            body: `A customer rated you ${score}/5${comment ? `: “${comment}”` : ''}.`,
+            type: 'ticket_rated',
+            link: `/support/${ticket._id}`,
+            refId: ticket._id,
+        }).catch((e) => console.error('[rateTicket] notify failed:', e.message));
+    }
 
     return res.status(200).json(new apiResponse(200, ticket, 'Thanks for your feedback'));
 });
