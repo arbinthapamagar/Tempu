@@ -4,7 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, Image, KeyboardAvoidingView, Linking, Platform, Pressable,
+  ActivityIndicator, Alert, Image, KeyboardAvoidingView, Linking, Modal, Platform, Pressable,
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { userApi } from '../api/user.api';
@@ -43,6 +43,11 @@ export default function SupportScreen({ onBack, role }) {
   const [category, setCategory] = useState('trip_issue');
   const [message, setMessage] = useState('');
   const [reply, setReply] = useState('');
+
+  // Close → review → reopen flow (per closed ticket).
+  const [reviewOpenFor, setReviewOpenFor] = useState(null);       // ticket id whose review modal is open
+  const [reviewDismissedFor, setReviewDismissedFor] = useState(null);
+  const [reopeningId, setReopeningId] = useState(null);           // ticket the customer chose to reopen
 
   // Support capabilities - global, admin-controlled. Default: calls off.
   const [settings, setSettings] = useState({ voiceMessages: true, documents: true, audioCall: false, videoCall: false });
@@ -87,6 +92,13 @@ export default function SupportScreen({ onBack, role }) {
     return () => clearInterval(timer);
   }, [view, active?._id]);
 
+  // A closed, unrated ticket prompts for a review (once, unless dismissed).
+  useEffect(() => {
+    if (active?.status === 'closed' && !active?.rating?.score && reviewDismissedFor !== active?._id) {
+      setReviewOpenFor(active._id);
+    }
+  }, [active?._id, active?.status, active?.rating?.score, reviewDismissedFor]);
+
   const openTicket = async (id) => {
     setView('thread');
     setActive(null);
@@ -130,9 +142,25 @@ export default function SupportScreen({ onBack, role }) {
     try {
       const res = await userApi.rateTicket(active._id, score, note, tags);
       setActive(res.data || active);
+      setReviewOpenFor(null);
     } catch (e) {
       Alert.alert('Could not submit rating', e?.message || 'Please try again.');
     } finally { setBusy(false); }
+  };
+
+  const dismissReview = () => { setReviewOpenFor(null); setReviewDismissedFor(active?._id); };
+
+  // Reopen a closed chat after a confirm that reminds them what they rated.
+  const confirmReopen = () => {
+    if (!active?._id) return;
+    const name = active?.assignedTo?.name || 'support';
+    const msg = active?.rating?.score
+      ? `You rated ${name} ${active.rating.score}/5${active.rating.comment ? ` — “${active.rating.comment}”` : ''}.\n\nDo you want to reopen this chat?`
+      : 'Do you want to reopen this chat?';
+    Alert.alert('Reopen chat', msg, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Reopen', onPress: () => setReopeningId(active._id) },
+    ]);
   };
 
   // Send everything staged in the preview, one attachment per message.
@@ -334,23 +362,26 @@ export default function SupportScreen({ onBack, role }) {
                   </View>
                 );
               })}
-
-              {active.rating?.score ? (
-                <View style={styles.ratedNote}>
-                  <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-                  <Text style={styles.ratedText}>You rated this support {active.rating.score}/5. Thank you!</Text>
-                </View>
-              ) : ['resolved', 'closed'].includes(active.status) ? (
-                <RatingCard agent={active.assignedTo} busy={busy} onSubmit={submitRating} />
-              ) : null}
             </ScrollView>
-            {active.status === 'closed' && (
-              <View style={styles.reopenBar}>
-                <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
-                <Text style={styles.reopenText}>This ticket is closed - send a message below to reopen it.</Text>
+            {active.status === 'closed' && reopeningId !== active._id ? (
+              <View style={styles.closedBar}>
+                <Ionicons name="lock-closed" size={18} color={colors.textMuted} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.closedTitle}>This conversation is closed</Text>
+                  {active.rating?.score ? (
+                    <Text style={styles.closedSub}>You rated {active.assignedTo?.name || 'support'} {active.rating.score}/5</Text>
+                  ) : null}
+                </View>
+                {!active.rating?.score && (
+                  <Pressable onPress={() => setReviewOpenFor(active._id)} style={styles.closedGhostBtn} hitSlop={6}>
+                    <Text style={styles.closedGhostText}>Review</Text>
+                  </Pressable>
+                )}
+                <Pressable onPress={confirmReopen} style={styles.closedBtn} hitSlop={6}>
+                  <Text style={styles.closedBtnText}>Reopen</Text>
+                </Pressable>
               </View>
-            )}
-            {(
+            ) : (
               <View>
                 {recording && (
                   <View style={styles.recordingBar}>
@@ -421,6 +452,26 @@ export default function SupportScreen({ onBack, role }) {
           </KeyboardAvoidingView>
         )
       )}
+
+      {/* Review prompt — pops when a closed ticket hasn't been rated (skippable) */}
+      <Modal
+        visible={!!reviewOpenFor && reviewOpenFor === active?._id}
+        transparent
+        animationType="slide"
+        onRequestClose={dismissReview}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <RatingCard agent={active?.assignedTo} busy={busy} onSubmit={submitRating} />
+              <Pressable onPress={dismissReview} style={styles.modalCancel} hitSlop={6}>
+                <Text style={styles.modalCancelText}>Not now</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {view === 'thread' && active?._id && <CallScreen ref={callRef} ticketId={active._id} />}
     </View>
@@ -513,6 +564,24 @@ const styles = StyleSheet.create({
 
   ratedNote: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
   ratedText: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
+  closedBar: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md,
+    backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  closedTitle: { ...type.caption, color: colors.text, fontWeight: '700' },
+  closedSub: { ...type.micro, color: colors.textMuted, marginTop: 2 },
+  closedBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  closedBtnText: { ...type.caption, color: '#fff', fontWeight: '700' },
+  closedGhostBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  closedGhostText: { ...type.caption, color: colors.textMuted, fontWeight: '700' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: colors.surfaceMuted, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
+    paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl, maxHeight: '90%',
+  },
+  modalHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: spacing.sm },
+  modalCancel: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },
+  modalCancelText: { ...type.caption, color: colors.textMuted, fontWeight: '700' },
   rateCard: {
     marginTop: spacing.lg, padding: spacing.lg, alignItems: 'center',
     backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
