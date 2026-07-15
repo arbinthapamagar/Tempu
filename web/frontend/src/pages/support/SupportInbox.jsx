@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { NavLink, Outlet, useParams, useSearchParams } from 'react-router-dom'
 import {
   Inbox, Mail, Clock, CheckCircle2, Archive, UserCheck, UserX,
-  Search, Mic, Paperclip, Phone, Video, MessageSquare,
+  Search, Mic, Paperclip, Phone, Video, MessageSquare, ChevronDown,
 } from '@/components/ui/icons'
 import { cn } from '../../utils/cn'
 import { PageHeader } from '../../components/shared/PageHeader'
@@ -60,6 +60,9 @@ function FolderRail() {
   // Moderators are scoped to their own tickets, so the "All" folder already
   // shows exactly their tickets and a queue view would be meaningless.
   const isSupervisor = ['admin', 'superadmin'].includes(admin?.role)
+  // Collapsible settings sections (collapsed by default to keep the rail tidy).
+  const [openPerms, setOpenPerms] = useState(false)
+  const [openAuto, setOpenAuto] = useState(false)
 
   const { data: countsRes } = useQuery({
     queryKey: ['support-counts'],
@@ -132,8 +135,12 @@ function FolderRail() {
 
       {/* Global permissions (apply to every ticket) */}
       <div className="border-t border-gray-200 p-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Permissions</p>
-        <p className="text-[11px] text-gray-400 mb-2">Applies to all tickets. Text chat is always on.</p>
+        <button type="button" onClick={() => setOpenPerms((o) => !o)} className="flex w-full items-center">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Permissions</span>
+          <ChevronDown className={cn('h-3.5 w-3.5 text-gray-400 ml-auto transition-transform', openPerms ? '' : '-rotate-90')} />
+        </button>
+        {openPerms && <>
+        <p className="text-[11px] text-gray-400 mb-2 mt-1">Applies to all tickets. Text chat is always on.</p>
         {PERMISSION_ROWS.map(({ key, label, icon: Icon }) => {
           const on = !!settings[key]
           return (
@@ -154,12 +161,17 @@ function FolderRail() {
             </div>
           )
         })}
+        </>}
       </div>
 
       {/* Auto-assignment (round-robin) */}
       <div className="border-t border-gray-200 p-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Auto-assign</p>
-        <p className="text-[11px] text-gray-400 mb-2">Round-robin new tickets across agents.</p>
+        <button type="button" onClick={() => setOpenAuto((o) => !o)} className="flex w-full items-center">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Auto-assign</span>
+          <ChevronDown className={cn('h-3.5 w-3.5 text-gray-400 ml-auto transition-transform', openAuto ? '' : '-rotate-90')} />
+        </button>
+        {openAuto && <>
+        <p className="text-[11px] text-gray-400 mb-2 mt-1">Round-robin new tickets across agents.</p>
         <div className="flex items-center gap-2 py-1">
           <span className="flex-1 text-xs text-gray-600">Enabled</span>
           <button
@@ -188,6 +200,7 @@ function FolderRail() {
             className="w-14 rounded border border-gray-300 px-2 py-1 text-xs text-gray-800 focus:border-orange-500 focus:outline-none"
           />
         </div>
+        </>}
       </div>
 
       {/* Working hours — shown to customers in the AI's opening greeting. */}
