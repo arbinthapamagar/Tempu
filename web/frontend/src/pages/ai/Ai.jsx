@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
 import { Spinner } from '../../components/ui/Spinner'
 import { knowledgeApi } from '../../api/knowledge.api'
 import { useAuthStore, hasPermission } from '../../store/authStore'
+import { Markdown } from '../../components/ai/Markdown'
 import toast from 'react-hot-toast'
 
 const ACCEPT = '.pdf,.docx,.txt,.md,.csv,.json'
@@ -91,7 +92,9 @@ function RagSection() {
 
         {answer && (
           <div className="mt-4 rounded-lg bg-gray-50 border border-gray-200 p-4">
-            <p className="text-sm text-gray-800 whitespace-pre-wrap">{answer.answer}</p>
+            <div className="text-sm text-gray-800">
+              <Markdown>{answer.answer}</Markdown>
+            </div>
             {answer.sources?.length > 0 && (
               <p className="mt-2 text-xs text-gray-400">Sources: {answer.sources.join(', ')}</p>
             )}
@@ -287,9 +290,18 @@ function RagDocuments({ qc }) {
   )
 }
 
+const AGENTIC_SUGGESTIONS = [
+  'Who is our least-rated driver?',
+  'How many open support tickets do we have?',
+  'List all admin users',
+]
+
 // ── Agentic: a tool-calling chat over LIVE app data (users, drivers, trips,
 // payments, etc.) — separate from the RAG knowledge base. Gated by the
-// useAgenticAI permission since it can surface personal data. ───────────────
+// useAgenticAI permission since it can surface personal data. Styled as a
+// plain, document-like conversation (Claude-style) rather than chat bubbles:
+// assistant turns are markdown prose with no box; user turns are a subtle
+// right-aligned pill. ────────────────────────────────────────────────────────
 function AgenticSection() {
   const admin = useAuthStore((s) => s.admin)
   const canUse = hasPermission(admin, 'useAgenticAI')
@@ -297,6 +309,7 @@ function AgenticSection() {
   const [messages, setMessages] = useState([]) // { role: 'user' | 'model', text }
   const [input, setInput] = useState('')
   const scrollRef = useRef(null)
+  const textareaRef = useRef(null)
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
@@ -327,65 +340,115 @@ function AgenticSection() {
     )
   }
 
+  const sendMessage = (text) => {
+    const trimmed = text.trim()
+    if (!trimmed || send.isPending) return
+    const history = messages.map((m) => ({ role: m.role, text: m.text }))
+    setMessages((prev) => [...prev, { role: 'user', text: trimmed }])
+    setInput('')
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+    send.mutate({ text: trimmed, history })
+  }
+
   const submit = (e) => {
     e.preventDefault()
-    const text = input.trim()
-    if (!text || send.isPending) return
-    const history = messages.map((m) => ({ role: m.role, text: m.text }))
-    setMessages((prev) => [...prev, { role: 'user', text }])
-    setInput('')
-    send.mutate({ text, history })
+    sendMessage(input)
+  }
+
+  const onInputKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage(input)
+    }
+  }
+
+  const autoGrow = (e) => {
+    setInput(e.target.value)
+    e.target.style.height = 'auto'
+    e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px'
   }
 
   return (
-    <section className="bg-white rounded-xl border border-gray-200 flex flex-col" style={{ height: '65vh' }}>
-      <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100">
+    <section className="bg-white rounded-xl border border-gray-200 flex flex-col" style={{ height: '75vh' }}>
+      <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 shrink-0">
         <MessageSquare className="h-4 w-4 text-orange-500" />
         <h2 className="text-sm font-semibold text-gray-900">Ultron Agent</h2>
         <span className="ml-auto text-[11px] text-gray-400">Queries live app data — users, drivers, trips, payments</span>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin p-5 space-y-3">
-        {messages.length === 0 ? (
-          <EmptyState
-            icon={Sparkles}
-            title="Start a conversation"
-            description="Ask the assistant anything. It answers from your knowledge base."
-          />
-        ) : (
-          messages.map((m, i) => (
-            <div key={i} className={'flex ' + (m.role === 'user' ? 'justify-end' : 'justify-start')}>
-              <div
-                className={
-                  'max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ' +
-                  (m.role === 'user'
-                    ? 'bg-orange-500 text-white rounded-br-sm'
-                    : 'bg-gray-100 text-gray-800 rounded-bl-sm')
-                }
-              >
-                {m.text}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
+        <div className="max-w-3xl mx-auto px-6 py-6">
+          {messages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center py-16">
+              <Sparkles className="h-7 w-7 text-orange-300 mb-3" />
+              <p className="text-base font-semibold text-gray-900">How can Ultron help?</p>
+              <p className="text-sm text-gray-400 mt-1 mb-5">Ask about any user, driver, trip, or platform stat.</p>
+              <div className="flex flex-wrap gap-2 justify-center max-w-md">
+                {AGENTIC_SUGGESTIONS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => sendMessage(s)}
+                    className="text-xs px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 hover:border-orange-300 hover:text-orange-600 transition-colors"
+                  >
+                    {s}
+                  </button>
+                ))}
               </div>
             </div>
-          ))
-        )}
-        {send.isPending && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 text-gray-400 rounded-2xl rounded-bl-sm px-4 py-2 text-sm">Thinking…</div>
-          </div>
-        )}
+          ) : (
+            <div className="space-y-6">
+              {messages.map((m, i) =>
+                m.role === 'user' ? (
+                  <div key={i} className="flex justify-end">
+                    <div className="max-w-[80%] rounded-2xl bg-gray-100 px-4 py-2.5 text-sm text-gray-900 whitespace-pre-wrap">
+                      {m.text}
+                    </div>
+                  </div>
+                ) : (
+                  <div key={i} className="text-sm text-gray-800">
+                    <Markdown>{m.text}</Markdown>
+                  </div>
+                )
+              )}
+              {send.isPending && (
+                <div className="flex items-center gap-1.5 py-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      <form onSubmit={submit} className="flex gap-2 items-center border-t border-gray-100 p-3">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a message…"
-          className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
-        />
-        <Button type="submit" icon={Send} loading={send.isPending} disabled={!input.trim()}>
-          Send
-        </Button>
-      </form>
+      <div className="border-t border-gray-100 p-4 shrink-0">
+        <form onSubmit={submit} className="max-w-3xl mx-auto">
+          <div className="relative rounded-2xl border border-gray-300 focus-within:border-orange-400 focus-within:ring-1 focus-within:ring-orange-400 bg-white shadow-sm transition-colors">
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              value={input}
+              onChange={autoGrow}
+              onKeyDown={onInputKeyDown}
+              placeholder="Message Ultron…"
+              className="w-full resize-none bg-transparent rounded-2xl pl-4 pr-12 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
+              style={{ maxHeight: 200 }}
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || send.isPending}
+              className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white grid place-items-center transition-colors"
+              aria-label="Send"
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
+          <p className="text-center text-[11px] text-gray-400 mt-2">
+            Ultron can make mistakes. Verify important details before acting on them.
+          </p>
+        </form>
+      </div>
     </section>
   )
 }
