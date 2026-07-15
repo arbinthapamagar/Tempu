@@ -19,6 +19,13 @@ const supportSettingsSchema = new mongoose.Schema(
     agentCapacity: { type: Number, default: 5, min: 1 },
     lastAssignedAgent: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
 
+    // Human-readable support hours, shown to the customer in the AI's opening
+    // greeting. Editable by admins in the support settings screen.
+    workingHours: {
+      type: String,
+      default: 'Our support team is available Sun–Fri, 9 AM–6 PM. We usually reply within a few hours during these times.',
+    },
+
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
   },
   { timestamps: true }

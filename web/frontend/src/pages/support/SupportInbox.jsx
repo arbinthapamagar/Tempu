@@ -180,6 +180,23 @@ function FolderRail() {
           />
         </div>
       </div>
+
+      {/* Working hours — shown to customers in the AI's opening greeting. */}
+      <div className="border-t border-gray-200 p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1">Working hours</p>
+        <p className="text-[11px] text-gray-400 mb-2">The AI shares this when a customer opens a chat.</p>
+        <textarea
+          rows={3}
+          defaultValue={settings.workingHours ?? ''}
+          key={settings.workingHours}
+          onBlur={(e) => {
+            const v = e.target.value.trim()
+            if (v !== (settings.workingHours || '').trim()) updateMutation.mutate({ workingHours: v })
+          }}
+          placeholder="e.g. Our team is available Sun–Fri, 9 AM–6 PM."
+          className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs text-gray-800 focus:border-orange-500 focus:outline-none resize-none"
+        />
+      </div>
     </aside>
   )
 }
@@ -194,9 +211,13 @@ function ConversationList() {
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState('unanswered') // 'unanswered' | 'all'
 
+  // Ask the server to scope the list: 'me' = my tickets, 'unassigned' = the
+  // queue. The backend also enforces role-based visibility (moderators only ever
+  // get their own + the queue), so this can't be bypassed from the client.
+  const assigned = view === 'mine' ? 'me' : view === 'unassigned' ? 'unassigned' : undefined
   const { data, isLoading } = useQuery({
-    queryKey: ['support-list', status],
-    queryFn: () => supportApi.list({ limit: 50, status: status || undefined }),
+    queryKey: ['support-list', status, assigned],
+    queryFn: () => supportApi.list({ limit: 50, status: status || undefined, assigned }),
     keepPreviousData: true,
     refetchInterval: 10000,
   })
@@ -291,6 +312,11 @@ function ConversationList() {
                   <div className="flex items-center gap-1.5 mt-1">
                     <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[t.status] || 'bg-gray-300')} />
                     <span className="text-[10px] text-gray-400">{CATEGORY_LABELS[t.category] || t.category}</span>
+                    {/* Who's handling it — or flag the unassigned queue. */}
+                    <span className="text-[10px] text-gray-400">·</span>
+                    <span className={cn('text-[10px] truncate', t.assignedTo?.name ? 'text-gray-500' : 'text-amber-600 font-medium')}>
+                      {t.assignedTo?.name || 'Unassigned'}
+                    </span>
                   </div>
                 </div>
               </NavLink>

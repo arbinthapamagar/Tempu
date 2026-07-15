@@ -1,4 +1,5 @@
 import { search, answerFromHits, MIN_SCORE } from './rag.js';
+import { getSupportSettings } from '../models/supportSettings.model.js';
 
 // Bridges the Knowledge Base assistant into the real support-ticket flow.
 //
@@ -32,36 +33,71 @@ function withTimeout(promise, ms) {
     ]);
 }
 
-// Generate + append an AI reply to `ticket` for `customerMessage`, then save.
-// `ticket` is a mongoose document. History is taken from messages BEFORE the
-// latest customer turn so the current question isn't duplicated in context.
+// True once a HUMAN support agent has replied on the ticket (an 'admin' message
+// that isn't AI-flagged). From that point the AI hands the conversation over and
+// stays silent — the customer is now talking to a real person.
+export function humanHasReplied(ticket) {
+    return (ticket.messages || []).some((m) => m.senderType === 'admin' && !m.isAI);
+}
+
+// Retrieve from the KB and append a grounded answer to `ticket` if — and only if
+// — something cleared the relevance bar. Returns true if a reply was appended.
+async function appendKbAnswer(ticket, customerMessage, priorHistory) {
+    // Gate on retrieval FIRST: cosine search always returns the top-k chunks, so
+    // filter by a relevance threshold. If nothing clears the bar, don't spend an
+    // LLM call and don't reply — leave it for a human agent.
+    const hits = await withTimeout(search(customerMessage), AI_TIMEOUT_MS);
+    const relevant = (hits || []).filter((h) => h.score >= MIN_SCORE);
+    if (!relevant.length) return false;
+
+    const result = await withTimeout(
+        answerFromHits(customerMessage, priorHistory, relevant),
+        AI_TIMEOUT_MS,
+    );
+    if (!result || !result.reply) return false;
+
+    ticket.messages.push({
+        senderId: null,
+        senderType: 'admin',
+        isAI: true,
+        message: result.reply,
+    });
+    await ticket.save();
+    return true;
+}
+
+// Follow-up customer messages: reply from the KB, UNLESS a human agent has
+// already stepped in (then the AI is out of the loop). History is taken from
+// messages BEFORE the latest customer turn so the question isn't duplicated.
 export async function maybeAppendAiReply(ticket, customerMessage) {
     try {
-        // Gate on retrieval FIRST: cosine search always returns the top-k chunks,
-        // so filter by a relevance threshold. If nothing clears the bar, don't
-        // spend an LLM call and don't reply — leave it for a human agent.
-        const hits = await withTimeout(search(customerMessage), AI_TIMEOUT_MS);
-        const relevant = (hits || []).filter((h) => h.score >= MIN_SCORE);
-        if (!relevant.length) return false;
-
-        // History excluding the just-added customer message (it's the last one).
+        if (humanHasReplied(ticket)) return false;
         const priorHistory = toHistory(ticket.messages.slice(0, -1));
-        const result = await withTimeout(
-            answerFromHits(customerMessage, priorHistory, relevant),
-            AI_TIMEOUT_MS,
-        );
-        if (!result || !result.reply) return false;
-
-        ticket.messages.push({
-            senderId: null,
-            senderType: 'admin',
-            isAI: true,
-            message: result.reply,
-        });
-        await ticket.save();
-        return true;
+        return await appendKbAnswer(ticket, customerMessage, priorHistory);
     } catch (err) {
         console.error('[supportAi] auto-reply skipped:', err.message);
+        return false;
+    }
+}
+
+// Brand-new ticket: the AI speaks FIRST with a welcome + the configured working
+// hours, then attempts a KB answer to the opening question. Best-effort; never
+// throws. The greeting always posts even when the KB has nothing to add.
+export async function greetAndMaybeAnswer(ticket, customerMessage) {
+    try {
+        const settings = await getSupportSettings();
+        const hours = (settings.workingHours || '').trim();
+        const greeting =
+            "Hi! Thanks for reaching out to Tempu support. I'm the AI assistant and I'll help right away while a support agent joins the chat." +
+            (hours ? `\n\n${hours}` : '');
+        ticket.messages.push({ senderId: null, senderType: 'admin', isAI: true, message: greeting });
+        await ticket.save();
+
+        // Opening question → no prior conversation history to carry.
+        await appendKbAnswer(ticket, customerMessage, []);
+        return true;
+    } catch (err) {
+        console.error('[supportAi] greeting skipped:', err.message);
         return false;
     }
 }

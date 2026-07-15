@@ -5,7 +5,7 @@ import { sendEmail } from '../config/sendEmail.js';
 import { apiError } from '../utils/apiError.js';
 import { apiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { maybeAppendAiReply } from '../utils/supportAi.js';
+import { maybeAppendAiReply, greetAndMaybeAnswer } from '../utils/supportAi.js';
 import { autoAssignTicket } from '../utils/supportAssign.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -101,9 +101,9 @@ const createGuestTicket = asyncHandler(async (req, res) => {
         messages: [{ senderId: null, senderType: 'guest', message }],
     });
 
-    // Non-blocking AI first response from the knowledge base (appears on the
-    // guest's next poll). Never blocks or fails the reply if the AI is down.
-    maybeAppendAiReply(ticket, message).catch(() => {});
+    // AI greets first (welcome + working hours) and tries a KB answer; it appears
+    // on the guest's next poll. Never blocks or fails the reply if the AI is down.
+    greetAndMaybeAnswer(ticket, message).catch(() => {});
     // Round-robin auto-assign to a support agent (non-blocking).
     autoAssignTicket(ticket._id).catch(() => {});
 

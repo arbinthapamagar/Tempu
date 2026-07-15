@@ -71,7 +71,7 @@ export async function autoAssignTicket(ticketId) {
         const settings = await getSupportSettings();
         if (!settings.autoAssign) return null;
 
-        const ticket = await SupportTicket.findById(ticketId);
+        const ticket = await SupportTicket.findById(ticketId).select('_id assignedTo status subject');
         if (!ticket || ticket.assignedTo || !ACTIVE.includes(ticket.status)) return null;
 
         const agents = await getAgents();
@@ -79,8 +79,14 @@ export async function autoAssignTicket(ticketId) {
         const agent = pickNext(agents, counts, settings.agentCapacity, settings.lastAssignedAgent);
         if (!agent) return null; // all at capacity → stays queued
 
-        ticket.assignedTo = agent._id;
-        await ticket.save();
+        // Atomic claim: only assign while still unassigned, so this can't clobber
+        // a concurrent AI-greeting save on the same document (or another caller
+        // racing to assign the same ticket).
+        const upd = await SupportTicket.updateOne(
+            { _id: ticketId, assignedTo: null },
+            { assignedTo: agent._id },
+        );
+        if (!upd.modifiedCount) return null; // something else assigned it first
 
         // Advance the rotation pointer.
         await SupportSettings.updateOne({ key: 'global' }, { lastAssignedAgent: agent._id });
