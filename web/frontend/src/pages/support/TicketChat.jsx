@@ -590,6 +590,10 @@ export default function TicketChat() {
                     </span>
                   ),
                 },
+                ticket.rating?.tags?.length > 0 && {
+                  label: 'Tags',
+                  value: <span className="font-normal text-gray-600">{ticket.rating.tags.join(', ')}</span>,
+                },
                 ticket.rating?.comment && {
                   label: 'Feedback',
                   value: <span className="font-normal italic text-gray-600">“{ticket.rating.comment}”</span>,

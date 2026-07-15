@@ -6,6 +6,7 @@ import {
   ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { supportPublicApi } from '../api/support.api';
+import RatingCard from '../components/RatingCard';
 import { Button, FormField, ScreenHeader } from '../components/ui';
 import { colors, radius, spacing, type } from '../theme';
 import { fonts } from '../theme/type';
@@ -102,17 +103,12 @@ export default function ContactSupportScreen({ onBack }) {
     }
   };
 
-  const [ratingScore, setRatingScore] = useState(0);
-  const [ratingNote, setRatingNote] = useState('');
-
-  const submitRating = async () => {
-    if (!chat || busy || ratingScore < 1) return;
+  const submitRating = async ({ score, note, tags }) => {
+    if (!chat || busy) return;
     setBusy(true);
     try {
-      const res = await supportPublicApi.rateChat(chat.id, chat.token, ratingScore, ratingNote.trim());
+      const res = await supportPublicApi.rateChat(chat.id, chat.token, score, note, tags);
       setTicket(res.data);
-      setRatingScore(0);
-      setRatingNote('');
     } catch (e) {
       Alert.alert('Could not submit rating', e?.message || 'Please try again.');
     } finally {
@@ -155,7 +151,7 @@ export default function ContactSupportScreen({ onBack }) {
     const closed = ticket?.status === 'closed';
     const agentName = ticket?.assignedTo?.name || null;
     const resolvedOrClosed = ticket?.status === 'resolved' || ticket?.status === 'closed';
-    const canRate = resolvedOrClosed && !ticket?.rating;
+    const canRate = resolvedOrClosed && !ticket?.rating?.score;
     return (
       <View style={styles.root}>
         <ScreenHeader
@@ -190,40 +186,17 @@ export default function ContactSupportScreen({ onBack }) {
               );
             })}
 
-            {ticket?.rating && (
+            {ticket?.rating?.score ? (
               <View style={styles.ratedNote}>
                 <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
                 <Text style={styles.ratedText}>
                   You rated this support {ticket.rating.score}/5. Thank you!
                 </Text>
               </View>
-            )}
+            ) : null}
 
             {canRate && (
-              <View style={styles.rateCard}>
-                <Text style={styles.rateTitle}>How was our support?</Text>
-                <View style={styles.starRow}>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <Pressable key={n} onPress={() => setRatingScore(n)} disabled={busy} hitSlop={6}>
-                      <Ionicons name={n <= ratingScore ? 'star' : 'star-outline'} size={30} color={colors.primary} style={{ marginHorizontal: 3 }} />
-                    </Pressable>
-                  ))}
-                </View>
-                <TextInput
-                  value={ratingNote}
-                  onChangeText={setRatingNote}
-                  placeholder="Add a note for the support team (optional)"
-                  placeholderTextColor={colors.textFaint}
-                  style={styles.rateNote}
-                  multiline
-                />
-                <Button
-                  label={busy ? 'Submitting…' : 'Submit rating'}
-                  onPress={submitRating}
-                  disabled={busy || ratingScore < 1}
-                  style={{ marginTop: spacing.md, alignSelf: 'stretch' }}
-                />
-              </View>
+              <RatingCard agent={ticket?.assignedTo} busy={busy} onSubmit={submitRating} />
             )}
           </ScrollView>
 
