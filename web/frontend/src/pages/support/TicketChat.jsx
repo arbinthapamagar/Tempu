@@ -583,12 +583,16 @@ export default function TicketChat() {
                 ticket.rating?.score && {
                   label: 'Rating',
                   value: (
-                    <span className="inline-flex items-center gap-0.5 text-amber-500" title={ticket.rating.comment || ''}>
+                    <span className="inline-flex items-center gap-0.5 text-amber-500">
                       {[1, 2, 3, 4, 5].map((n) => (
                         <Star key={n} className={`h-3.5 w-3.5 ${n <= ticket.rating.score ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
                       ))}
                     </span>
                   ),
+                },
+                ticket.rating?.comment && {
+                  label: 'Feedback',
+                  value: <span className="font-normal italic text-gray-600">“{ticket.rating.comment}”</span>,
                 },
               ].filter(Boolean).map(({ label, value }) => (
                 <div key={label} className="flex justify-between items-start gap-2">
