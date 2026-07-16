@@ -20,7 +20,12 @@ const SYSTEM_PROMPT =
     'question (e.g. "hi", "thanks", "who are you", "what can you do") — respond ' +
     'warmly and briefly in plain conversation. Do NOT call a tool just because one ' +
     'is available; only call a tool when the admin is actually asking about real ' +
-    'data.';
+    'data. If you are unsure what to look up, ask a short clarifying question in ' +
+    'plain English — never guess by calling a tool anyway.\n\n' +
+    'Your reply is shown to the admin AS-IS. NEVER write JSON, curly braces, or ' +
+    'anything that looks like a function/tool call in your reply — the tool ' +
+    'mechanism is separate and automatic. If there is nothing to look up, just say ' +
+    'so in one plain sentence.';
 
 async function ollamaChat(messages) {
     const res = await fetch(`${OLLAMA_URL}/api/chat`, {
@@ -45,21 +50,48 @@ async function runTool(call) {
     }
 }
 
+// Scan text for top-level {...} blocks using brace-depth counting, so a JSON
+// object embedded mid-sentence (with nested objects inside it) is still
+// extracted correctly — a plain regex can't handle the nested braces in e.g.
+// {"name":"x","parameters":{}}.
+function extractJsonObjects(text) {
+    const blocks = [];
+    let depth = 0;
+    let start = -1;
+    for (let i = 0; i < text.length; i++) {
+        if (text[i] === '{') {
+            if (depth === 0) start = i;
+            depth++;
+        } else if (text[i] === '}') {
+            depth = Math.max(0, depth - 1);
+            if (depth === 0 && start !== -1) {
+                blocks.push(text.slice(start, i + 1));
+                start = -1;
+            }
+        }
+    }
+    return blocks;
+}
+
 // The 8B model occasionally "leaks" a tool call as plain text JSON (e.g.
 // {"name":"platform_stats","parameters":{}}) instead of using the proper
-// tool_calls mechanism — usually right after being corrected mid-conversation.
-// Detect that shape and either actually run the intended tool (self-heal) or,
-// if it doesn't match a real tool, drop it — the raw JSON must never reach
-// the admin as if it were a real answer.
+// tool_calls mechanism — sometimes standalone, sometimes wrapped inside an
+// explanatory sentence ("...I'll provide a generic response: {...}"). Scan the
+// WHOLE reply for any embedded JSON object naming a real tool, and either
+// actually run it (self-heal) or drop it — raw JSON must never reach the
+// admin as if it were a real answer.
 function parseLeakedToolCall(content) {
-    const trimmed = (content || '').trim();
-    if (!trimmed.startsWith('{') || !/"name"\s*:\s*"/.test(trimmed)) return null;
-    try {
-        const parsed = JSON.parse(trimmed);
-        const name = parsed.name;
-        if (name && HANDLERS[name]) return { name, args: parsed.parameters || parsed.arguments || {} };
-    } catch {
-        // Not valid JSON - fall through to null.
+    if (!content) return null;
+    for (const block of extractJsonObjects(content)) {
+        if (!/"name"\s*:\s*"/.test(block)) continue;
+        try {
+            const parsed = JSON.parse(block);
+            if (parsed?.name && HANDLERS[parsed.name]) {
+                return { name: parsed.name, args: parsed.parameters || parsed.arguments || {} };
+            }
+        } catch {
+            // Not valid JSON - try the next candidate block.
+        }
     }
     return null;
 }
@@ -97,6 +129,16 @@ export async function runAgenticChat(message, history = []) {
             messages.push({ role: 'assistant', content: '' });
             messages.push({ role: 'tool', content: JSON.stringify(result) });
             continue;
+        }
+
+        // Content has a JSON "tool call" shape but names a tool that doesn't
+        // exist (hallucinated) — still never show that raw text as an answer.
+        const hasUnresolvedToolAttempt = extractJsonObjects(reply.content || '').some((b) => /"name"\s*:\s*"/.test(b));
+        if (hasUnresolvedToolAttempt) {
+            return {
+                reply: "I don't have a way to look that up yet — could you rephrase your question?",
+                toolCalls,
+            };
         }
 
         return { reply: reply.content || 'Sorry, I could not generate a response.', toolCalls };
