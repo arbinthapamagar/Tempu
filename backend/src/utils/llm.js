@@ -18,8 +18,21 @@ const OLLAMA_URL = (process.env.OLLAMA_URL || 'http://localhost:11434').replace(
 const OLLAMA_MODEL = process.env.AGENTIC_CHAT_MODEL || process.env.RAG_CHAT_MODEL || 'llama3.1:8b';
 
 const GEMINI_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-lite-latest';
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+
+// Gemini free-tier quota is counted PER MODEL PER DAY, so when the active model
+// returns 429 (or 404 = unavailable) we transparently fail over to the next
+// model — each has its own daily bucket. Order: the configured primary first,
+// then a sane default chain. Override with GEMINI_FALLBACK_MODELS (comma-sep).
+const GEMINI_FALLBACKS = (
+    process.env.GEMINI_FALLBACK_MODELS ||
+    'gemini-flash-lite-latest,gemini-3-flash-preview,gemini-flash-latest,gemini-2.0-flash,gemini-2.0-flash-lite'
+).split(',').map((s) => s.trim()).filter(Boolean);
+const GEMINI_MODELS = [...new Set([GEMINI_MODEL, ...GEMINI_FALLBACKS])];
+// Remember the last model that worked so we start there next time instead of
+// re-hitting an already-exhausted model on every request.
+let activeGeminiIdx = 0;
 
 const TEMPERATURE = Number(process.env.AGENTIC_TEMPERATURE) || 0.15;
 
@@ -141,19 +154,16 @@ function toOpenAiMessages(messages) {
     });
 }
 
-async function geminiChat(messages, tools) {
-    if (!GEMINI_KEY) {
-        const err = providerError('gemini', 401, 'GEMINI_API_KEY is not set');
-        throw err;
-    }
+// One raw call to a specific Gemini model.
+async function geminiCall(model, openAiMessages, tools) {
     let res;
     try {
         res = await fetch(GEMINI_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GEMINI_KEY}` },
             body: JSON.stringify({
-                model: GEMINI_MODEL,
-                messages: toOpenAiMessages(messages),
+                model,
+                messages: openAiMessages,
                 ...(tools ? { tools } : {}),
                 temperature: TEMPERATURE,
             }),
@@ -161,12 +171,10 @@ async function geminiChat(messages, tools) {
     } catch (e) {
         const err = providerError('gemini', 0, e.message);
         err.connection = true;
-        console.error('[llm] Gemini unreachable', e.message);
         throw err;
     }
     if (!res.ok) {
         const body = await res.text().catch(() => '');
-        console.error('[llm] Gemini error', res.status, body.slice(0, 300));
         throw providerError('gemini', res.status, body);
     }
     const msg = (await res.json()).choices?.[0]?.message || {};
@@ -179,6 +187,39 @@ async function geminiChat(messages, tools) {
             extra: tc.extra_content, // thought_signature etc., replayed on next turn
         })),
     };
+}
+
+async function geminiChat(messages, tools) {
+    if (!GEMINI_KEY) throw providerError('gemini', 401, 'GEMINI_API_KEY is not set');
+    const openAiMessages = toOpenAiMessages(messages);
+    let lastErr;
+    // Start from the last known-good model, then walk the list. Only a 429
+    // (daily quota used up) or 404 (model unavailable) triggers failover — real
+    // errors (bad key, malformed request) surface immediately.
+    for (let attempt = 0; attempt < GEMINI_MODELS.length; attempt++) {
+        const idx = (activeGeminiIdx + attempt) % GEMINI_MODELS.length;
+        const model = GEMINI_MODELS[idx];
+        try {
+            const result = await geminiCall(model, openAiMessages, tools);
+            if (idx !== activeGeminiIdx) {
+                console.warn(`[llm] Gemini now using "${model}" (index ${idx})`);
+                activeGeminiIdx = idx; // stick with the model that just worked
+            }
+            return result;
+        } catch (err) {
+            if (err.connection) throw err; // network down — switching models won't help
+            if (err.status === 429 || err.status === 404) {
+                console.warn(`[llm] Gemini "${model}" → ${err.status}, failing over to next model`);
+                lastErr = err;
+                continue;
+            }
+            console.error('[llm] Gemini error', err.status, err.body);
+            throw err; // 400/401/403/etc. — not a quota issue
+        }
+    }
+    // Every model in the chain is exhausted for today.
+    console.error('[llm] all Gemini models exhausted (429)');
+    throw lastErr || providerError('gemini', 429, 'all Gemini models exhausted');
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
