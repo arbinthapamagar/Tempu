@@ -68,8 +68,8 @@ const navSections = [
     icon: Settings,
     items: [
       { to: '/notifications', label: 'Notifications', icon: Bell, permission: null },
-      { to: '/ai', label: 'Tempu Ai', icon: Sparkles, permission: null },
-      { to: '/knowledge', label: 'Tempu Rag', icon: BookOpen, permission: 'manageKnowledge' },
+      { to: '/ai', label: 'Tempu AI', icon: Sparkles, permission: null },
+      { to: '/knowledge', label: 'Tempu RAG', icon: BookOpen, permission: 'manageKnowledge' },
       { to: '/api-logs', label: 'API Log', icon: History, superadmin: true },
     ],
   },
