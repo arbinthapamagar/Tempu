@@ -29,7 +29,16 @@ LLM_MODEL = os.environ.get("RAG_CHAT_MODEL", "llama3.1:8b")
 # Chroma vector store never needs re-ingesting.
 AI_PROVIDER = os.environ.get("AI_PROVIDER", "ollama").lower()
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
+# Free-tier quota is per-model-per-day, so on a 429 we fail over to the next
+# model (each has its own bucket). Primary first, then this chain.
+_GEMINI_FALLBACKS = os.environ.get(
+    "GEMINI_FALLBACK_MODELS",
+    "gemini-flash-lite-latest,gemini-3-flash-preview,gemini-flash-latest,gemini-2.0-flash,gemini-2.0-flash-lite",
+)
+GEMINI_MODELS = list(dict.fromkeys(
+    [GEMINI_MODEL] + [m.strip() for m in _GEMINI_FALLBACKS.split(",") if m.strip()]
+))
 
 # Generation params (mirror BOT/config.py).
 LLM_TEMPERATURE = float(os.environ.get("RAG_TEMPERATURE", "0.3"))

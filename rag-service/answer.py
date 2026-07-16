@@ -15,29 +15,44 @@ from config import (
     MIN_SCORE,
     AI_PROVIDER,
     GEMINI_API_KEY,
-    GEMINI_MODEL,
+    GEMINI_MODELS,
 )
 from retriever import search
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+# Index of the last Gemini model that worked, so we don't re-hit an exhausted
+# model on every request (mirrors the Node side).
+_active_gemini_idx = 0
 
 SYSTEM = (
     "You are **Tempu Rag**, the knowledge assistant for Tempu — a women-first "
     "ride-sharing platform in Nepal. You answer questions from the Tempu "
     "knowledge base (policies, fares, help articles, uploaded documents).\n\n"
-    "RULES:\n"
+
+    "GROUNDING:\n"
     "- Answer using ONLY the KNOWLEDGE provided below. Never invent facts, "
-    "numbers, prices, or policies. If the knowledge does not cover the question, "
-    "say so plainly ('I don't have that in the knowledge base yet') and suggest "
-    "contacting support — do NOT guess.\n"
-    "- If the user just greets you or makes small talk ('hi', 'hello', 'thanks', "
-    "'who are you'), reply warmly in one or two lines, say you're Tempu Rag and "
-    "can answer questions from the Tempu knowledge base, and invite their "
-    "question. Do NOT force knowledge into a greeting.\n"
-    "- Be warm, clear, and concise. Format your reply as Markdown: a direct "
-    "opening line, then bullet points or short paragraphs for detail. Bold the "
-    "key facts.\n"
-    "- Cite sources as [1], [2] inline when you draw on a specific passage."
+    "numbers, prices, or policies. If it isn't covered, say so plainly ('I don't "
+    "have that in the knowledge base yet') and suggest contacting support — never guess.\n\n"
+
+    "HOW TO ANSWER (be genuinely helpful, not robotic):\n"
+    "- LEAD with a direct, confident answer to exactly what was asked in the first "
+    "sentence — e.g. 'Yes — Arbin works with Node.js.' Then add the supporting "
+    "detail.\n"
+    "- Write like a knowledgeable colleague: natural, warm, flowing prose. Do NOT "
+    "repeat the same point in different words, and don't pad with filler like 'here "
+    "are a few key details'. Every line should add something new.\n"
+    "- Use structure only when it truly helps: a short paragraph for a simple answer; "
+    "tight bullets **only** when listing 3+ distinct items. Bold the key fact or "
+    "figure so it stands out. Keep it concise.\n"
+    "- Anticipate the obvious follow-up and fold it in when the knowledge supports it, "
+    "but don't speculate beyond the sources.\n"
+    "- Cite sources naturally as [1], [2] right after the fact they back — don't stack "
+    "citations on every clause.\n\n"
+
+    "GREETINGS & SMALL TALK:\n"
+    "- For 'hi', 'hello', 'thanks', 'who are you', reply warmly in a line or two, say "
+    "you're Tempu Rag and answer from the Tempu knowledge base, and invite a question. "
+    "Never force knowledge into a greeting."
 )
 
 _llm = None
@@ -59,21 +74,30 @@ def llm():
 def _generate(msgs):
     """Run one chat generation on the configured provider. `msgs` is a list of
     (role, text) tuples. Returns the reply text. Embeddings/retrieval are
-    unaffected — only text generation switches provider."""
+    unaffected — only text generation switches provider. On Gemini, a per-model
+    daily 429 (or 404) fails over to the next model in the chain."""
+    global _active_gemini_idx
     if AI_PROVIDER == "gemini" and GEMINI_API_KEY:
-        payload = {
-            "model": GEMINI_MODEL,
-            "messages": [{"role": r, "content": t} for r, t in msgs],
-            "temperature": LLM_TEMPERATURE,
-        }
-        res = requests.post(
-            GEMINI_URL,
-            headers={"Authorization": f"Bearer {GEMINI_API_KEY}", "Content-Type": "application/json"},
-            json=payload,
-            timeout=60,
-        )
-        res.raise_for_status()
-        return res.json()["choices"][0]["message"]["content"] or ""
+        oai = [{"role": r, "content": t} for r, t in msgs]
+        last_exc = None
+        for attempt in range(len(GEMINI_MODELS)):
+            idx = (_active_gemini_idx + attempt) % len(GEMINI_MODELS)
+            model = GEMINI_MODELS[idx]
+            res = requests.post(
+                GEMINI_URL,
+                headers={"Authorization": f"Bearer {GEMINI_API_KEY}", "Content-Type": "application/json"},
+                json={"model": model, "messages": oai, "temperature": LLM_TEMPERATURE},
+                timeout=60,
+            )
+            if res.status_code in (429, 404):
+                last_exc = requests.HTTPError(f"{model} -> {res.status_code}", response=res)
+                continue
+            res.raise_for_status()
+            _active_gemini_idx = idx  # stick with the model that worked
+            return res.json()["choices"][0]["message"]["content"] or ""
+        # Every model exhausted — re-raise the last 429 so the caller shows the
+        # quota message.
+        raise last_exc if last_exc else RuntimeError("Gemini: no models available")
     resp = llm().invoke(msgs)
     return getattr(resp, "content", None) or str(resp)
 
