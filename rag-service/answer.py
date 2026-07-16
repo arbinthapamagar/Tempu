@@ -2,6 +2,7 @@
 from Chroma first. Returns the reply, the cited sources, and the raw hits (with
 scores) so callers can apply their own relevance gate.
 """
+import requests
 from langchain_ollama import ChatOllama
 
 from config import (
@@ -12,8 +13,13 @@ from config import (
     LLM_NUM_PREDICT,
     RETRIEVE_K,
     MIN_SCORE,
+    AI_PROVIDER,
+    GEMINI_API_KEY,
+    GEMINI_MODEL,
 )
 from retriever import search
+
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
 
 SYSTEM = (
     "You are **Tempu Rag**, the knowledge assistant for Tempu — a women-first "
@@ -50,6 +56,28 @@ def llm():
     return _llm
 
 
+def _generate(msgs):
+    """Run one chat generation on the configured provider. `msgs` is a list of
+    (role, text) tuples. Returns the reply text. Embeddings/retrieval are
+    unaffected — only text generation switches provider."""
+    if AI_PROVIDER == "gemini" and GEMINI_API_KEY:
+        payload = {
+            "model": GEMINI_MODEL,
+            "messages": [{"role": r, "content": t} for r, t in msgs],
+            "temperature": LLM_TEMPERATURE,
+        }
+        res = requests.post(
+            GEMINI_URL,
+            headers={"Authorization": f"Bearer {GEMINI_API_KEY}", "Content-Type": "application/json"},
+            json=payload,
+            timeout=60,
+        )
+        res.raise_for_status()
+        return res.json()["choices"][0]["message"]["content"] or ""
+    resp = llm().invoke(msgs)
+    return getattr(resp, "content", None) or str(resp)
+
+
 def _context(hits) -> str:
     if not hits:
         return ""
@@ -75,7 +103,6 @@ def answer(message: str, history=None, k: int = RETRIEVE_K):
         msgs.append((role, m.get("text", "")))
     msgs.append(("user", message))
 
-    resp = llm().invoke(msgs)
-    reply = getattr(resp, "content", None) or str(resp)
+    reply = _generate(msgs)
     sources = list(dict.fromkeys(h["source"] for h in hits))
     return {"reply": reply, "sources": sources, "hits": hits}

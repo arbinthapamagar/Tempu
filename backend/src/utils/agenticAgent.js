@@ -1,11 +1,11 @@
-// Agentic AI orchestration — a tool-calling loop over Ollama (llama3.1:8b),
-// restricted to the whitelisted read-only data tools in agenticTools.js. The
-// model can only ever call those named functions; it never sees or writes raw
-// database queries.
+// Agentic AI orchestration — a tool-calling loop restricted to the whitelisted
+// read-only data tools in agenticTools.js. The model can only ever call those
+// named functions; it never sees or writes raw database queries. The underlying
+// model is provider-agnostic (Gemini or local Ollama) via ./llm.js — set with
+// the AI_PROVIDER env var.
 import { TOOLS, HANDLERS } from './agenticTools.js';
+import { chatWithTools, chatPlain } from './llm.js';
 
-const OLLAMA_URL = (process.env.OLLAMA_URL || 'http://localhost:11434').replace(/\/+$/, '');
-const MODEL = process.env.AGENTIC_CHAT_MODEL || process.env.RAG_CHAT_MODEL || 'llama3.1:8b';
 // Enough round-trips for real multi-step questions (e.g. list tickets → open the
 // detail of each → summarise) without letting a confused model loop forever.
 const MAX_STEPS = 8;
@@ -64,49 +64,13 @@ const SYSTEM_PROMPT =
     'or anything resembling a function/tool call in your reply — the tool mechanism is ' +
     'separate and automatic. Write only natural, human-readable Markdown prose.';
 
-// Low temperature + a warm model keep answers deterministic, grounded, and fast.
-const OLLAMA_OPTIONS = {
-    temperature: Number(process.env.AGENTIC_TEMPERATURE) || 0.15,
-    top_p: 0.9,
-    num_ctx: Number(process.env.AGENTIC_NUM_CTX) || 8192,
-};
-// Ollama's keep_alive accepts a duration string ("30m") OR a number of seconds
-// (-1 = keep loaded forever). A bare numeric string like "-1" is rejected as a
-// duration ("missing unit"), so coerce numerics to an actual number.
-const rawKeepAlive = process.env.OLLAMA_KEEP_ALIVE || '30m';
-const KEEP_ALIVE = /^-?\d+$/.test(rawKeepAlive.trim()) ? Number(rawKeepAlive) : rawKeepAlive;
-
-async function ollamaChat(messages) {
-    const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            model: MODEL,
-            messages,
-            tools: TOOLS,
-            stream: false,
-            options: OLLAMA_OPTIONS,
-            keep_alive: KEEP_ALIVE,
-        }),
-    });
-    if (!res.ok) {
-        const body = await res.text().catch(() => '');
-        console.error('[agenticAgent] Ollama error', res.status, body.slice(0, 500));
-        throw new Error(`Ollama responded ${res.status}`);
-    }
-    const data = await res.json();
-    return data.message || {};
-}
-
-async function runTool(call) {
-    const name = call.function?.name;
-    const args = call.function?.arguments || {};
+async function runTool(name, args = {}) {
     const handler = HANDLERS[name];
-    if (!handler) return { name, args, result: { error: `Unknown tool: ${name}` } };
+    if (!handler) return { error: `Unknown tool: ${name}` };
     try {
-        return { name, args, result: await handler(args) };
+        return await handler(args);
     } catch (e) {
-        return { name, args, result: { error: e.message } };
+        return { error: e.message };
     }
 }
 
@@ -170,24 +134,27 @@ export async function runAgenticChat(message, history = []) {
 
     const toolCalls = [];
     for (let step = 0; step < MAX_STEPS; step++) {
-        const reply = await ollamaChat(messages);
+        const reply = await chatWithTools(messages, TOOLS);
 
-        if (reply.tool_calls?.length) {
-            messages.push({ role: 'assistant', content: reply.content || '', tool_calls: reply.tool_calls });
-            for (const call of reply.tool_calls) {
-                const { name, args, result } = await runTool(call);
-                toolCalls.push({ name, args });
-                messages.push({ role: 'tool', content: JSON.stringify(result) });
+        if (reply.toolCalls?.length) {
+            messages.push({ role: 'assistant', content: reply.content || '', toolCalls: reply.toolCalls });
+            for (const call of reply.toolCalls) {
+                const result = await runTool(call.name, call.args);
+                toolCalls.push({ name: call.name, args: call.args });
+                messages.push({ role: 'tool', toolCallId: call.id, name: call.name, content: JSON.stringify(result) });
             }
             continue;
         }
 
+        // Some models "leak" a tool call as plain-text JSON instead of using the
+        // tool mechanism. Detect it and self-heal by actually running the tool.
         const leaked = parseLeakedToolCall(reply.content);
         if (leaked) {
-            const { result } = await runTool({ function: { name: leaked.name, arguments: leaked.args } });
+            const result = await runTool(leaked.name, leaked.args);
+            const id = `leak_${toolCalls.length}`;
             toolCalls.push({ name: leaked.name, args: leaked.args });
-            messages.push({ role: 'assistant', content: '' });
-            messages.push({ role: 'tool', content: JSON.stringify(result) });
+            messages.push({ role: 'assistant', content: '', toolCalls: [{ id, name: leaked.name, args: leaked.args }] });
+            messages.push({ role: 'tool', toolCallId: id, name: leaked.name, content: JSON.stringify(result) });
             continue;
         }
 
@@ -214,31 +181,23 @@ export async function runAgenticChat(message, history = []) {
 // One last generation with NO tools available, so the model is forced to write
 // a natural-language answer from the tool results already in the conversation.
 async function finalizeAnswer(messages) {
-    const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            model: MODEL,
-            messages: [
-                ...messages,
-                {
-                    role: 'system',
-                    content:
-                        'Now write the final answer for the admin using ONLY the data already ' +
-                        'gathered above. Do not call tools. Reply in warm, skimmable Markdown ' +
-                        'prose — no JSON or curly braces.',
-                },
-            ],
-            stream: false,
-            options: OLLAMA_OPTIONS,
-            keep_alive: KEEP_ALIVE,
-        }),
-    });
-    if (!res.ok) return 'Sorry, I could not generate a response.';
-    const data = await res.json();
-    const content = data.message?.content || '';
+    let content = '';
+    try {
+        ({ content } = await chatPlain([
+            ...messages,
+            {
+                role: 'system',
+                content:
+                    'Now write the final answer for the admin using ONLY the data already ' +
+                    'gathered above. Do not call tools. Reply in warm, skimmable Markdown ' +
+                    'prose — no JSON or curly braces.',
+            },
+        ]));
+    } catch {
+        return 'Sorry, I could not generate a response.';
+    }
     // Strip any stray leaked JSON so raw tool-call text never reaches the admin.
-    if (extractJsonObjects(content).some((b) => /"name"\s*:\s*"/.test(b))) {
+    if (extractJsonObjects(content || '').some((b) => /"name"\s*:\s*"/.test(b))) {
         return 'I gathered the data but had trouble writing it up — could you ask that again?';
     }
     return content || 'Sorry, I could not generate a response.';
