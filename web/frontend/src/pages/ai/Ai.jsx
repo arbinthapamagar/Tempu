@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sparkles, Send, Upload, FileText, BookOpen, Trash2, MessageSquare } from '@/components/ui/icons'
+import { Sparkles, Send, Upload, FileText, BookOpen, Trash2, MessageSquare, Plus } from '@/components/ui/icons'
 import { Button } from '../../components/ui/Button'
 import { Input, Textarea } from '../../components/ui/Input'
 import { PageHeader } from '../../components/shared/PageHeader'
@@ -48,59 +48,33 @@ export default function Ai() {
   )
 }
 
-// ── RAG: ask the knowledge base (all admins) + manage documents (superadmin /
-// manageKnowledge only) ──────────────────────────────────────────────────────
+const RAG_SUGGESTIONS = [
+  'What are the fare and pricing rules?',
+  'How does a driver get verified?',
+  'What is the cancellation policy?',
+]
+
+// ── RAG: chat with the knowledge base (all admins) + manage documents
+// (superadmin / manageKnowledge only). Same chat UX as Tempu Ai. ─────────────
 function RagSection() {
   const admin = useAuthStore((s) => s.admin)
   const canManage = hasPermission(admin, 'manageKnowledge') // superadmin auto-passes
   const qc = useQueryClient()
 
-  const [question, setQuestion] = useState('')
-  const [answer, setAnswer] = useState(null)
-
-  const runAsk = useMutation({
-    mutationFn: () => knowledgeApi.ask(question.trim()),
-    onSuccess: (res) => setAnswer(res?.data || null),
-    onError: (e) => toast.error(e?.message || 'Could not get an answer. Is the AI service running?'),
-  })
-
-  const submitAsk = (e) => {
-    e.preventDefault()
-    if (!question.trim()) return
-    runAsk.mutate()
-  }
-
   return (
     <div className="space-y-5">
-      {/* Ask — available to every admin */}
-      <section className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-3">
-          <Sparkles className="h-4 w-4 text-orange-500" /> Tempu Rag — ask the knowledge base
-        </h2>
-        <form onSubmit={submitAsk} className="flex gap-2 items-start">
-          <div className="flex-1">
-            <Input
-              placeholder="Ask a question about policies, fares, documents…"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-            />
-          </div>
-          <Button type="submit" icon={Send} loading={runAsk.isPending} disabled={!question.trim()}>
-            Ask
-          </Button>
-        </form>
-
-        {answer && (
-          <div className="mt-4 rounded-lg bg-gray-50 border border-gray-200 p-4">
-            <div className="text-sm text-gray-800">
-              <Markdown>{answer.answer}</Markdown>
-            </div>
-            {answer.sources?.length > 0 && (
-              <p className="mt-2 text-xs text-gray-400">Sources: {answer.sources.join(', ')}</p>
-            )}
-          </div>
-        )}
-      </section>
+      <ChatPanel
+        icon={Sparkles}
+        title="Tempu Rag"
+        subtitle="Answers from your Tempu knowledge base"
+        emptyTitle="Ask Tempu Rag"
+        emptyHint="Ask about policies, fares, documents, or help articles."
+        suggestions={RAG_SUGGESTIONS}
+        placeholder="Ask about policies, fares, documents…"
+        footerNote="Tempu Rag answers only from your uploaded knowledge base."
+        sendFn={(text, history) => knowledgeApi.chat(text, history)}
+        showSources
+      />
 
       {/* Document management — superadmin / manageKnowledge only */}
       {canManage && <RagDocuments qc={qc} />}
@@ -297,17 +271,15 @@ const AGENTIC_SUGGESTIONS = [
   'Give me the platform stats',
 ]
 
-// ── Agentic: a tool-calling chat over LIVE app data (users, drivers, trips,
-// payments, etc.) — separate from the RAG knowledge base. Gated by the
-// useAgenticAI permission since it can surface personal data. Styled as a
-// plain, document-like conversation (Claude-style) rather than chat bubbles:
-// assistant turns are markdown prose with no box; user turns are a subtle
-// right-aligned pill. ────────────────────────────────────────────────────────
-function AgenticSection() {
-  const admin = useAuthStore((s) => s.admin)
-  const canUse = hasPermission(admin, 'useAgenticAI')
-
-  const [messages, setMessages] = useState([]) // { role: 'user' | 'model', text }
+// Shared chat panel used by BOTH Tempu Ai (agentic) and Tempu Rag, so they are
+// the exact same multi-turn chat experience: conversation history, a "New chat"
+// button to start fresh, suggestion chips, streamed-in markdown replies, and an
+// optional sources line. `sendFn(text, history)` posts to the right endpoint.
+function ChatPanel({
+  icon: Icon = MessageSquare, title, subtitle, emptyTitle, emptyHint,
+  suggestions = [], placeholder, footerNote, sendFn, showSources = false,
+}) {
+  const [messages, setMessages] = useState([]) // { role: 'user' | 'model', text, sources? }
   const [input, setInput] = useState('')
   const scrollRef = useRef(null)
   const textareaRef = useRef(null)
@@ -317,29 +289,16 @@ function AgenticSection() {
   }, [messages])
 
   const send = useMutation({
-    // History is everything already exchanged; the new message is sent separately.
-    mutationFn: ({ text, history }) => knowledgeApi.agenticChat(text, history),
+    mutationFn: ({ text, history }) => sendFn(text, history),
     onSuccess: (res) => {
-      setMessages((prev) => [...prev, { role: 'model', text: res?.data?.reply || '…' }])
+      const data = res?.data || {}
+      setMessages((prev) => [...prev, { role: 'model', text: data.reply || data.answer || '…', sources: data.sources || [] }])
     },
     onError: (e) => {
       toast.error(e?.message || 'Chat failed. Is the AI service running?')
-      // Drop the optimistic user turn so they can retry.
-      setMessages((prev) => prev.slice(0, -1))
+      setMessages((prev) => prev.slice(0, -1)) // drop the optimistic user turn so they can retry
     },
   })
-
-  if (!canUse) {
-    return (
-      <section className="bg-white rounded-xl border border-gray-200 p-10">
-        <EmptyState
-          icon={MessageSquare}
-          title="No access to Tempu Ai"
-          description="Ask a superadmin to grant you the “Use Agentic AI” permission to query live app data through chat."
-        />
-      </section>
-    )
-  }
 
   const sendMessage = (text) => {
     const trimmed = text.trim()
@@ -351,18 +310,16 @@ function AgenticSection() {
     send.mutate({ text: trimmed, history })
   }
 
-  const submit = (e) => {
-    e.preventDefault()
-    sendMessage(input)
+  const newChat = () => {
+    setMessages([])
+    setInput('')
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }
 
+  const submit = (e) => { e.preventDefault(); sendMessage(input) }
   const onInputKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage(input)
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) }
   }
-
   const autoGrow = (e) => {
     setInput(e.target.value)
     e.target.style.height = 'auto'
@@ -372,9 +329,17 @@ function AgenticSection() {
   return (
     <section className="bg-white rounded-xl border border-gray-200 flex flex-col" style={{ height: '75vh' }}>
       <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 shrink-0">
-        <MessageSquare className="h-4 w-4 text-orange-500" />
-        <h2 className="text-sm font-semibold text-gray-900">Tempu Ai</h2>
-        <span className="ml-auto text-[11px] text-gray-400">Queries live app data — users, drivers, trips, payments</span>
+        <Icon className="h-4 w-4 text-orange-500" />
+        <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
+        {subtitle && <span className="text-[11px] text-gray-400 hidden sm:inline">· {subtitle}</span>}
+        <button
+          onClick={newChat}
+          disabled={messages.length === 0 && !input}
+          className="ml-auto flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          title="Start a new chat"
+        >
+          <Plus className="h-3.5 w-3.5" /> New chat
+        </button>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
@@ -382,10 +347,10 @@ function AgenticSection() {
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center py-16">
               <Sparkles className="h-7 w-7 text-orange-300 mb-3" />
-              <p className="text-base font-semibold text-gray-900">How can Tempu Ai help?</p>
-              <p className="text-sm text-gray-400 mt-1 mb-5">Ask about any user, driver, trip, or platform stat.</p>
+              <p className="text-base font-semibold text-gray-900">{emptyTitle}</p>
+              <p className="text-sm text-gray-400 mt-1 mb-5">{emptyHint}</p>
               <div className="flex flex-wrap gap-2 justify-center max-w-md">
-                {AGENTIC_SUGGESTIONS.map((s) => (
+                {suggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => sendMessage(s)}
@@ -408,6 +373,9 @@ function AgenticSection() {
                 ) : (
                   <div key={i} className="text-sm text-gray-800">
                     <Markdown>{m.text}</Markdown>
+                    {showSources && m.sources?.length > 0 && (
+                      <p className="mt-2 text-xs text-gray-400">Sources: {m.sources.join(', ')}</p>
+                    )}
                   </div>
                 )
               )}
@@ -432,7 +400,7 @@ function AgenticSection() {
               value={input}
               onChange={autoGrow}
               onKeyDown={onInputKeyDown}
-              placeholder="Message Tempu Ai…"
+              placeholder={placeholder}
               className="w-full resize-none bg-transparent rounded-2xl pl-4 pr-12 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
               style={{ maxHeight: 200 }}
             />
@@ -445,11 +413,42 @@ function AgenticSection() {
               <Send className="h-4 w-4" />
             </button>
           </div>
-          <p className="text-center text-[11px] text-gray-400 mt-2">
-            Tempu Ai can make mistakes. Verify important details before acting on them.
-          </p>
+          {footerNote && <p className="text-center text-[11px] text-gray-400 mt-2">{footerNote}</p>}
         </form>
       </div>
     </section>
+  )
+}
+
+// ── Agentic: a tool-calling chat over LIVE app data. Gated by the useAgenticAI
+// permission since it can surface personal data. ─────────────────────────────
+function AgenticSection() {
+  const admin = useAuthStore((s) => s.admin)
+  const canUse = hasPermission(admin, 'useAgenticAI')
+
+  if (!canUse) {
+    return (
+      <section className="bg-white rounded-xl border border-gray-200 p-10">
+        <EmptyState
+          icon={MessageSquare}
+          title="No access to Tempu Ai"
+          description="Ask a superadmin to grant you the “Use Agentic AI” permission to query live app data through chat."
+        />
+      </section>
+    )
+  }
+
+  return (
+    <ChatPanel
+      icon={MessageSquare}
+      title="Tempu Ai"
+      subtitle="Queries live app data — users, drivers, trips, payments"
+      emptyTitle="How can Tempu Ai help?"
+      emptyHint="Ask about any user, driver, trip, or platform stat."
+      suggestions={AGENTIC_SUGGESTIONS}
+      placeholder="Message Tempu Ai…"
+      footerNote="Tempu Ai can make mistakes. Verify important details before acting on them."
+      sendFn={(text, history) => knowledgeApi.agenticChat(text, history)}
+    />
   )
 }

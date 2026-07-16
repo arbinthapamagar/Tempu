@@ -86,8 +86,35 @@ def _context(hits) -> str:
     )
 
 
+def _friendly_error(exc, stage: str) -> str:
+    """Turn a provider/dependency failure into a clear message the admin sees
+    (and that gets logged), instead of a bare 500."""
+    msg = str(exc)
+    # Gemini HTTP error (raise_for_status) carries the status on the response.
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    if status == 429:
+        return ("⚠️ The Gemini AI quota has been used up for now. Enable billing on the "
+                "Gemini API key (free-tier limits reset daily), or set AI_PROVIDER=ollama "
+                "to use the local model.")
+    if status in (401, 403):
+        return "⚠️ The Gemini API key was rejected. Check GEMINI_API_KEY in rag-service/.env."
+    if "connect to ollama" in msg.lower() or "connection" in msg.lower():
+        if stage == "embed":
+            return ("⚠️ The knowledge base search is unavailable — the local embedding model "
+                    "(Ollama) can't be reached. Start it with `ollama serve` and try again.")
+        return ("⚠️ The local AI (Ollama) isn't reachable. Start it with `ollama serve`, or set "
+                "AI_PROVIDER=gemini in rag-service/.env.")
+    return f"⚠️ The AI service hit an error while trying to answer ({stage}). Please try again shortly."
+
+
 def answer(message: str, history=None, k: int = RETRIEVE_K):
-    raw_hits = search(message, k=k)
+    # Retrieval (uses local Ollama embeddings). If Ollama is down this is where
+    # it fails — return a clear message rather than a 500 so the admin knows why.
+    try:
+        raw_hits = search(message, k=k)
+    except Exception as exc:  # noqa: BLE001 - surface any dependency failure cleanly
+        return {"reply": _friendly_error(exc, "embed"), "sources": [], "hits": [], "error": True}
+
     # Only ground on genuinely relevant chunks. Below the relevance floor the
     # match is noise (e.g. a greeting nearest-neighbours some random doc), so we
     # drop it — that keeps answers from hallucinating off weak matches and stops
@@ -103,6 +130,12 @@ def answer(message: str, history=None, k: int = RETRIEVE_K):
         msgs.append((role, m.get("text", "")))
     msgs.append(("user", message))
 
-    reply = _generate(msgs)
+    # Generation (Gemini or Ollama). Gemini quota / key / connection problems land
+    # here — again, return a clear message instead of a 500.
+    try:
+        reply = _generate(msgs)
+    except Exception as exc:  # noqa: BLE001
+        return {"reply": _friendly_error(exc, "generate"), "sources": [], "hits": hits, "error": True}
+
     sources = list(dict.fromkeys(h["source"] for h in hits))
     return {"reply": reply, "sources": sources, "hits": hits}
