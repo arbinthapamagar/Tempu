@@ -29,6 +29,12 @@ LLM_MODEL = os.environ.get("RAG_CHAT_MODEL", "llama3.1:8b")
 # Chroma vector store never needs re-ingesting.
 AI_PROVIDER = os.environ.get("AI_PROVIDER", "ollama").lower()
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+# One or more keys: GEMINI_API_KEY is primary, GEMINI_API_KEYS holds extras
+# (comma-separated). When a key's whole model chain is exhausted, roll to the next.
+_GEMINI_EXTRA_KEYS = os.environ.get("GEMINI_API_KEYS", "")
+GEMINI_KEYS = list(dict.fromkeys(
+    [k.strip() for k in ([GEMINI_API_KEY] + _GEMINI_EXTRA_KEYS.split(",")) if k.strip()]
+))
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 # Free-tier quota is per-model-per-day, so on a 429 we fail over to the next
 # model (each has its own bucket). Primary first, then this chain.

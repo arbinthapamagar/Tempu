@@ -91,12 +91,14 @@ def ask_endpoint(body: AskIn):
 
 
 class ChatIn(BaseModel):
-    message: str
+    message: str = ""
     history: Optional[list] = None
     k: Optional[int] = None
+    # Optional base64 data URL ("data:image/png;base64,…") for image understanding.
+    image: Optional[str] = None
 
 
 @app.post("/chat")
 def chat_endpoint(body: ChatIn):
-    r = answer_mod.answer(body.message, body.history or [], body.k or RETRIEVE_K)
+    r = answer_mod.answer(body.message, body.history or [], body.k or RETRIEVE_K, image=body.image)
     return {"reply": r["reply"], "sources": r["sources"]}

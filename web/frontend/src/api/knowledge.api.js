@@ -14,7 +14,9 @@ export const knowledgeApi = {
   ingestText: (text, label) => api.post('/admin/knowledge/text', { text, label }),
   search: (query, k) => api.post('/admin/knowledge/search', { query, k }),
   ask: (question, k) => api.post('/admin/knowledge/ask', { question, k }),
-  chat: (message, history) => api.post('/admin/knowledge/chat', { message, history }),
+  // image: optional base64 data URL ("data:image/png;base64,…") for image understanding.
+  chat: (message, history, image) =>
+    api.post('/admin/knowledge/chat', { message, history, ...(image ? { image } : {}) }),
   removeSource: (source) => api.delete(`/admin/knowledge/sources/${encodeURIComponent(source)}`),
   // Agentic AI — tool-calling agent over LIVE app data (users, drivers, trips,
   // payments, etc.), gated by the separate useAgenticAI permission.
