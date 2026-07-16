@@ -4,7 +4,7 @@
 // model is provider-agnostic (Gemini or local Ollama) via ./llm.js — set with
 // the AI_PROVIDER env var.
 import { TOOLS, HANDLERS } from './agenticTools.js';
-import { chatWithTools, chatPlain, friendlyAiError } from './llm.js';
+import { chatWithTools, chatPlain, friendlyAiError, AI_PROVIDER } from './llm.js';
 
 // Enough round-trips for real multi-step questions (e.g. list tickets → open the
 // detail of each → summarise) without letting a confused model loop forever.
@@ -103,15 +103,39 @@ function parseLeakedToolCall(content) {
 }
 
 // history: [{ role: 'user'|'model', text }] — same shape the RAG chat uses.
+// `image` (optional) is a base64 data URL ("data:image/png;base64,…") — only
+// understood on the Gemini provider (its OpenAI-compatible endpoint accepts
+// multimodal content alongside tool calling); on Ollama the image is ignored
+// with a note, since the configured local model isn't vision-capable.
 // Returns { reply, toolCalls: [{name, args}] }.
-export async function runAgenticChat(message, history = []) {
+export async function runAgenticChat(message, history = [], image = null) {
+    let systemPrompt = SYSTEM_PROMPT;
+    let userContent = message;
+    if (image) {
+        if (AI_PROVIDER === 'gemini') {
+            systemPrompt +=
+                '\n\n## Attached image\nThe boss attached an image. Describe/analyse it and answer their ' +
+                'question about it. Combine what you see with tool data when relevant, but never invent ' +
+                'facts that aren’t in the image or a tool result.';
+            const parts = [];
+            if (message) parts.push({ type: 'text', text: message });
+            parts.push({ type: 'image_url', image_url: { url: image } });
+            userContent = parts;
+        } else {
+            systemPrompt +=
+                '\n\n## Attached image\nThe boss attached an image, but the local model can’t view images ' +
+                '— tell them to switch `AI_PROVIDER=gemini` for image understanding, then answer the text ' +
+                'part of their message if there is one.';
+        }
+    }
+
     const messages = [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         ...(history || []).slice(-8).map((m) => ({
             role: m.role === 'user' ? 'user' : 'assistant',
             content: m.text,
         })),
-        { role: 'user', content: message },
+        { role: 'user', content: userContent },
     ];
 
     const toolCalls = [];

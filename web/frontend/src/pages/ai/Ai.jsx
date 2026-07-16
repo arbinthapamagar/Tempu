@@ -13,7 +13,7 @@ import { useAuthStore, hasPermission } from '../../store/authStore'
 import { Markdown } from '../../components/ai/Markdown'
 import toast from 'react-hot-toast'
 
-const ACCEPT = '.pdf,.docx,.txt,.md,.csv,.json'
+const ACCEPT = '.pdf,.docx,.txt,.md,.csv,.json,.png,.jpg,.jpeg,.webp,.bmp,.tiff,.gif'
 
 export default function Ai() {
   const [tab, setTab] = useState('rag') // 'rag' | 'agentic'
@@ -147,7 +147,7 @@ function RagDocuments({ qc }) {
             onChange={(e) => setFiles(Array.from(e.target.files || []))}
             className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-orange-50 file:text-orange-700 file:text-sm file:font-medium hover:file:bg-orange-100 cursor-pointer"
           />
-          <p className="mt-2 text-xs text-gray-400">PDF, DOCX, TXT, MD, CSV, JSON — up to 10 files.</p>
+          <p className="mt-2 text-xs text-gray-400">PDF, DOCX, TXT, MD, CSV, JSON, or images (PNG/JPG/WEBP — OCR'd) — up to 10 files.</p>
           {files.length > 0 && (
             <ul className="mt-3 space-y-1 text-sm text-gray-600">
               {files.map((f) => (
@@ -501,9 +501,10 @@ function AgenticSection() {
       emptyTitle="How can Tempu Ai help?"
       emptyHint="Ask about any user, driver, trip, or platform stat."
       suggestions={AGENTIC_SUGGESTIONS}
-      placeholder="Message Tempu Ai…"
+      placeholder="Message Tempu Ai… or attach an image"
       footerNote="Tempu Ai can make mistakes. Verify important details before acting on them."
-      sendFn={(text, history) => knowledgeApi.agenticChat(text, history)}
+      sendFn={(text, history, image) => knowledgeApi.agenticChat(text, history, image)}
+      allowImage
     />
   )
 }
