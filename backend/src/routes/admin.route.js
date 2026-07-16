@@ -4,6 +4,7 @@ import { upload } from '../middlewares/multer.middleware.js';
 import {
     ingestDocuments, ingestRawText, getSources, removeSource, searchKnowledge, askKnowledge, chatKnowledge, agenticChat,
 } from '../controller/rag.controller.js';
+import { listApiLogs, apiLogStats, getApiLog, clearApiLogs } from '../controller/apiLog.controller.js';
 import { apiError } from '../utils/apiError.js';
 import {
     login, logout, refreshAdminToken, getMe, updateMyProfile, uploadMyAvatar, deleteMyAvatar,
@@ -180,5 +181,18 @@ const requireAgenticAI = (req, res, next) => {
     throw new apiError(403, 'Insufficient permissions');
 };
 adminRouter.post('/agentic/chat', requireAgenticAI, agenticChat);
+
+// API Log viewer — shows captured request/response traffic across the whole
+// platform (web, mobile, backend). Superadmin only: it exposes full request and
+// response payloads for every domain, so it is strictly more sensitive than any
+// single-domain permission.
+const requireSuperadmin = (req, res, next) => {
+    if (req.admin?.role === 'superadmin') return next();
+    throw new apiError(403, 'Superadmin only');
+};
+adminRouter.get('/api-logs', requireSuperadmin, listApiLogs);
+adminRouter.get('/api-logs/stats', requireSuperadmin, apiLogStats);
+adminRouter.get('/api-logs/:id', requireSuperadmin, getApiLog);
+adminRouter.delete('/api-logs', requireSuperadmin, clearApiLogs);
 
 export { adminRouter };

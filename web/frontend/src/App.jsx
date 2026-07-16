@@ -25,6 +25,7 @@ import Analytics from './pages/analytics/Analytics'
 import Notifications from './pages/notifications/Notifications'
 import KnowledgeBase from './pages/knowledge/KnowledgeBase'
 import Ai from './pages/ai/Ai'
+import ApiLogs from './pages/apiLogs/ApiLogs'
 
 function PrivateRoute({ children }) {
   const { isAuthenticated } = useAuthStore()
@@ -98,6 +99,7 @@ export default function App() {
         <Route path="notifications" element={<Notifications />} />
         <Route path="knowledge" element={<KnowledgeBase />} />
         <Route path="ai" element={<Ai />} />
+        <Route path="api-logs" element={<ApiLogs />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
