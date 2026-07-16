@@ -90,12 +90,13 @@ const askKnowledge = asyncHandler(async (req, res) => {
     }
 });
 
-// POST /knowledge/chat  { message, history }  → multi-turn assistant reply
+// POST /knowledge/chat  { message, history, image? }  → multi-turn assistant reply.
+// `image` is an optional base64 data URL for image understanding (Tempu Rag).
 const chatKnowledge = asyncHandler(async (req, res) => {
-    const { message, history = [] } = req.body;
-    if (!message || !message.trim()) throw new apiError(400, 'Message is required');
+    const { message = '', history = [], image = null } = req.body;
+    if ((!message || !message.trim()) && !image) throw new apiError(400, 'Message or image is required');
     try {
-        const result = await chat(message.trim(), Array.isArray(history) ? history : []);
+        const result = await chat((message || '').trim(), Array.isArray(history) ? history : [], image);
         return res.status(200).json(new apiResponse(200, result, 'Chat reply'));
     } catch {
         return res.status(200).json(new apiResponse(200, { reply: RAG_DOWN_MSG, sources: [], error: true }, 'Chat reply'));

@@ -14,14 +14,14 @@ from config import (
     RETRIEVE_K,
     MIN_SCORE,
     AI_PROVIDER,
-    GEMINI_API_KEY,
+    GEMINI_KEYS,
     GEMINI_MODELS,
 )
 from retriever import search
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
-# Index of the last Gemini model that worked, so we don't re-hit an exhausted
-# model on every request (mirrors the Node side).
+# Last key/model that worked, so we don't re-hit an exhausted combo every call.
+_active_key_idx = 0
 _active_gemini_idx = 0
 
 SYSTEM = (
@@ -71,34 +71,45 @@ def llm():
     return _llm
 
 
-def _generate(msgs):
-    """Run one chat generation on the configured provider. `msgs` is a list of
-    (role, text) tuples. Returns the reply text. Embeddings/retrieval are
-    unaffected — only text generation switches provider. On Gemini, a per-model
-    daily 429 (or 404) fails over to the next model in the chain."""
-    global _active_gemini_idx
-    if AI_PROVIDER == "gemini" and GEMINI_API_KEY:
-        oai = [{"role": r, "content": t} for r, t in msgs]
+def _generate(oai_messages):
+    """Run one chat generation on the configured provider. `oai_messages` is a
+    list of OpenAI-style {role, content} dicts (content may be a string or, for
+    vision, a list of parts). Embeddings/retrieval are unaffected. On Gemini it
+    rotates KEY × MODEL: a per-model daily 429/404 tries the next model, and once
+    a key's whole chain is exhausted (or the key is rejected) it rolls to the
+    next key — each key has its own quota buckets."""
+    global _active_key_idx, _active_gemini_idx
+    if AI_PROVIDER == "gemini" and GEMINI_KEYS:
         last_exc = None
-        for attempt in range(len(GEMINI_MODELS)):
-            idx = (_active_gemini_idx + attempt) % len(GEMINI_MODELS)
-            model = GEMINI_MODELS[idx]
-            res = requests.post(
-                GEMINI_URL,
-                headers={"Authorization": f"Bearer {GEMINI_API_KEY}", "Content-Type": "application/json"},
-                json={"model": model, "messages": oai, "temperature": LLM_TEMPERATURE},
-                timeout=60,
-            )
-            if res.status_code in (429, 404):
-                last_exc = requests.HTTPError(f"{model} -> {res.status_code}", response=res)
+        for ka in range(len(GEMINI_KEYS)):
+            key_idx = (_active_key_idx + ka) % len(GEMINI_KEYS)
+            key = GEMINI_KEYS[key_idx]
+            key_rejected = False
+            for ma in range(len(GEMINI_MODELS)):
+                m_idx = (_active_gemini_idx + ma) % len(GEMINI_MODELS)
+                model = GEMINI_MODELS[m_idx]
+                res = requests.post(
+                    GEMINI_URL,
+                    headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                    json={"model": model, "messages": oai_messages, "temperature": LLM_TEMPERATURE},
+                    timeout=60,
+                )
+                if res.status_code in (401, 403):
+                    last_exc = requests.HTTPError(f"key#{key_idx + 1} -> {res.status_code}", response=res)
+                    key_rejected = True
+                    break  # bad key — next key
+                if res.status_code in (429, 404):
+                    last_exc = requests.HTTPError(f"{model} -> {res.status_code}", response=res)
+                    continue  # next model on this key
+                res.raise_for_status()
+                _active_key_idx, _active_gemini_idx = key_idx, m_idx
+                return res.json()["choices"][0]["message"]["content"] or ""
+            if key_rejected:
                 continue
-            res.raise_for_status()
-            _active_gemini_idx = idx  # stick with the model that worked
-            return res.json()["choices"][0]["message"]["content"] or ""
-        # Every model exhausted — re-raise the last 429 so the caller shows the
-        # quota message.
-        raise last_exc if last_exc else RuntimeError("Gemini: no models available")
-    resp = llm().invoke(msgs)
+        raise last_exc if last_exc else RuntimeError("Gemini: no keys/models available")
+    # Ollama fallback (text only).
+    tuples = [(m["role"], m["content"]) for m in oai_messages if isinstance(m.get("content"), str)]
+    resp = llm().invoke(tuples)
     return getattr(resp, "content", None) or str(resp)
 
 
@@ -131,11 +142,15 @@ def _friendly_error(exc, stage: str) -> str:
     return f"⚠️ The AI service hit an error while trying to answer ({stage}). Please try again shortly."
 
 
-def answer(message: str, history=None, k: int = RETRIEVE_K):
+def answer(message: str, history=None, k: int = RETRIEVE_K, image=None):
+    """Answer a question from the knowledge base. `image` (optional) is a base64
+    data URL ("data:image/png;base64,…") — when present, Tempu Rag also looks at
+    the image (Gemini vision) and can answer about it. Retrieval still runs so KB
+    context is available alongside the image."""
     # Retrieval (uses local Ollama embeddings). If Ollama is down this is where
     # it fails — return a clear message rather than a 500 so the admin knows why.
     try:
-        raw_hits = search(message, k=k)
+        raw_hits = search(message or "image", k=k)
     except Exception as exc:  # noqa: BLE001 - surface any dependency failure cleanly
         return {"reply": _friendly_error(exc, "embed"), "sources": [], "hits": [], "error": True}
 
@@ -148,11 +163,25 @@ def answer(message: str, history=None, k: int = RETRIEVE_K):
     sys = SYSTEM + (
         f"\n\nKNOWLEDGE:\n{ctx}" if ctx else "\n\n(No knowledge base entries matched this question.)"
     )
-    msgs = [("system", sys)]
+    if image:
+        sys += ("\n\nThe user attached an IMAGE. Describe/analyse it and answer their question about "
+                "it. You may combine what you see with the KNOWLEDGE above, but never invent facts "
+                "that aren't in the image or the knowledge base.")
+
+    # OpenAI-style messages (content is a string, or a multimodal parts list when
+    # an image is attached).
+    msgs = [{"role": "system", "content": sys}]
     for m in (history or [])[-8:]:
         role = "user" if (m.get("role") == "user") else "assistant"
-        msgs.append((role, m.get("text", "")))
-    msgs.append(("user", message))
+        msgs.append({"role": role, "content": m.get("text", "")})
+    if image:
+        parts = []
+        if message:
+            parts.append({"type": "text", "text": message})
+        parts.append({"type": "image_url", "image_url": {"url": image}})
+        msgs.append({"role": "user", "content": parts})
+    else:
+        msgs.append({"role": "user", "content": message})
 
     # Generation (Gemini or Ollama). Gemini quota / key / connection problems land
     # here — again, return a clear message instead of a 500.

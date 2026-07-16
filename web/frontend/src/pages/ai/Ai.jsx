@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Sparkles, Send, Upload, FileText, BookOpen, Trash2, MessageSquare, Plus } from '@/components/ui/icons'
+import { Sparkles, Send, Upload, FileText, BookOpen, Trash2, MessageSquare, Plus, Paperclip, X } from '@/components/ui/icons'
+import { cn } from '../../utils/cn'
 import { Button } from '../../components/ui/Button'
 import { Input, Textarea } from '../../components/ui/Input'
 import { PageHeader } from '../../components/shared/PageHeader'
@@ -70,10 +71,11 @@ function RagSection() {
         emptyTitle="Ask Tempu Rag"
         emptyHint="Ask about policies, fares, documents, or help articles."
         suggestions={RAG_SUGGESTIONS}
-        placeholder="Ask about policies, fares, documents…"
-        footerNote="Tempu Rag answers only from your uploaded knowledge base."
-        sendFn={(text, history) => knowledgeApi.chat(text, history)}
+        placeholder="Ask about policies, fares, documents… or attach an image"
+        footerNote="Tempu Rag answers from your knowledge base and can understand attached images."
+        sendFn={(text, history, image) => knowledgeApi.chat(text, history, image)}
         showSources
+        allowImage
       />
 
       {/* Document management — superadmin / manageKnowledge only */}
@@ -277,19 +279,21 @@ const AGENTIC_SUGGESTIONS = [
 // optional sources line. `sendFn(text, history)` posts to the right endpoint.
 function ChatPanel({
   icon: Icon = MessageSquare, title, subtitle, emptyTitle, emptyHint,
-  suggestions = [], placeholder, footerNote, sendFn, showSources = false,
+  suggestions = [], placeholder, footerNote, sendFn, showSources = false, allowImage = false,
 }) {
-  const [messages, setMessages] = useState([]) // { role: 'user' | 'model', text, sources? }
+  const [messages, setMessages] = useState([]) // { role: 'user' | 'model', text, sources?, image? }
   const [input, setInput] = useState('')
+  const [image, setImage] = useState(null) // base64 data URL, attached to the next message
   const scrollRef = useRef(null)
   const textareaRef = useRef(null)
+  const imageInputRef = useRef(null)
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
 
   const send = useMutation({
-    mutationFn: ({ text, history }) => sendFn(text, history),
+    mutationFn: ({ text, history, image: img }) => sendFn(text, history, img),
     onSuccess: (res) => {
       const data = res?.data || {}
       setMessages((prev) => [...prev, { role: 'model', text: data.reply || data.answer || '…', sources: data.sources || [] }])
@@ -300,19 +304,36 @@ function ChatPanel({
     },
   })
 
+  const onPickImage = (e) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (!file.type.startsWith('image/')) toast.error('Please choose an image file')
+      else if (file.size > 8 * 1024 * 1024) toast.error('Image too large (max 8MB)')
+      else {
+        const reader = new FileReader()
+        reader.onload = () => setImage(reader.result) // data URL
+        reader.readAsDataURL(file)
+      }
+    }
+    e.target.value = '' // allow re-picking the same file
+  }
+
   const sendMessage = (text) => {
-    const trimmed = text.trim()
-    if (!trimmed || send.isPending) return
+    const trimmed = (text || '').trim()
+    if ((!trimmed && !image) || send.isPending) return
     const history = messages.map((m) => ({ role: m.role, text: m.text }))
-    setMessages((prev) => [...prev, { role: 'user', text: trimmed }])
+    const sentImage = image
+    setMessages((prev) => [...prev, { role: 'user', text: trimmed, image: sentImage }])
     setInput('')
+    setImage(null)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
-    send.mutate({ text: trimmed, history })
+    send.mutate({ text: trimmed, history, image: sentImage })
   }
 
   const newChat = () => {
     setMessages([])
     setInput('')
+    setImage(null)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }
 
@@ -366,8 +387,11 @@ function ChatPanel({
               {messages.map((m, i) =>
                 m.role === 'user' ? (
                   <div key={i} className="flex justify-end">
-                    <div className="max-w-[80%] rounded-2xl bg-gray-100 px-4 py-2.5 text-sm text-gray-900 whitespace-pre-wrap">
-                      {m.text}
+                    <div className="max-w-[80%] rounded-2xl bg-gray-100 px-4 py-2.5 text-sm text-gray-900">
+                      {m.image && (
+                        <img src={m.image} alt="attachment" className="mb-2 max-h-48 rounded-lg object-contain" />
+                      )}
+                      {m.text && <span className="whitespace-pre-wrap">{m.text}</span>}
                     </div>
                   </div>
                 ) : (
@@ -393,6 +417,20 @@ function ChatPanel({
 
       <div className="border-t border-gray-100 p-4 shrink-0">
         <form onSubmit={submit} className="max-w-3xl mx-auto">
+          {/* Attached-image preview */}
+          {image && (
+            <div className="mb-2 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-1.5">
+              <img src={image} alt="attachment" className="h-12 w-12 rounded object-cover" />
+              <button
+                type="button"
+                onClick={() => setImage(null)}
+                className="p-1 rounded-md hover:bg-gray-200 text-gray-500"
+                aria-label="Remove image"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           <div className="relative rounded-2xl border border-gray-300 focus-within:border-orange-400 focus-within:ring-1 focus-within:ring-orange-400 bg-white shadow-sm transition-colors">
             <textarea
               ref={textareaRef}
@@ -401,12 +439,29 @@ function ChatPanel({
               onChange={autoGrow}
               onKeyDown={onInputKeyDown}
               placeholder={placeholder}
-              className="w-full resize-none bg-transparent rounded-2xl pl-4 pr-12 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
+              className={cn(
+                'w-full resize-none bg-transparent rounded-2xl py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none',
+                allowImage ? 'pl-11 pr-12' : 'pl-4 pr-12'
+              )}
               style={{ maxHeight: 200 }}
             />
+            {allowImage && (
+              <>
+                <input ref={imageInputRef} type="file" accept="image/*" onChange={onPickImage} className="hidden" />
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  className="absolute bottom-2 left-2 h-8 w-8 rounded-full text-gray-400 hover:text-orange-500 hover:bg-gray-100 grid place-items-center transition-colors"
+                  aria-label="Attach image"
+                  title="Attach an image"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </button>
+              </>
+            )}
             <button
               type="submit"
-              disabled={!input.trim() || send.isPending}
+              disabled={(!input.trim() && !image) || send.isPending}
               className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white grid place-items-center transition-colors"
               aria-label="Send"
             >

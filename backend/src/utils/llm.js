@@ -17,7 +17,15 @@ export const AI_PROVIDER = (process.env.AI_PROVIDER || 'ollama').toLowerCase();
 const OLLAMA_URL = (process.env.OLLAMA_URL || 'http://localhost:11434').replace(/\/+$/, '');
 const OLLAMA_MODEL = process.env.AGENTIC_CHAT_MODEL || process.env.RAG_CHAT_MODEL || 'llama3.1:8b';
 
-const GEMINI_KEY = process.env.GEMINI_API_KEY || '';
+// One or more Gemini API keys. GEMINI_API_KEY is the main one; add extras in
+// GEMINI_API_KEYS (comma-separated). Each key has its own per-model daily quota,
+// so when every model on the current key is exhausted we roll to the next key.
+const GEMINI_KEYS = [...new Set(
+    [process.env.GEMINI_API_KEY, ...(process.env.GEMINI_API_KEYS || '').split(',')]
+        .map((s) => (s || '').trim())
+        .filter(Boolean)
+)];
+let activeKeyIdx = 0; // remember the last key that worked
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-lite-latest';
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 
@@ -154,13 +162,13 @@ function toOpenAiMessages(messages) {
     });
 }
 
-// One raw call to a specific Gemini model.
-async function geminiCall(model, openAiMessages, tools) {
+// One raw call to a specific Gemini key + model.
+async function geminiCall(key, model, openAiMessages, tools) {
     let res;
     try {
         res = await fetch(GEMINI_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GEMINI_KEY}` },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
             body: JSON.stringify({
                 model,
                 messages: openAiMessages,
@@ -190,36 +198,51 @@ async function geminiCall(model, openAiMessages, tools) {
 }
 
 async function geminiChat(messages, tools) {
-    if (!GEMINI_KEY) throw providerError('gemini', 401, 'GEMINI_API_KEY is not set');
+    if (!GEMINI_KEYS.length) throw providerError('gemini', 401, 'GEMINI_API_KEY is not set');
     const openAiMessages = toOpenAiMessages(messages);
     let lastErr;
-    // Start from the last known-good model, then walk the list. Only a 429
-    // (daily quota used up) or 404 (model unavailable) triggers failover — real
-    // errors (bad key, malformed request) surface immediately.
-    for (let attempt = 0; attempt < GEMINI_MODELS.length; attempt++) {
-        const idx = (activeGeminiIdx + attempt) % GEMINI_MODELS.length;
-        const model = GEMINI_MODELS[idx];
-        try {
-            const result = await geminiCall(model, openAiMessages, tools);
-            if (idx !== activeGeminiIdx) {
-                console.warn(`[llm] Gemini now using "${model}" (index ${idx})`);
-                activeGeminiIdx = idx; // stick with the model that just worked
+    // Two-level rotation, starting from the last known-good key + model:
+    //   for each KEY → try each MODEL. A 429/404 rolls to the next model; once a
+    //   key's whole model chain is exhausted (or the key is rejected) roll to the
+    //   next key (fresh per-model daily quota). Only network/malformed errors abort.
+    for (let k = 0; k < GEMINI_KEYS.length; k++) {
+        const keyIdx = (activeKeyIdx + k) % GEMINI_KEYS.length;
+        const key = GEMINI_KEYS[keyIdx];
+        let keyRejected = false;
+        for (let m = 0; m < GEMINI_MODELS.length; m++) {
+            const modelIdx = (activeGeminiIdx + m) % GEMINI_MODELS.length;
+            const model = GEMINI_MODELS[modelIdx];
+            try {
+                const result = await geminiCall(key, model, openAiMessages, tools);
+                if (keyIdx !== activeKeyIdx || modelIdx !== activeGeminiIdx) {
+                    console.warn(`[llm] Gemini now using key #${keyIdx + 1} / "${model}"`);
+                    activeKeyIdx = keyIdx;
+                    activeGeminiIdx = modelIdx;
+                }
+                return result;
+            } catch (err) {
+                if (err.connection) throw err; // network down — rotating won't help
+                if (err.status === 401 || err.status === 403) {
+                    // Key invalid/expired — no point trying more models on it; next key.
+                    console.warn(`[llm] Gemini key #${keyIdx + 1} rejected (${err.status}), trying next key`);
+                    lastErr = err;
+                    keyRejected = true;
+                    break;
+                }
+                if (err.status === 429 || err.status === 404) {
+                    console.warn(`[llm] Gemini key #${keyIdx + 1} "${model}" → ${err.status}, failing over`);
+                    lastErr = err;
+                    continue; // next model on this key
+                }
+                console.error('[llm] Gemini error', err.status, err.body);
+                throw err; // 400 etc. — a request bug, not a quota/key issue
             }
-            return result;
-        } catch (err) {
-            if (err.connection) throw err; // network down — switching models won't help
-            if (err.status === 429 || err.status === 404) {
-                console.warn(`[llm] Gemini "${model}" → ${err.status}, failing over to next model`);
-                lastErr = err;
-                continue;
-            }
-            console.error('[llm] Gemini error', err.status, err.body);
-            throw err; // 400/401/403/etc. — not a quota issue
         }
+        if (keyRejected) continue; // move to next key
     }
-    // Every model in the chain is exhausted for today.
-    console.error('[llm] all Gemini models exhausted (429)');
-    throw lastErr || providerError('gemini', 429, 'all Gemini models exhausted');
+    // Every key × model combination is exhausted / rejected.
+    console.error('[llm] all Gemini keys + models exhausted');
+    throw lastErr || providerError('gemini', 429, 'all Gemini keys/models exhausted');
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────

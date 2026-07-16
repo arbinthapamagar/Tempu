@@ -44,8 +44,8 @@ export async function answerFromHits(message, history = [], _hits) {
     return { reply: data.reply, sources: data.sources || [] };
 }
 
-export async function chat(message, history = []) {
-    const data = await call('/chat', { json: { message, history } });
+export async function chat(message, history = [], image = null) {
+    const data = await call('/chat', { json: { message, history, ...(image ? { image } : {}) } });
     return { reply: data.reply, sources: data.sources || [] };
 }
 
