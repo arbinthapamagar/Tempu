@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -59,7 +60,7 @@ export default function LoginScreen({ onGoToRegister, onContact }) {
     >
       {/* Top bar: wordmark + help */}
       <View style={styles.header}>
-        <Text style={styles.brand}>Tempu</Text>
+        <Image source={require('../assets/logo-wordmark.png')} style={styles.brand} resizeMode="contain" />
         <View style={styles.headerBtn}>
           <Ionicons name="help" size={20} color={colors.textMuted} />
         </View>
@@ -212,10 +213,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   brand: {
-    fontFamily: fonts.displayBold,
-    fontSize: 28,
-    color: colors.primary,
-    letterSpacing: -0.3,
+    height: 28,
+    width: 74,
   },
   headerBtn: {
     width: 40,

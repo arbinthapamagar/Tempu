@@ -1,5 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
+  Image,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -40,7 +41,7 @@ export default function RoleSelectScreen({ onPassenger, onDriver, onSignIn, onCo
     <SafeAreaView style={styles.root}>
       {/* Top bar: wordmark + round action */}
       <View style={styles.header}>
-        <Text style={styles.brand}>Tempu</Text>
+        <Image source={require('../assets/logo-wordmark.png')} style={styles.brand} resizeMode="contain" />
         <View style={styles.headerBtn}>
           <Ionicons name="language" size={20} color={colors.textMuted} />
         </View>
@@ -117,10 +118,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   brand: {
-    fontFamily: fonts.displayBold,
-    fontSize: 28,
-    color: colors.primary,
-    letterSpacing: -0.3,
+    height: 28,
+    width: 74,
   },
   headerBtn: {
     width: 40,

@@ -27,10 +27,13 @@ LLM_NUM_PREDICT = int(os.environ.get("RAG_NUM_PREDICT", "1800"))
 # Retrieval / chunking (mirror BOT/config.py).
 CHUNK_SIZE = int(os.environ.get("RAG_CHUNK_SIZE", "500"))
 CHUNK_OVERLAP = int(os.environ.get("RAG_CHUNK_OVERLAP", "50"))
-RETRIEVE_K = int(os.environ.get("RAG_RETRIEVE_K", "4"))
+RETRIEVE_K = int(os.environ.get("RAG_RETRIEVE_K", "5"))
 
-# Relevance floor for the support bot's "only answer if we actually know" gate.
-# Chroma cosine relevance is in [0,1]; tune if the AI answers too eagerly/rarely.
-MIN_SCORE = float(os.environ.get("RAG_MIN_SCORE", "0.35"))
+# Relevance floor for grounding: a chunk is only used as context / cited as a
+# source when its cosine relevance clears this. nomic-embed gives loosely-related
+# text a ~0.4 baseline, so 0.5 keeps genuine matches while dropping noise (e.g. a
+# greeting no longer "matches" a random document). Tune via RAG_MIN_SCORE if the
+# assistant answers too eagerly (raise it) or too rarely (lower it).
+MIN_SCORE = float(os.environ.get("RAG_MIN_SCORE", "0.5"))
 
 COLLECTION = os.environ.get("RAG_COLLECTION", "shakti")

@@ -3,9 +3,11 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   LayoutGrid, Users, Car, Navigation, Repeat, CreditCard, FileText,
-  MessageSquare, Building2, BarChart2, Shield, Bell, Zap, X, Banknote, Coins, Siren,
+  MessageSquare, Building2, BarChart2, Shield, Bell, X, Banknote, Coins, Siren,
   ChevronDown, Settings, ChevronsLeft, LogOut, BookOpen, Sparkles,
 } from '@/components/ui/icons'
+import logoIcon from '@/assets/logo-icon.png'
+import logoWordmark from '@/assets/logo-wordmark.png'
 import { cn } from '../../utils/cn'
 import { Avatar } from '../ui/Avatar'
 import { NotificationBell } from './NotificationBell'
@@ -66,8 +68,8 @@ const navSections = [
     icon: Settings,
     items: [
       { to: '/notifications', label: 'Notifications', icon: Bell, permission: null },
-      { to: '/ai', label: 'AI', icon: Sparkles, permission: null },
-      { to: '/knowledge', label: 'Knowledge Base', icon: BookOpen, permission: 'manageKnowledge' },
+      { to: '/ai', label: 'Tempu Ai', icon: Sparkles, permission: null },
+      { to: '/knowledge', label: 'Tempu Rag', icon: BookOpen, permission: 'manageKnowledge' },
     ],
   },
 ]
@@ -171,12 +173,12 @@ export function Sidebar({ open, onClose, isCollapsed, onToggle }) {
           className="flex items-center gap-2 min-w-0 text-left"
           title="Go to home"
         >
-          <div className="bg-orange-500 p-1.5 rounded-lg shrink-0">
-            <Zap className="h-6 w-6 text-white" />
-          </div>
-          <span className={cn('text-[30px] font-black tracking-tight leading-none', isCollapsed && 'lg:hidden')}>
-            <span className="text-gray-900">TEM</span><span className="text-orange-500">PU</span>
-          </span>
+          <img src={logoIcon} alt="Tempu" className="h-9 w-9 shrink-0 object-contain" />
+          <img
+            src={logoWordmark}
+            alt="Tempu"
+            className={cn('h-6 w-auto object-contain', isCollapsed && 'lg:hidden')}
+          />
         </button>
         {/* Mobile drawer close */}
         <button onClick={onClose} className="lg:hidden p-1 rounded-md hover:bg-gray-100 text-gray-500 shrink-0">
