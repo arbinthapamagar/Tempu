@@ -24,7 +24,7 @@ async function doRefresh() {
   if (!refreshToken) throw new Error('No refresh token');
   const res = await fetch(`${BASE_URL}/auth/refresh-token`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Client': 'mobile' },
     body: JSON.stringify({ refreshToken }),
   });
   const json = await res.json();
@@ -46,7 +46,9 @@ export async function request(method, path, body, opts = {}) {
   const { skipAuth = false, tempToken = null } = opts;
   const { accessToken } = tokenStore.get();
 
-  const headers = { 'Content-Type': 'application/json' };
+  // X-Client tags every request so the backend API-Log viewer buckets this
+  // traffic under the "Mobile" section (the web admin sends 'web').
+  const headers = { 'Content-Type': 'application/json', 'X-Client': 'mobile' };
   if (tempToken) {
     headers.Authorization = `Bearer ${tempToken}`;
   } else if (!skipAuth && accessToken) {

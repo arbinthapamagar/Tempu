@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   LayoutGrid, Users, Car, Navigation, Repeat, CreditCard, FileText,
   MessageSquare, Building2, BarChart2, Shield, Bell, X, Banknote, Coins, Siren,
-  ChevronDown, Settings, ChevronsLeft, LogOut, BookOpen, Sparkles,
+  ChevronDown, Settings, ChevronsLeft, LogOut, BookOpen, Sparkles, History,
 } from '@/components/ui/icons'
 import logoIcon from '@/assets/logo-icon.png'
 import logoWordmark from '@/assets/logo-wordmark.png'
@@ -70,6 +70,7 @@ const navSections = [
       { to: '/notifications', label: 'Notifications', icon: Bell, permission: null },
       { to: '/ai', label: 'Tempu Ai', icon: Sparkles, permission: null },
       { to: '/knowledge', label: 'Tempu Rag', icon: BookOpen, permission: 'manageKnowledge' },
+      { to: '/api-logs', label: 'API Log', icon: History, superadmin: true },
     ],
   },
 ]
@@ -191,6 +192,7 @@ export function Sidebar({ open, onClose, isCollapsed, onToggle }) {
         {navSections.map((section) => {
           const visibleItems = section.items.filter((item) => {
             if (item.to === '/dashboard' && !canSeeDashboard(admin)) return false
+            if (item.superadmin && admin?.role !== 'superadmin') return false
             return !item.permission || hasPermission(admin, item.permission)
           })
           if (!visibleItems.length) return null
