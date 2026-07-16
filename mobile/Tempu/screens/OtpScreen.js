@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -97,7 +98,7 @@ export default function OtpScreen({ phone, onSuccess, onBack }) {
         </Pressable>
 
         <View style={styles.header}>
-          <Text style={styles.brand}>Tempu</Text>
+          <Image source={require('../assets/logo-wordmark.png')} style={styles.brand} resizeMode="contain" />
           <Text style={styles.title}>Verify your number</Text>
           <Text style={styles.subtitle}>
             Enter the 6-digit code sent{phone ? ` to ${phone}` : ''}.
@@ -183,10 +184,8 @@ const styles = StyleSheet.create({
   },
   header: { marginBottom: 40 },
   brand: {
-    color: colors.primary,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 2,
+    height: 13,
+    width: 34,
     marginBottom: 20,
   },
   title: {

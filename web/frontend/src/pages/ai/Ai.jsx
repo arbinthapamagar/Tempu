@@ -20,15 +20,15 @@ export default function Ai() {
   return (
     <div className="max-w-5xl mx-auto">
       <PageHeader
-        title="Ultron"
+        title="Tempu Ai"
         description="Ask the knowledge base or chat with the agent. Powered by your Tempu knowledge base."
       />
 
       {/* Section switcher */}
       <div className="flex gap-1.5 mb-5">
         {[
-          { key: 'rag', label: 'Ultron RAG', icon: Sparkles },
-          { key: 'agentic', label: 'Ultron Agent', icon: MessageSquare },
+          { key: 'rag', label: 'Tempu Rag', icon: Sparkles },
+          { key: 'agentic', label: 'Tempu Ai', icon: MessageSquare },
         ].map((t) => (
           <button
             key={t.key}
@@ -75,7 +75,7 @@ function RagSection() {
       {/* Ask — available to every admin */}
       <section className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-3">
-          <Sparkles className="h-4 w-4 text-orange-500" /> Ultron RAG — ask the knowledge base
+          <Sparkles className="h-4 w-4 text-orange-500" /> Tempu Rag — ask the knowledge base
         </h2>
         <form onSubmit={submitAsk} className="flex gap-2 items-start">
           <div className="flex-1">
@@ -291,9 +291,10 @@ function RagDocuments({ qc }) {
 }
 
 const AGENTIC_SUGGESTIONS = [
+  'What can you do?',
+  'How many unanswered support tickets, and what are they about?',
   'Who is our least-rated driver?',
-  'How many open support tickets do we have?',
-  'List all admin users',
+  'Give me the platform stats',
 ]
 
 // ── Agentic: a tool-calling chat over LIVE app data (users, drivers, trips,
@@ -333,7 +334,7 @@ function AgenticSection() {
       <section className="bg-white rounded-xl border border-gray-200 p-10">
         <EmptyState
           icon={MessageSquare}
-          title="No access to Ultron Agent"
+          title="No access to Tempu Ai"
           description="Ask a superadmin to grant you the “Use Agentic AI” permission to query live app data through chat."
         />
       </section>
@@ -372,7 +373,7 @@ function AgenticSection() {
     <section className="bg-white rounded-xl border border-gray-200 flex flex-col" style={{ height: '75vh' }}>
       <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 shrink-0">
         <MessageSquare className="h-4 w-4 text-orange-500" />
-        <h2 className="text-sm font-semibold text-gray-900">Ultron Agent</h2>
+        <h2 className="text-sm font-semibold text-gray-900">Tempu Ai</h2>
         <span className="ml-auto text-[11px] text-gray-400">Queries live app data — users, drivers, trips, payments</span>
       </div>
 
@@ -381,7 +382,7 @@ function AgenticSection() {
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center py-16">
               <Sparkles className="h-7 w-7 text-orange-300 mb-3" />
-              <p className="text-base font-semibold text-gray-900">How can Ultron help?</p>
+              <p className="text-base font-semibold text-gray-900">How can Tempu Ai help?</p>
               <p className="text-sm text-gray-400 mt-1 mb-5">Ask about any user, driver, trip, or platform stat.</p>
               <div className="flex flex-wrap gap-2 justify-center max-w-md">
                 {AGENTIC_SUGGESTIONS.map((s) => (
@@ -431,7 +432,7 @@ function AgenticSection() {
               value={input}
               onChange={autoGrow}
               onKeyDown={onInputKeyDown}
-              placeholder="Message Ultron…"
+              placeholder="Message Tempu Ai…"
               className="w-full resize-none bg-transparent rounded-2xl pl-4 pr-12 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
               style={{ maxHeight: 200 }}
             />
@@ -445,7 +446,7 @@ function AgenticSection() {
             </button>
           </div>
           <p className="text-center text-[11px] text-gray-400 mt-2">
-            Ultron can make mistakes. Verify important details before acting on them.
+            Tempu Ai can make mistakes. Verify important details before acting on them.
           </p>
         </form>
       </div>

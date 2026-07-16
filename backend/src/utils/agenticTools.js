@@ -90,6 +90,27 @@ const shapeDriver = (d) => d && ({
     cancelledRides: d.cancelledRides, city: d.city,
 });
 
+// A support ticket is "awaiting reply" (unanswered) when it is still live
+// (open/in_progress) and the last message in the customer thread came from the
+// customer side (user/driver/guest), not from an admin. This is exactly what an
+// admin means by "unanswered tickets" — someone is waiting on us to respond.
+const isAwaitingReply = (t) => {
+    if (!['open', 'in_progress'].includes(t.status)) return false;
+    const msgs = t.messages || [];
+    if (!msgs.length) return true; // opened with no reply yet
+    const last = msgs[msgs.length - 1];
+    return last.senderType !== 'admin';
+};
+const msgPreview = (m) => {
+    if (!m) return null;
+    const text = (m.message || '').trim();
+    if (text) return text.length > 240 ? `${text.slice(0, 240)}…` : text;
+    if (m.attachmentType === 'audio') return '[voice note]';
+    if (m.attachmentType === 'file') return `[file: ${m.attachmentName || 'attachment'}]`;
+    return null;
+};
+const ticketOpenedBy = (t) => (t.driverId ? 'driver' : t.userId ? 'rider' : 'guest');
+
 // ── Tool schemas (Ollama / OpenAI-style function definitions) ───────────────
 export const TOOLS = [
     {
@@ -225,13 +246,28 @@ export const TOOLS = [
         type: 'function',
         function: {
             name: 'list_support_tickets',
-            description: 'List support tickets across the WHOLE platform (not one user) - use this for "all pending tickets", "how many open tickets", "list closed tickets", etc. Optionally filter by status or category. Status "open" means new/pending/unanswered tickets.',
+            description: 'List support tickets across the WHOLE platform (not one user) - use this for "all pending tickets", "how many open tickets", "unanswered tickets", "list closed tickets", "our support tickets", etc. Returns an exact `count` plus each ticket with its customer, assigned agent, category, who opened it, the opening message, the latest message, and whether it is awaiting our reply. IMPORTANT: OMIT the status argument to include tickets of ALL statuses (open, in_progress, resolved, closed) — only pass status when the admin explicitly names one. Status "open" means new/pending tickets. Set awaitingReply=true only for tickets a customer is waiting on us to answer ("unanswered").',
             parameters: {
                 type: 'object',
                 properties: {
                     status: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'closed'] },
                     category: { type: 'string' },
+                    awaitingReply: { type: 'boolean', description: 'true = only tickets whose last message is from the customer (unanswered / waiting on us)' },
                     limit: { type: 'integer' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_support_ticket_detail',
+            description: 'Get the FULL detail of one support ticket — the complete customer conversation thread (every message with who sent it and when), the customer, the assigned agent, category, status, opening complaint, latest message, whether it is awaiting our reply, and the support rating the customer gave. Use this when the admin wants to know what a ticket is about or what was said. Identify the ticket by its id, or by subject text or customer name.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    ticketId: { type: 'string', description: 'The ticket id (preferred if known)' },
+                    query: { type: 'string', description: 'Subject text or customer name/phone to find the ticket by, if the id is unknown' },
                 },
             },
         },
@@ -444,13 +480,17 @@ export const HANDLERS = {
     async list_recent_trips({ status, limit = 10 } = {}) {
         status = clean(status);
         const filter = status ? { status } : {};
-        const trips = await Trip.find(filter)
-            .sort({ createdAt: -1 })
-            .limit(clampLimit(limit, 10))
-            .populate('userId', 'name phone')
-            .populate('driverId', 'vehiclePlate')
-            .select('status vehicleType pickup.address dropoff.address offeredPrice finalPrice createdAt userId driverId');
+        const [count, trips] = await Promise.all([
+            Trip.countDocuments(filter),
+            Trip.find(filter)
+                .sort({ createdAt: -1 })
+                .limit(clampLimit(limit, 10))
+                .populate('userId', 'name phone')
+                .populate('driverId', 'vehiclePlate')
+                .select('status vehicleType pickup.address dropoff.address offeredPrice finalPrice createdAt userId driverId'),
+        ]);
         return {
+            count,
             trips: trips.map((t) => ({
                 id: t._id, status: t.status, vehicleType: t.vehicleType,
                 rider: t.userId?.name, pickup: t.pickup?.address, dropoff: t.dropoff?.address,
@@ -498,22 +538,101 @@ export const HANDLERS = {
         };
     },
 
-    async list_support_tickets({ status, category, limit = 10 } = {}) {
+    async list_support_tickets({ status, category, awaitingReply, limit = 10 } = {}) {
         status = normalizeTicketStatus(status);
         category = clean(category);
+        awaitingReply = cleanBool(awaitingReply);
         const filter = { ...(status ? { status } : {}), ...(category ? { category } : {}) };
-        const tickets = await SupportTicket.find(filter)
+        // Exact total that matches the filter, independent of the display limit —
+        // so "how many" answers are correct even when we only show a few rows.
+        const totalMatching = await SupportTicket.countDocuments(filter);
+        let tickets = await SupportTicket.find(filter)
             .sort({ createdAt: -1 })
-            .limit(clampLimit(limit, 10))
+            .limit(clampLimit(awaitingReply ? MAX_LIMIT : limit, 10))
             .populate('userId', 'name phone')
+            .populate('driverId', 'userId')
             .populate('assignedTo', 'name')
-            .select('subject category status rating.score createdAt userId assignedTo guest');
-        return {
-            tickets: tickets.map((t) => ({
+            .select('subject category status rating.score createdAt userId driverId assignedTo guest messages');
+        if (awaitingReply === true) tickets = tickets.filter(isAwaitingReply);
+        else if (awaitingReply === false) tickets = tickets.filter((t) => !isAwaitingReply(t));
+        const shaped = tickets.slice(0, clampLimit(limit, 10)).map((t) => {
+            const msgs = t.messages || [];
+            return {
                 id: t._id, subject: t.subject, category: t.category, status: t.status,
                 customer: t.userId?.name || t.guest?.name || 'Guest',
-                assignedTo: t.assignedTo?.name || null, createdAt: t.createdAt,
-            })),
+                openedBy: ticketOpenedBy(t),
+                assignedTo: t.assignedTo?.name || null,
+                awaitingReply: isAwaitingReply(t),
+                messageCount: msgs.length,
+                openingMessage: msgPreview(msgs[0]),
+                lastMessage: msgPreview(msgs[msgs.length - 1]),
+                lastMessageFrom: msgs.length ? msgs[msgs.length - 1].senderType : null,
+                ratingGiven: t.rating?.score ?? null,
+                createdAt: t.createdAt,
+            };
+        });
+        return {
+            count: awaitingReply === undefined ? totalMatching : shaped.length,
+            totalMatchingFilter: totalMatching,
+            awaitingReplyCount: shaped.filter((t) => t.awaitingReply).length,
+            tickets: shaped,
+        };
+    },
+
+    async get_support_ticket_detail({ ticketId, query } = {}) {
+        ticketId = clean(ticketId);
+        query = clean(query);
+        let ticket = null;
+        if (ticketId && /^[a-f\d]{24}$/i.test(String(ticketId))) {
+            ticket = await SupportTicket.findById(ticketId)
+                .populate('userId', 'name phone email')
+                .populate({ path: 'driverId', populate: { path: 'userId', select: 'name phone email' } })
+                .populate('assignedTo', 'name email')
+                .populate('rating.agentId', 'name');
+        }
+        if (!ticket && query) {
+            const rx = new RegExp(escapeRegex(query), 'i');
+            const user = await User.findOne({ $or: [{ name: rx }, { phone: rx }, { email: rx }] }).select('_id');
+            const or = [{ subject: rx }, { 'guest.name': rx }, { 'guest.email': rx }];
+            if (user) or.push({ userId: user._id });
+            ticket = await SupportTicket.findOne({ $or: or })
+                .sort({ createdAt: -1 })
+                .populate('userId', 'name phone email')
+                .populate({ path: 'driverId', populate: { path: 'userId', select: 'name phone email' } })
+                .populate('assignedTo', 'name email')
+                .populate('rating.agentId', 'name');
+        }
+        if (!ticket) return { found: false };
+        const msgs = ticket.messages || [];
+        return {
+            found: true,
+            ticket: {
+                id: ticket._id,
+                subject: ticket.subject,
+                category: ticket.category,
+                status: ticket.status,
+                openedBy: ticketOpenedBy(ticket),
+                customer: ticket.userId?.name || ticket.driverId?.userId?.name || ticket.guest?.name || 'Guest',
+                customerPhone: ticket.userId?.phone || ticket.driverId?.userId?.phone || null,
+                customerEmail: ticket.userId?.email || ticket.driverId?.userId?.email || ticket.guest?.email || null,
+                assignedTo: ticket.assignedTo?.name || null,
+                awaitingReply: isAwaitingReply(ticket),
+                messageCount: msgs.length,
+                openingMessage: msgPreview(msgs[0]),
+                lastMessage: msgPreview(msgs[msgs.length - 1]),
+                thread: msgs.map((m) => ({
+                    from: m.senderType,
+                    isAI: !!m.isAI,
+                    text: msgPreview(m),
+                    at: m.createdAt,
+                })),
+                supportRating: ticket.rating?.score ?? null,
+                supportRatingComment: ticket.rating?.comment || null,
+                handledBy: ticket.rating?.agentId?.name || ticket.assignedTo?.name || null,
+                createdAt: ticket.createdAt,
+                resolvedAt: ticket.resolvedAt,
+                closedAt: ticket.closedAt,
+            },
         };
     },
 
@@ -544,12 +663,16 @@ export const HANDLERS = {
 
     async list_active_emergencies({ status, limit = 10 } = {}) {
         status = clean(status) || 'active';
-        const emergencies = await Emergency.find({ status })
-            .sort({ createdAt: -1 })
-            .limit(clampLimit(limit, 10))
-            .populate('userId', 'name phone')
-            .select('role status address contactPhone createdAt userId');
+        const [count, emergencies] = await Promise.all([
+            Emergency.countDocuments({ status }),
+            Emergency.find({ status })
+                .sort({ createdAt: -1 })
+                .limit(clampLimit(limit, 10))
+                .populate('userId', 'name phone')
+                .select('role status address contactPhone createdAt userId'),
+        ]);
         return {
+            count,
             emergencies: emergencies.map((e) => ({
                 id: e._id, role: e.role, status: e.status, address: e.address,
                 contactPhone: e.contactPhone || e.userId?.phone, reportedBy: e.userId?.name, createdAt: e.createdAt,
@@ -577,11 +700,14 @@ export const HANDLERS = {
         const filter = {};
         if (typeof verified === 'boolean') filter.isVerified = verified;
         if (city) filter.city = city;
-        const suppliers = await Supplier.find(filter)
-            .sort({ createdAt: -1 })
-            .limit(clampLimit(limit, 10))
-            .select('businessName contactPerson phone city isVerified plan');
-        return { suppliers };
+        const [count, suppliers] = await Promise.all([
+            Supplier.countDocuments(filter),
+            Supplier.find(filter)
+                .sort({ createdAt: -1 })
+                .limit(clampLimit(limit, 10))
+                .select('businessName contactPerson phone city isVerified plan'),
+        ]);
+        return { count, suppliers };
     },
 
     async get_trip_bids({ tripId }) {
@@ -630,11 +756,14 @@ export const HANDLERS = {
     async list_admins({ role, limit = 20 } = {}) {
         role = clean(role);
         const filter = role ? { role } : {};
-        const admins = await Admin.find(filter)
-            .sort({ name: 1 })
-            .limit(clampLimit(limit, 20))
-            .select('name email phone role isActive createdAt');
-        return { admins };
+        const [count, admins] = await Promise.all([
+            Admin.countDocuments(filter),
+            Admin.find(filter)
+                .sort({ name: 1 })
+                .limit(clampLimit(limit, 20))
+                .select('name email phone role isActive createdAt'),
+        ]);
+        return { count, admins };
     },
 
     async find_admin({ query }) {

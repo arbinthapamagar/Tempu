@@ -1,3 +1,5 @@
+import { EMAIL_LOGO_DATA_URI } from './emailLogo.js';
+
 // Shared, email-client-safe brand shell (inline styles, table-based) used by
 // every transactional email so they all look consistent. `accent` themes the
 // header/badge; `content` is the inner HTML for the body card.
@@ -7,8 +9,10 @@ const emailShell = ({ badge, accent = '#f97316', content }) => `
       <tr><td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);font-family:Arial,Helvetica,sans-serif;">
           <tr>
-            <td style="background:${accent};padding:32px 32px 28px;text-align:center;">
-              <div style="font-size:30px;font-weight:800;letter-spacing:-0.5px;color:#ffffff;">TEM<span style="color:#ffe6d1;">PU</span> 🛺</div>
+            <td style="background:${accent};padding:28px 32px 24px;text-align:center;">
+              <div style="display:inline-block;background:#ffffff;border-radius:12px;padding:10px 18px;">
+                <img src="${EMAIL_LOGO_DATA_URI}" alt="Tempu" height="40" style="display:block;height:40px;width:auto;" />
+              </div>
               ${badge ? `<div style="margin-top:10px;display:inline-block;background:rgba(255,255,255,0.2);color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.5px;padding:5px 12px;border-radius:999px;">${badge}</div>` : ''}
             </td>
           </tr>

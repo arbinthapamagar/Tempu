@@ -90,7 +90,7 @@ export default function KnowledgeBase() {
   return (
     <div className="max-w-5xl mx-auto">
       <PageHeader
-        title="Knowledge Base"
+        title="Tempu Rag"
         description="Documents the AI assistant can answer from (retrieval-augmented). Powered by Ollama embeddings."
       />
 
