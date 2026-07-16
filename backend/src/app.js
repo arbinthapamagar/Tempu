@@ -57,6 +57,11 @@ app.use(cors({
     },
     credentials: true,
 }));
+// Tempu Rag image understanding sends a base64 image, which far exceeds the
+// strict 20kb default. Give just that route a bigger JSON limit BEFORE the
+// global parser (body-parser skips once the body is already parsed), so every
+// other endpoint keeps the tight 20kb cap.
+app.use('/api/v1/admin/knowledge/chat', express.json({ limit: '12mb' }));
 app.use(express.json({ limit: '20kb' }));
 app.use(express.urlencoded({ extended: true, limit: '20kb' }));
 app.use(helmet({
