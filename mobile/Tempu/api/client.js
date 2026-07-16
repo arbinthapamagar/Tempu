@@ -8,8 +8,8 @@ import { tokenStore } from './tokenStore';
 export const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ||
   (Platform.OS === 'android'
-    ? 'http://10.0.2.2:8000/api/v1'
-    : 'http://localhost:8000/api/v1');
+    ? 'http://10.0.2.2:8001/api/v1'
+    : 'http://localhost:8001/api/v1');
 
 let isRefreshing = false;
 let waitQueue = [];
@@ -59,9 +59,7 @@ export async function request(method, path, body, opts = {}) {
   try {
     res = await rawFetch(method, path, body, headers);
   } catch (networkErr) {
-    throw new Error(
-      'Cannot reach the server. Make sure the backend is running and your device can access it.'
-    );
+    throw new Error('App is down. Please try again later.');
   }
 
   if (res.status === 401 && !skipAuth && !tempToken) {
@@ -73,7 +71,7 @@ export async function request(method, path, body, opts = {}) {
       try {
         res = await rawFetch(method, path, body, headers);
       } catch {
-        throw new Error('Cannot reach the server. Check your network connection.');
+        throw new Error('App is down. Please try again later.');
       }
     } else {
       isRefreshing = true;
@@ -91,7 +89,7 @@ export async function request(method, path, body, opts = {}) {
       try {
         res = await rawFetch(method, path, body, headers);
       } catch {
-        throw new Error('Cannot reach the server. Check your network connection.');
+        throw new Error('App is down. Please try again later.');
       }
     }
   }

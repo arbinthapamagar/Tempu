@@ -13,7 +13,7 @@ import { useAuthStore, hasPermission } from '../../store/authStore'
 import { Markdown } from '../../components/ai/Markdown'
 import toast from 'react-hot-toast'
 
-const ACCEPT = '.pdf,.docx,.txt,.md,.csv,.json'
+const ACCEPT = '.pdf,.docx,.txt,.md,.csv,.json,.png,.jpg,.jpeg,.webp,.bmp,.tiff,.gif'
 
 export default function Ai() {
   const [tab, setTab] = useState('rag') // 'rag' | 'agentic'
@@ -76,6 +76,7 @@ function RagSection() {
         sendFn={(text, history, image) => knowledgeApi.chat(text, history, image)}
         showSources
         allowImage
+        storageKey={`tempu-rag-chat:${admin?._id || 'anon'}`}
       />
 
       {/* Document management — superadmin / manageKnowledge only */}
@@ -147,7 +148,7 @@ function RagDocuments({ qc }) {
             onChange={(e) => setFiles(Array.from(e.target.files || []))}
             className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-orange-50 file:text-orange-700 file:text-sm file:font-medium hover:file:bg-orange-100 cursor-pointer"
           />
-          <p className="mt-2 text-xs text-gray-400">PDF, DOCX, TXT, MD, CSV, JSON — up to 10 files.</p>
+          <p className="mt-2 text-xs text-gray-400">PDF, DOCX, TXT, MD, CSV, JSON, or images (PNG/JPG/WEBP — OCR'd) — up to 10 files.</p>
           {files.length > 0 && (
             <ul className="mt-3 space-y-1 text-sm text-gray-600">
               {files.map((f) => (
@@ -277,11 +278,38 @@ const AGENTIC_SUGGESTIONS = [
 // the exact same multi-turn chat experience: conversation history, a "New chat"
 // button to start fresh, suggestion chips, streamed-in markdown replies, and an
 // optional sources line. `sendFn(text, history)` posts to the right endpoint.
+// Only the last N turns are persisted — plenty for continuity across a refresh
+// or tab switch without letting localStorage grow unbounded over weeks of use.
+const HISTORY_LIMIT = 60
+
+function loadStoredMessages(storageKey) {
+  if (!storageKey) return []
+  try {
+    const raw = localStorage.getItem(storageKey)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+// Images are dropped before persisting (kept only as a `hadImage` flag) — a
+// full base64 attachment can be 8MB+ and would blow past localStorage's ~5MB
+// per-origin quota after just a couple of turns.
+function toStorable(messages) {
+  return messages.slice(-HISTORY_LIMIT).map((m) => ({
+    role: m.role,
+    text: m.text,
+    ...(m.sources?.length ? { sources: m.sources } : {}),
+    ...(m.image ? { hadImage: true } : {}),
+  }))
+}
+
 function ChatPanel({
   icon: Icon = MessageSquare, title, subtitle, emptyTitle, emptyHint,
   suggestions = [], placeholder, footerNote, sendFn, showSources = false, allowImage = false,
+  storageKey = null,
 }) {
-  const [messages, setMessages] = useState([]) // { role: 'user' | 'model', text, sources?, image? }
+  const [messages, setMessages] = useState(() => loadStoredMessages(storageKey)) // { role: 'user' | 'model', text, sources?, image?, hadImage? }
   const [input, setInput] = useState('')
   const [image, setImage] = useState(null) // base64 data URL, attached to the next message
   const scrollRef = useRef(null)
@@ -291,6 +319,16 @@ function ChatPanel({
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (!storageKey) return
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(toStorable(messages)))
+    } catch {
+      // Quota exceeded or unavailable (private browsing) — history just won't
+      // survive a refresh this time; not worth surfacing to the admin.
+    }
+  }, [messages, storageKey])
 
   const send = useMutation({
     mutationFn: ({ text, history, image: img }) => sendFn(text, history, img),
@@ -390,6 +428,11 @@ function ChatPanel({
                     <div className="max-w-[80%] rounded-2xl bg-gray-100 px-4 py-2.5 text-sm text-gray-900">
                       {m.image && (
                         <img src={m.image} alt="attachment" className="mb-2 max-h-48 rounded-lg object-contain" />
+                      )}
+                      {!m.image && m.hadImage && (
+                        <p className="mb-1 flex items-center gap-1 text-xs text-gray-400">
+                          <Paperclip className="h-3 w-3" /> image attached
+                        </p>
                       )}
                       {m.text && <span className="whitespace-pre-wrap">{m.text}</span>}
                     </div>
@@ -501,9 +544,11 @@ function AgenticSection() {
       emptyTitle="How can Tempu Ai help?"
       emptyHint="Ask about any user, driver, trip, or platform stat."
       suggestions={AGENTIC_SUGGESTIONS}
-      placeholder="Message Tempu Ai…"
+      placeholder="Message Tempu Ai… or attach an image"
       footerNote="Tempu Ai can make mistakes. Verify important details before acting on them."
-      sendFn={(text, history) => knowledgeApi.agenticChat(text, history)}
+      sendFn={(text, history, image) => knowledgeApi.agenticChat(text, history, image)}
+      allowImage
+      storageKey={`tempu-agentic-chat:${admin?._id || 'anon'}`}
     />
   )
 }
