@@ -5,7 +5,9 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
 export const api = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
-  headers: { 'Content-Type': 'application/json' },
+  // X-Client tags every request so the backend API-Log viewer can bucket this
+  // traffic under the "Web Frontend" section (mobile sends 'mobile').
+  headers: { 'Content-Type': 'application/json', 'X-Client': 'web' },
 })
 
 api.interceptors.request.use((config) => {

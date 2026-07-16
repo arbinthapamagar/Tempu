@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import helmet from 'helmet';
 import { errorMiddleware } from './middlewares/error.middleware.js';
+import { apiLogger } from './middlewares/apiLogger.middleware.js';
 
 import { authRouter } from './routes/auth.route.js';
 import { userRouter } from './routes/user.route.js';
@@ -67,6 +68,12 @@ app.use(helmet({
 }));
 app.use(express.static('public'));
 app.use(cookieParser());
+
+// Capture every /api/v1/* request + response into the ApiLog collection for the
+// admin API-Log viewer. Runs after body/cookie parsing so it can see the parsed
+// request, and reads req.admin/req.user on 'finish' (set by auth middleware in
+// the routers). Fire-and-forget — never blocks or fails a request.
+app.use(apiLogger);
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
