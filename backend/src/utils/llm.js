@@ -34,6 +34,39 @@ const safeParse = (s) => {
     try { return JSON.parse(s); } catch { return {}; }
 };
 
+// Build an Error carrying the provider + HTTP status so callers can turn it into
+// a clear, user-facing message (e.g. "Gemini quota used up") instead of a
+// generic 500.
+function providerError(provider, status, body) {
+    const err = new Error(`${provider} responded ${status}`);
+    err.provider = provider;
+    err.status = status;
+    err.body = (body || '').slice(0, 300);
+    return err;
+}
+
+// A human-readable explanation for an AI provider failure, shown to the admin
+// AND stored in the API log. Covers the common cases explicitly.
+export function friendlyAiError(err) {
+    const provider = err?.provider || AI_PROVIDER;
+    // Network-level failure (server not running / unreachable).
+    if (err?.connection) {
+        return provider === 'gemini'
+            ? '⚠️ Could not reach the Gemini API — check the network connection.'
+            : "⚠️ The local AI (Ollama) isn't running. Start it with `ollama serve`, or switch `AI_PROVIDER=gemini` in the backend `.env`.";
+    }
+    if (provider === 'gemini') {
+        if (err?.status === 429) {
+            return '⚠️ The Gemini AI quota has been used up for now. Enable billing on the Gemini API key (free-tier limits reset daily), or switch `AI_PROVIDER=ollama` to use the local model. I can’t answer until then.';
+        }
+        if (err?.status === 401 || err?.status === 403) {
+            return '⚠️ The Gemini API key was rejected (invalid or unauthorized). Check `GEMINI_API_KEY` in the backend `.env`.';
+        }
+        return `⚠️ The Gemini AI request failed (status ${err?.status || '?'}). Try again shortly, or switch \`AI_PROVIDER=ollama\`.`;
+    }
+    return `⚠️ The local AI (Ollama) request failed (status ${err?.status || '?'}). Make sure the model is pulled and Ollama has enough memory.`;
+}
+
 // ── Ollama ──────────────────────────────────────────────────────────────────
 function toOllamaMessages(messages) {
     return messages.map((m) => {
@@ -50,22 +83,30 @@ function toOllamaMessages(messages) {
 }
 
 async function ollamaChat(messages, tools) {
-    const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            model: OLLAMA_MODEL,
-            messages: toOllamaMessages(messages),
-            ...(tools ? { tools } : {}),
-            stream: false,
-            options: { temperature: TEMPERATURE, top_p: 0.9, num_ctx: Number(process.env.AGENTIC_NUM_CTX) || 8192 },
-            keep_alive: KEEP_ALIVE,
-        }),
-    });
+    let res;
+    try {
+        res = await fetch(`${OLLAMA_URL}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: OLLAMA_MODEL,
+                messages: toOllamaMessages(messages),
+                ...(tools ? { tools } : {}),
+                stream: false,
+                options: { temperature: TEMPERATURE, top_p: 0.9, num_ctx: Number(process.env.AGENTIC_NUM_CTX) || 8192 },
+                keep_alive: KEEP_ALIVE,
+            }),
+        });
+    } catch (e) {
+        const err = providerError('ollama', 0, e.message);
+        err.connection = true;
+        console.error('[llm] Ollama unreachable', e.message);
+        throw err;
+    }
     if (!res.ok) {
         const body = await res.text().catch(() => '');
         console.error('[llm] Ollama error', res.status, body.slice(0, 300));
-        throw new Error(`Ollama responded ${res.status}`);
+        throw providerError('ollama', res.status, body);
     }
     const msg = (await res.json()).message || {};
     return {
@@ -101,21 +142,32 @@ function toOpenAiMessages(messages) {
 }
 
 async function geminiChat(messages, tools) {
-    if (!GEMINI_KEY) throw new Error('GEMINI_API_KEY is not set');
-    const res = await fetch(GEMINI_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GEMINI_KEY}` },
-        body: JSON.stringify({
-            model: GEMINI_MODEL,
-            messages: toOpenAiMessages(messages),
-            ...(tools ? { tools } : {}),
-            temperature: TEMPERATURE,
-        }),
-    });
+    if (!GEMINI_KEY) {
+        const err = providerError('gemini', 401, 'GEMINI_API_KEY is not set');
+        throw err;
+    }
+    let res;
+    try {
+        res = await fetch(GEMINI_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GEMINI_KEY}` },
+            body: JSON.stringify({
+                model: GEMINI_MODEL,
+                messages: toOpenAiMessages(messages),
+                ...(tools ? { tools } : {}),
+                temperature: TEMPERATURE,
+            }),
+        });
+    } catch (e) {
+        const err = providerError('gemini', 0, e.message);
+        err.connection = true;
+        console.error('[llm] Gemini unreachable', e.message);
+        throw err;
+    }
     if (!res.ok) {
         const body = await res.text().catch(() => '');
         console.error('[llm] Gemini error', res.status, body.slice(0, 300));
-        throw new Error(`Gemini responded ${res.status}`);
+        throw providerError('gemini', res.status, body);
     }
     const msg = (await res.json()).choices?.[0]?.message || {};
     return {

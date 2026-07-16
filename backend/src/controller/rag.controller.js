@@ -71,20 +71,35 @@ const searchKnowledge = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, { results }, 'Search results'));
 });
 
+// When the RAG microservice can't even be reached (not started / crashed), turn
+// it into a clear reply the admin sees — returned as a normal 200 so it also
+// lands in the API log, instead of a bare 500 that looks like the feature broke.
+const RAG_DOWN_MSG =
+    "⚠️ The knowledge service (Tempu Rag) isn't reachable. Make sure it's running on port 8100 " +
+    '(`cd rag-service && uvicorn main:app --host 0.0.0.0 --port 8100`).';
+
 // POST /knowledge/ask  { question, k }  → LLM answer grounded in retrieval
 const askKnowledge = asyncHandler(async (req, res) => {
     const { question, k } = req.body;
     if (!question || !question.trim()) throw new apiError(400, 'Question is required');
-    const result = await ask(question.trim(), Number(k) || undefined);
-    return res.status(200).json(new apiResponse(200, result, 'Answer'));
+    try {
+        const result = await ask(question.trim(), Number(k) || undefined);
+        return res.status(200).json(new apiResponse(200, result, 'Answer'));
+    } catch {
+        return res.status(200).json(new apiResponse(200, { answer: RAG_DOWN_MSG, sources: [], error: true }, 'Answer'));
+    }
 });
 
 // POST /knowledge/chat  { message, history }  → multi-turn assistant reply
 const chatKnowledge = asyncHandler(async (req, res) => {
     const { message, history = [] } = req.body;
     if (!message || !message.trim()) throw new apiError(400, 'Message is required');
-    const result = await chat(message.trim(), Array.isArray(history) ? history : []);
-    return res.status(200).json(new apiResponse(200, result, 'Chat reply'));
+    try {
+        const result = await chat(message.trim(), Array.isArray(history) ? history : []);
+        return res.status(200).json(new apiResponse(200, result, 'Chat reply'));
+    } catch {
+        return res.status(200).json(new apiResponse(200, { reply: RAG_DOWN_MSG, sources: [], error: true }, 'Chat reply'));
+    }
 });
 
 // POST /agentic/chat  { message, history }  → tool-calling agent over live app data
