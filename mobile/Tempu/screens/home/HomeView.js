@@ -1,6 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -55,7 +56,7 @@ export default function HomeView({ onTapSearch, onPickSaved }) {
     <View style={styles.root}>
       {/* Sticky top bar */}
       <View style={styles.header}>
-        <Text style={styles.brand}>Tempu</Text>
+        <Image source={require('../../assets/logo-wordmark.png')} style={styles.brand} resizeMode="contain" />
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initial}</Text>
         </View>
@@ -223,10 +224,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   brand: {
-    fontFamily: fonts.displayBold,
-    fontSize: 28,
-    color: colors.primary,
-    letterSpacing: -0.3,
+    height: 28,
+    width: 74,
   },
   avatar: {
     width: 40,

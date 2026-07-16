@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Eye, EyeOff, Zap, Mail, Lock } from '@/components/ui/icons'
+import { Eye, EyeOff, Mail, Lock } from '@/components/ui/icons'
+import logoFull from '@/assets/logo-full.png'
 import { authApi } from '../api/auth.api'
 import { useAuthStore, homePath } from '../store/authStore'
 import toast from 'react-hot-toast'
@@ -40,10 +41,8 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <div className="bg-orange-600 rounded-2xl p-3 mb-4 shadow-lg shadow-orange-500/30">
-            <Zap className="h-8 w-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Tempu Admin</h1>
+          <img src={logoFull} alt="Tempu" className="h-14 w-auto object-contain mb-3" />
+          <p className="text-gray-500 text-sm font-semibold tracking-wide uppercase">Admin</p>
           <p className="text-gray-500 text-sm mt-1">Sign in to manage your platform</p>
         </div>
 
