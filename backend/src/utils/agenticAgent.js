@@ -4,7 +4,7 @@
 // model is provider-agnostic (Gemini or local Ollama) via ./llm.js — set with
 // the AI_PROVIDER env var.
 import { TOOLS, HANDLERS } from './agenticTools.js';
-import { chatWithTools, chatPlain } from './llm.js';
+import { chatWithTools, chatPlain, friendlyAiError } from './llm.js';
 
 // Enough round-trips for real multi-step questions (e.g. list tickets → open the
 // detail of each → summarise) without letting a confused model loop forever.
@@ -133,49 +133,57 @@ export async function runAgenticChat(message, history = []) {
     ];
 
     const toolCalls = [];
-    for (let step = 0; step < MAX_STEPS; step++) {
-        const reply = await chatWithTools(messages, TOOLS);
+    try {
+        for (let step = 0; step < MAX_STEPS; step++) {
+            const reply = await chatWithTools(messages, TOOLS);
 
-        if (reply.toolCalls?.length) {
-            messages.push({ role: 'assistant', content: reply.content || '', toolCalls: reply.toolCalls });
-            for (const call of reply.toolCalls) {
-                const result = await runTool(call.name, call.args);
-                toolCalls.push({ name: call.name, args: call.args });
-                messages.push({ role: 'tool', toolCallId: call.id, name: call.name, content: JSON.stringify(result) });
+            if (reply.toolCalls?.length) {
+                messages.push({ role: 'assistant', content: reply.content || '', toolCalls: reply.toolCalls });
+                for (const call of reply.toolCalls) {
+                    const result = await runTool(call.name, call.args);
+                    toolCalls.push({ name: call.name, args: call.args });
+                    messages.push({ role: 'tool', toolCallId: call.id, name: call.name, content: JSON.stringify(result) });
+                }
+                continue;
             }
-            continue;
-        }
 
-        // Some models "leak" a tool call as plain-text JSON instead of using the
-        // tool mechanism. Detect it and self-heal by actually running the tool.
-        const leaked = parseLeakedToolCall(reply.content);
-        if (leaked) {
-            const result = await runTool(leaked.name, leaked.args);
-            const id = `leak_${toolCalls.length}`;
-            toolCalls.push({ name: leaked.name, args: leaked.args });
-            messages.push({ role: 'assistant', content: '', toolCalls: [{ id, name: leaked.name, args: leaked.args }] });
-            messages.push({ role: 'tool', toolCallId: id, name: leaked.name, content: JSON.stringify(result) });
-            continue;
-        }
+            // Some models "leak" a tool call as plain-text JSON instead of using the
+            // tool mechanism. Detect it and self-heal by actually running the tool.
+            const leaked = parseLeakedToolCall(reply.content);
+            if (leaked) {
+                const result = await runTool(leaked.name, leaked.args);
+                const id = `leak_${toolCalls.length}`;
+                toolCalls.push({ name: leaked.name, args: leaked.args });
+                messages.push({ role: 'assistant', content: '', toolCalls: [{ id, name: leaked.name, args: leaked.args }] });
+                messages.push({ role: 'tool', toolCallId: id, name: leaked.name, content: JSON.stringify(result) });
+                continue;
+            }
 
-        // Content has a JSON "tool call" shape but names a tool that doesn't
-        // exist (hallucinated). Never show that raw text — but if we already have
-        // real tool data, summarise it instead of bailing.
-        const hasUnresolvedToolAttempt = extractJsonObjects(reply.content || '').some((b) => /"name"\s*:\s*"/.test(b));
-        if (hasUnresolvedToolAttempt) {
-            if (toolCalls.length) return { reply: await finalizeAnswer(messages), toolCalls };
-            return {
-                reply: "I don't have a way to look that up yet — could you rephrase your question?",
-                toolCalls,
-            };
-        }
+            // Content has a JSON "tool call" shape but names a tool that doesn't
+            // exist (hallucinated). Never show that raw text — but if we already have
+            // real tool data, summarise it instead of bailing.
+            const hasUnresolvedToolAttempt = extractJsonObjects(reply.content || '').some((b) => /"name"\s*:\s*"/.test(b));
+            if (hasUnresolvedToolAttempt) {
+                if (toolCalls.length) return { reply: await finalizeAnswer(messages), toolCalls };
+                return {
+                    reply: "I don't have a way to look that up yet — could you rephrase your question?",
+                    toolCalls,
+                };
+            }
 
-        return { reply: reply.content || 'Sorry, I could not generate a response.', toolCalls };
+            return { reply: reply.content || 'Sorry, I could not generate a response.', toolCalls };
+        }
+        // Hit the step cap. We almost certainly have tool data by now — force one
+        // final tool-free pass so the admin gets an answer built from it, not a
+        // "couldn't finish" apology.
+        return { reply: await finalizeAnswer(messages), toolCalls };
+    } catch (err) {
+        // The AI provider failed (Gemini quota used up, key rejected, Ollama not
+        // running, …). Return a clear, human-readable reply as a normal response
+        // — the admin sees exactly what went wrong, and the API logger records it
+        // like any other reply instead of it vanishing into a 500.
+        return { reply: friendlyAiError(err), toolCalls, error: true };
     }
-    // Hit the step cap. We almost certainly have tool data by now — force one
-    // final tool-free pass so the admin gets an answer built from it, not a
-    // "couldn't finish" apology.
-    return { reply: await finalizeAnswer(messages), toolCalls };
 }
 
 // One last generation with NO tools available, so the model is forced to write
@@ -193,8 +201,10 @@ async function finalizeAnswer(messages) {
                     'prose — no JSON or curly braces.',
             },
         ]));
-    } catch {
-        return 'Sorry, I could not generate a response.';
+    } catch (err) {
+        // Surface the real provider problem (quota, unreachable) so the admin
+        // isn't left with a vague apology after we already fetched the data.
+        return friendlyAiError(err);
     }
     // Strip any stray leaked JSON so raw tool-call text never reaches the admin.
     if (extractJsonObjects(content || '').some((b) => /"name"\s*:\s*"/.test(b))) {
