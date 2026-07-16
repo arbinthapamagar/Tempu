@@ -24,6 +24,9 @@ from config import (
     CHUNK_OVERLAP,
     COLLECTION,
 )
+from vision import describe_image
+
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".tif", ".gif"}
 
 _vs = None
 
@@ -44,6 +47,8 @@ def get_vectorstore() -> Chroma:
 
 def _load_file(path: Path):
     ext = path.suffix.lower()
+    if ext in IMAGE_EXTS:
+        return [Document(page_content=describe_image(path), metadata={"source": path.name})]
     try:
         if ext == ".pdf":
             return PyPDFLoader(str(path)).load()

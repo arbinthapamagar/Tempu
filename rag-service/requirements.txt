@@ -13,3 +13,5 @@ python-docx>=1.1.2
 docx2txt>=0.8
 unstructured>=0.16.5
 markdown>=3.7
+Pillow>=10.4.0
+pytesseract>=0.3.13

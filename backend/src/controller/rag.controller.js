@@ -103,13 +103,14 @@ const chatKnowledge = asyncHandler(async (req, res) => {
     }
 });
 
-// POST /agentic/chat  { message, history }  → tool-calling agent over live app data
+// POST /agentic/chat  { message, history, image? }  → tool-calling agent over live app data
 // Gated by requireAgenticAI (see admin.route.js) - separate from the RAG knowledge
 // permission, since this reaches live user/driver/trip/payment data.
+// `image` is an optional base64 data URL, understood on the Gemini provider only.
 const agenticChat = asyncHandler(async (req, res) => {
-    const { message, history = [] } = req.body;
-    if (!message || !message.trim()) throw new apiError(400, 'Message is required');
-    const result = await runAgenticChat(message.trim(), Array.isArray(history) ? history : []);
+    const { message = '', history = [], image = null } = req.body;
+    if ((!message || !message.trim()) && !image) throw new apiError(400, 'Message or image is required');
+    const result = await runAgenticChat((message || '').trim(), Array.isArray(history) ? history : [], image);
     return res.status(200).json(new apiResponse(200, result, 'Agentic reply'));
 });
 

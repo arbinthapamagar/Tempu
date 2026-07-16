@@ -19,6 +19,8 @@ export const knowledgeApi = {
     api.post('/admin/knowledge/chat', { message, history, ...(image ? { image } : {}) }),
   removeSource: (source) => api.delete(`/admin/knowledge/sources/${encodeURIComponent(source)}`),
   // Agentic AI — tool-calling agent over LIVE app data (users, drivers, trips,
-  // payments, etc.), gated by the separate useAgenticAI permission.
-  agenticChat: (message, history) => api.post('/admin/agentic/chat', { message, history }),
+  // payments, etc.), gated by the separate useAgenticAI permission. image: optional
+  // base64 data URL, understood when AI_PROVIDER=gemini.
+  agenticChat: (message, history, image) =>
+    api.post('/admin/agentic/chat', { message, history, ...(image ? { image } : {}) }),
 }
