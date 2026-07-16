@@ -7,7 +7,12 @@ Chroma store, so support answers are never grounded in unrelated corpora.
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).parent
+# Load rag-service/.env so AI_PROVIDER / GEMINI_* are available when the service
+# is started with a plain `uvicorn` (which doesn't read .env on its own).
+load_dotenv(BASE_DIR / ".env")
 DATA_DIR = BASE_DIR / "data"
 DOCS_DIR = DATA_DIR / "documents"       # uploaded source files land here
 CHROMA_DIR = DATA_DIR / "chroma"        # persistent vector store
@@ -18,6 +23,13 @@ CHROMA_DIR.mkdir(parents=True, exist_ok=True)
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 EMBED_MODEL = os.environ.get("RAG_EMBED_MODEL", "nomic-embed-text")
 LLM_MODEL = os.environ.get("RAG_CHAT_MODEL", "llama3.1:8b")
+
+# Chat-generation provider: 'gemini' (Google, fast) or 'ollama' (local). Only the
+# chat model switches — embeddings + retrieval always stay on local Ollama so the
+# Chroma vector store never needs re-ingesting.
+AI_PROVIDER = os.environ.get("AI_PROVIDER", "ollama").lower()
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")
 
 # Generation params (mirror BOT/config.py).
 LLM_TEMPERATURE = float(os.environ.get("RAG_TEMPERATURE", "0.3"))
