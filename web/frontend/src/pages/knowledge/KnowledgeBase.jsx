@@ -7,13 +7,22 @@ import { PageHeader } from '../../components/shared/PageHeader'
 import { EmptyState } from '../../components/shared/EmptyState'
 import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
 import { Spinner } from '../../components/ui/Spinner'
+import { ChatPanel } from '../../components/ai/ChatPanel'
 import { knowledgeApi } from '../../api/knowledge.api'
+import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
 
 const ACCEPT = '.pdf,.docx,.txt,.md,.csv,.json'
 
+const RAG_SUGGESTIONS = [
+  'What are the fare and pricing rules?',
+  'How does a driver get verified?',
+  'What is the cancellation policy?',
+]
+
 export default function KnowledgeBase() {
   const qc = useQueryClient()
+  const admin = useAuthStore((s) => s.admin)
   const fileRef = useRef(null)
   const [files, setFiles] = useState([])
   const [label, setLabel] = useState('')
@@ -93,6 +102,24 @@ export default function KnowledgeBase() {
         title="Tempu Rag"
         description="Documents the AI assistant can answer from (retrieval-augmented). Powered by Ollama embeddings."
       />
+
+      {/* ── Chat with the knowledge base (multi-turn, saved to this browser) ── */}
+      <div className="mb-5">
+        <ChatPanel
+          icon={Sparkles}
+          title="Chat with Tempu Rag"
+          subtitle="Answers from your Tempu knowledge base"
+          emptyTitle="Ask Tempu Rag"
+          emptyHint="Ask about policies, fares, documents, or help articles."
+          suggestions={RAG_SUGGESTIONS}
+          placeholder="Ask about policies, fares, documents… or attach an image"
+          footerNote="Tempu Rag answers from your knowledge base and can understand attached images. This chat is saved on this device."
+          sendFn={(text, history, image) => knowledgeApi.chat(text, history, image)}
+          showSources
+          allowImage
+          storageKey={`tempu-rag-chat:${admin?._id || 'anon'}`}
+        />
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
         {/* ── Upload documents ── */}
