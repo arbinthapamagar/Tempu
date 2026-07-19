@@ -208,7 +208,7 @@ export function Sidebar({ open, onClose, isCollapsed, onToggle }) {
                 )}
               >
                 <span className="flex items-center gap-2">
-                  <section.icon className="h-4 w-4 text-gray-500" />
+                  <section.icon className="h-4 w-4 text-orange-500" />
                   <span className={cn(isCollapsed && 'lg:hidden')}>{section.label}</span>
                 </span>
                 <ChevronDown className={cn('h-3 w-3 text-gray-400 transition-transform', isOpen ? '' : '-rotate-90', isCollapsed && 'lg:hidden')} />
