@@ -64,19 +64,19 @@ const navSections = [
     ],
   },
   {
-    label: 'AI',
-    icon: Sparkles,
-    items: [
-      { to: '/ai', label: 'Tempu AI', icon: Sparkles, permission: null },
-      { to: '/knowledge', label: 'Tempu RAG', icon: BookOpen, permission: 'manageKnowledge' },
-    ],
-  },
-  {
     label: 'System',
     icon: Settings,
     items: [
       { to: '/notifications', label: 'Notifications', icon: Bell, permission: null },
       { to: '/api-logs', label: 'API Log', icon: History, superadmin: true },
+    ],
+  },
+  {
+    label: 'AI',
+    icon: Sparkles,
+    items: [
+      { to: '/ai', label: 'Tempu AI', icon: Sparkles, permission: null },
+      { to: '/knowledge', label: 'Tempu RAG', icon: BookOpen, permission: 'manageKnowledge' },
     ],
   },
 ]

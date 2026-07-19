@@ -10,6 +10,7 @@ import { Spinner } from '../../components/ui/Spinner'
 import { ChatPanel } from '../../components/ai/ChatPanel'
 import { knowledgeApi } from '../../api/knowledge.api'
 import { useAuthStore } from '../../store/authStore'
+import ragLogo from '@/assets/rag-logo.png'
 import toast from 'react-hot-toast'
 
 const ACCEPT = '.pdf,.docx,.txt,.md,.csv,.json'
@@ -99,7 +100,12 @@ export default function KnowledgeBase() {
   return (
     <div className="max-w-5xl mx-auto">
       <PageHeader
-        title="Tempu Rag"
+        title={
+          <span className="flex flex-col items-center gap-2">
+            <img src={ragLogo} alt="Tempu Rag" className="h-64 w-64 rounded-xl object-contain" />
+            Tempu Rag
+          </span>
+        }
         description="Documents the AI assistant can answer from (retrieval-augmented). Powered by Ollama embeddings."
       />
 
