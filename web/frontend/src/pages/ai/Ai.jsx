@@ -4,13 +4,26 @@ import { EmptyState } from '../../components/shared/EmptyState'
 import { ChatPanel } from '../../components/ai/ChatPanel'
 import { knowledgeApi } from '../../api/knowledge.api'
 import { useAuthStore, hasPermission } from '../../store/authStore'
+import agentLogo from '@/assets/agent-logo.png'
 
 // Tempu Ai — a tool-calling chat over LIVE app data. The knowledge base (Tempu
 // Rag) lives on its own page (/knowledge); this page is purely the agent.
 export default function Ai() {
   return (
     <div className="max-w-5xl mx-auto">
-      <PageHeader title="AGENT" />
+      <PageHeader
+        sticky
+        title={
+          <span className="inline-flex items-center gap-3">
+            <img
+              src={agentLogo}
+              alt="Tempu Ai"
+              className="h-16 w-16 rounded-full object-cover bg-white ring-2 ring-orange-200 p-0.5"
+            />
+            <span className="text-2xl sm:text-3xl w-40 text-left">AGENT</span>
+          </span>
+        }
+      />
       <AgenticSection />
     </div>
   )

@@ -72,7 +72,7 @@ const navSections = [
     ],
   },
   {
-    label: 'AI',
+    label: 'HemaWati',
     icon: Sparkles,
     items: [
       { to: '/ai', label: 'Tempu AI', icon: Sparkles, permission: null },

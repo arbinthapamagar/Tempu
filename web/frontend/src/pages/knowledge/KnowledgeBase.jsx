@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { BookOpen, Upload, FileText, Trash2, Sparkles, Settings, Search } from '@/components/ui/icons'
+import { BookOpen, Upload, FileText, Trash2, MessageSquare, Settings, Search } from '@/components/ui/icons'
 import { Button } from '../../components/ui/Button'
 import { Input, Textarea } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
@@ -102,7 +102,7 @@ export default function KnowledgeBase() {
               alt="Tempu Rag"
               className="h-16 w-16 rounded-full object-cover bg-white ring-2 ring-orange-200 p-0.5"
             />
-            <span className="text-2xl sm:text-3xl">Tempu Rag</span>
+            <span className="text-2xl sm:text-3xl w-40 text-left">RAG</span>
           </span>
         }
         actions={
@@ -119,13 +119,12 @@ export default function KnowledgeBase() {
 
       {/* ── Chat with the knowledge base (multi-turn, saved to this browser) ── */}
       <ChatPanel
-        icon={Sparkles}
+        icon={MessageSquare}
         title="Chat"
         emptyTitle="Ask Tempu Rag"
         emptyHint="Ask about policies, fares, documents, or help articles."
         suggestions={RAG_SUGGESTIONS}
         placeholder="Ask about policies, fares, documents… or attach an image"
-        footerNote="Tempu Rag answers from your knowledge base and can understand attached images. Saved on this device."
         sendFn={(msg, history, image) => knowledgeApi.chat(msg, history, image)}
         showSources
         allowImage
