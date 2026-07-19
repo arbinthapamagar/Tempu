@@ -97,8 +97,8 @@ export default function App() {
         <Route path="admins" element={<AdminList />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="notifications" element={<Notifications />} />
-        <Route path="knowledge" element={<KnowledgeBase />} />
-        <Route path="ai" element={<Ai />} />
+        <Route path="rag" element={<KnowledgeBase />} />
+        <Route path="agentic" element={<Ai />} />
         <Route path="api-logs" element={<ApiLogs />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

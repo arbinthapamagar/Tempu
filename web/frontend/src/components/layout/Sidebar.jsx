@@ -16,6 +16,31 @@ import { authApi } from '../../api/auth.api'
 import { useAuthStore, hasPermission, canSeeDashboard, homePath } from '../../store/authStore'
 import toast from 'react-hot-toast'
 
+// Claude-style sunburst mark (approximation) used as the HemaWati group icon.
+// Radial spokes of alternating length from the centre, matching the icon API
+// (accepts a className so it inherits the sidebar's h-4 w-4 text-orange-500).
+function ClaudeIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor"
+      strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+      {Array.from({ length: 12 }).map((_, i) => {
+        const a = (i * Math.PI) / 6
+        const inner = 3
+        const outer = i % 2 === 0 ? 9.5 : 7
+        return (
+          <line
+            key={i}
+            x1={12 + Math.cos(a) * inner}
+            y1={12 + Math.sin(a) * inner}
+            x2={12 + Math.cos(a) * outer}
+            y2={12 + Math.sin(a) * outer}
+          />
+        )
+      })}
+    </svg>
+  )
+}
+
 // Each group gets an icon + chevron header (collapsible), with its links indented
 // underneath - the ShipOS sidebar pattern.
 const navSections = [
@@ -73,10 +98,10 @@ const navSections = [
   },
   {
     label: 'HemaWati',
-    icon: Sparkles,
+    icon: ClaudeIcon,
     items: [
-      { to: '/ai', label: 'Tempu AI', icon: Sparkles, permission: null },
-      { to: '/knowledge', label: 'Tempu RAG', icon: BookOpen, permission: 'manageKnowledge' },
+      { to: '/agentic', label: 'Tempu AI', icon: Sparkles, permission: null },
+      { to: '/rag', label: 'Tempu RAG', icon: BookOpen, permission: 'manageKnowledge' },
     ],
   },
 ]
