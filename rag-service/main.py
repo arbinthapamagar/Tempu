@@ -10,7 +10,7 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from config import DOCS_DIR, EMBED_MODEL, LLM_MODEL, RETRIEVE_K
+from config import DOCS_DIR, ACTIVE_EMBED_MODEL, LLM_MODEL, RETRIEVE_K
 import ingest
 import retriever
 import answer as answer_mod
@@ -28,7 +28,7 @@ app.add_middleware(
 
 @app.get("/health")
 def health():
-    return {"ok": True, "embedModel": EMBED_MODEL, "chatModel": LLM_MODEL}
+    return {"ok": True, "embedModel": ACTIVE_EMBED_MODEL, "chatModel": LLM_MODEL}
 
 
 @app.post("/ingest")
@@ -55,7 +55,7 @@ def text_endpoint(body: TextIn):
 
 @app.get("/sources")
 def sources_endpoint():
-    return {"sources": ingest.list_sources(), "embedModel": EMBED_MODEL}
+    return {"sources": ingest.list_sources(), "embedModel": ACTIVE_EMBED_MODEL}
 
 
 @app.delete("/source")

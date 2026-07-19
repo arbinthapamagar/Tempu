@@ -24,6 +24,15 @@ OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 EMBED_MODEL = os.environ.get("RAG_EMBED_MODEL", "nomic-embed-text")
 LLM_MODEL = os.environ.get("RAG_CHAT_MODEL", "llama3.1:8b")
 
+# Embeddings run on the local Ollama nomic-embed-text (768-dim) — free, private,
+# and fast (~20ms/query, no network hop). The Google API embedder
+# (gemini-embedding-001, 3072-dim, higher quality/multilingual) is kept as a
+# commented alternative in ingest.py (see embeddings.py). Switching embedders
+# changes the vector dimension, so the Chroma store must be wiped + re-ingested.
+GEMINI_EMBED_MODEL = os.environ.get("GEMINI_EMBED_MODEL", "gemini-embedding-001")
+# Name surfaced to the admin UI (/health, /sources) as the active embedder.
+ACTIVE_EMBED_MODEL = EMBED_MODEL
+
 # Chat-generation provider: 'gemini' (Google, fast) or 'ollama' (local). Only the
 # chat model switches — embeddings + retrieval always stay on local Ollama so the
 # Chroma vector store never needs re-ingesting.

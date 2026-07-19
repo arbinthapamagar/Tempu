@@ -24,6 +24,7 @@ from config import (
     CHUNK_OVERLAP,
     COLLECTION,
 )
+# from embeddings import GeminiEmbeddings  # Google API embedder (see get_vectorstore)
 from vision import describe_image
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".tif", ".gif"}
@@ -34,7 +35,14 @@ _vs = None
 def get_vectorstore() -> Chroma:
     global _vs
     if _vs is None:
+        # Local Ollama nomic-embed-text — free, private, and fast (~20ms/query, no
+        # network round-trip), which is why it's the active embedder.
         embeddings = OllamaEmbeddings(model=EMBED_MODEL, base_url=OLLAMA_BASE_URL)
+        # Google API embeddings (gemini-embedding-001) — higher quality, multilingual.
+        # To switch: uncomment the next line (and its import above), set
+        # ACTIVE_EMBED_MODEL=GEMINI_EMBED_MODEL in config, then wipe + re-ingest
+        # Chroma (nomic 768-dim vs gemini 3072-dim — the stores aren't compatible).
+        # embeddings = GeminiEmbeddings()
         _vs = Chroma(
             persist_directory=str(CHROMA_DIR),
             embedding_function=embeddings,

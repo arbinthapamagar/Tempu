@@ -12,10 +12,18 @@ import mimetypes
 from pathlib import Path
 
 import requests
-from PIL import Image
-import pytesseract
 
 from config import AI_PROVIDER, GEMINI_KEYS, GEMINI_MODELS
+
+# OCR is optional. If Pillow/pytesseract (or the tesseract binary) aren't
+# installed, image ingestion must still work via Gemini vision — so a missing
+# dependency degrades to "no OCR", it never crashes the whole service on import.
+try:
+    from PIL import Image
+    import pytesseract
+except Exception:  # noqa: BLE001 - any import failure means OCR is simply unavailable
+    Image = None
+    pytesseract = None
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
 # Last key/model that worked, so we don't re-hit an exhausted combo every call.
@@ -33,6 +41,8 @@ def _ocr_text(path: Path) -> str:
     """Extract any literal text in the image. Requires the tesseract-ocr system
     binary (`apt install tesseract-ocr` / `brew install tesseract`) — if it isn't
     installed, or the image can't be read, this quietly returns ''."""
+    if pytesseract is None or Image is None:
+        return ""
     try:
         return pytesseract.image_to_string(Image.open(path)).strip()
     except Exception:
