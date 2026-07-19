@@ -8,7 +8,7 @@ export function PageHeader({ title, description, actions, eyebrow, sticky = fals
     <div
       className={cn(
         'relative min-h-[2.25rem] flex flex-col items-center text-center',
-        sticky ? 'sticky top-0 z-20 bg-gray-50/95 backdrop-blur-sm py-3 mb-5' : 'mb-5'
+        sticky ? 'sticky top-0 z-20 bg-gray-50/95 backdrop-blur-sm pt-0 pb-2 mb-3' : 'mb-5'
       )}
     >
       {eyebrow && <p className="eyebrow mb-1">{eyebrow}</p>}

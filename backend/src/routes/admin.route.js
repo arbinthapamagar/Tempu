@@ -164,7 +164,7 @@ const requireKnowledge = (req, res, next) => {
 // Managing documents (list/ingest/delete) + raw search stay gated to superadmin
 // or the manageKnowledge permission.
 adminRouter.get('/knowledge/sources', requireKnowledge, getSources);
-adminRouter.post('/knowledge/ingest', requireKnowledge, upload.array('files', 10), ingestDocuments);
+adminRouter.post('/knowledge/ingest', requireKnowledge, upload.array('files', 50), ingestDocuments);
 adminRouter.post('/knowledge/text', requireKnowledge, ingestRawText);
 adminRouter.post('/knowledge/search', requireKnowledge, searchKnowledge);
 adminRouter.delete('/knowledge/sources/:source', requireKnowledge, removeSource);

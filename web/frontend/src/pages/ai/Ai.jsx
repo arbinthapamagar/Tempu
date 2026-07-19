@@ -4,22 +4,13 @@ import { EmptyState } from '../../components/shared/EmptyState'
 import { ChatPanel } from '../../components/ai/ChatPanel'
 import { knowledgeApi } from '../../api/knowledge.api'
 import { useAuthStore, hasPermission } from '../../store/authStore'
-import agentLogo from '@/assets/agent-logo.png'
 
 // Tempu Ai — a tool-calling chat over LIVE app data. The knowledge base (Tempu
 // Rag) lives on its own page (/knowledge); this page is purely the agent.
 export default function Ai() {
   return (
     <div className="max-w-5xl mx-auto">
-      <PageHeader
-        title={
-          <span className="flex flex-col items-center gap-2">
-            <img src={agentLogo} alt="Tempu Ai" className="h-64 w-64 rounded-xl object-contain" />
-            Tempu Ai
-          </span>
-        }
-        description="Chat with the agent over live app data — users, drivers, trips, payments."
-      />
+      <PageHeader title="AGENT" />
       <AgenticSection />
     </div>
   )
@@ -53,13 +44,11 @@ function AgenticSection() {
   return (
     <ChatPanel
       icon={MessageSquare}
-      title="Tempu Ai"
-      subtitle="Queries live app data — users, drivers, trips, payments"
+      title="Chat"
       emptyTitle="How can Tempu Ai help?"
       emptyHint="Ask about any user, driver, trip, or platform stat."
       suggestions={AGENTIC_SUGGESTIONS}
       placeholder="Message Tempu Ai… or attach an image"
-      footerNote="Tempu Ai can make mistakes. Verify important details before acting on them."
       sendFn={(text, history, image) => knowledgeApi.agenticChat(text, history, image)}
       allowImage
       storageKey={`tempu-agentic-chat:${admin?._id || 'anon'}`}

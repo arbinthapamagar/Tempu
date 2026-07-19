@@ -10,7 +10,7 @@ const sizes = {
   full: 'max-w-6xl',
 }
 
-export function Modal({ open, onClose, title, children, size = 'md', footer }) {
+export function Modal({ open, onClose, title, children, size = 'md', footer, align = 'center' }) {
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden'
@@ -28,7 +28,9 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }) {
       <div
         className={cn(
           'relative w-full bg-white rounded-2xl shadow-xl flex flex-col max-h-[90vh]',
-          sizes[size]
+          sizes[size],
+          // Nudge the dialog toward the right on wider screens when requested.
+          align === 'right' && 'lg:translate-x-24'
         )}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">

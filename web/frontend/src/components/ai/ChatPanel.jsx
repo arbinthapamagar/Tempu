@@ -120,7 +120,7 @@ export function ChatPanel({
   }
 
   return (
-    <section className="bg-white rounded-xl border border-gray-200 flex flex-col" style={{ height: '75vh' }}>
+    <section className="bg-white rounded-xl border border-gray-200 flex flex-col" style={{ height: '85vh' }}>
       <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 shrink-0">
         <Icon className="h-4 w-4 text-orange-500" />
         <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
@@ -136,7 +136,7 @@ export function ChatPanel({
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="max-w-3xl mx-auto px-6 py-6">
+        <div className="max-w-4xl mx-auto px-6 py-6">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center py-16">
               <Sparkles className="h-7 w-7 text-orange-300 mb-3" />
@@ -193,7 +193,7 @@ export function ChatPanel({
       </div>
 
       <div className="border-t border-gray-100 p-4 shrink-0">
-        <form onSubmit={submit} className="max-w-3xl mx-auto">
+        <form onSubmit={submit} className="max-w-4xl mx-auto">
           {/* Attached-image preview */}
           {image && (
             <div className="mb-2 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-1.5">
