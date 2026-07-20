@@ -95,9 +95,10 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
   const [overlay, setOverlay] = useState(null); // 'support' | 'notifications' | null
   const [totalRides, setTotalRides] = useState(null);
   const [unread, setUnread] = useState(0);
+  const [vehicleType, setVehicleType] = useState(null);
   const flow = useDriverFlow(initialOnline);
 
-  // Load the trip count + unread notification count for the top bar.
+  // Load the trip count, unread notifications, and vehicle type for the UI.
   useEffect(() => {
     userApi.getMyEarnings()
       .then((r) => setTotalRides(r.data?.totalRides ?? 0))
@@ -107,6 +108,9 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
         const items = r.data?.notifications || r.data || [];
         setUnread(items.filter((n) => !n.isRead).length);
       })
+      .catch(() => {});
+    userApi.getMyDriverProfile()
+      .then((r) => setVehicleType((r.data?.driver || r.data)?.vehicleType || null))
       .catch(() => {});
   }, []);
 
@@ -164,7 +168,7 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
         />
       )}
       <View style={styles.body}>
-        {tab === 'home' && <DriverHome flow={flow} />}
+        {tab === 'home' && <DriverHome flow={flow} vehicleType={vehicleType} />}
         {tab === 'earnings' && <DriverEarnings />}
         {tab === 'support' && <SupportScreen role="driver" onBack={() => setTab('home')} />}
         {tab === 'account' && (

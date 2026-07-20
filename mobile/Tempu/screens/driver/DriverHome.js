@@ -248,9 +248,17 @@ function SlideToGoOnline({ onConfirm, disabled, resetSignal }) {
   );
 }
 
-export default function DriverHome({ flow }) {
+// Offline illustration by vehicle type — tuktuk gets its own image.
+const OFFLINE_IMAGES = {
+  tuktuk: require('../../assets/ev-tuktuk.png'),
+  tuktuk_delivery: require('../../assets/ev-tuktuk.png'),
+};
+const DEFAULT_OFFLINE_IMAGE = require('../../assets/ev-car.png');
+
+export default function DriverHome({ flow, vehicleType }) {
   const { user } = useAuth();
   const [bidTrip, setBidTrip] = useState(null);
+  const offlineImage = OFFLINE_IMAGES[vehicleType] || DEFAULT_OFFLINE_IMAGE;
 
   const {
     online,
@@ -331,7 +339,7 @@ export default function DriverHome({ flow }) {
       {!online ? (
         <View style={styles.empty}>
           <Image
-            source={require('../../assets/ev-car.png')}
+            source={offlineImage}
             style={styles.carImg}
             resizeMode="contain"
           />
