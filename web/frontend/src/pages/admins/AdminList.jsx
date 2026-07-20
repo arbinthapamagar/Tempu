@@ -483,10 +483,24 @@ export default function AdminList() {
                   })()}
                 </Section>
 
-                {/* Reviews (support agents only) */}
+                {/* Single support rating (support agents only) */}
                 {showReviews && (
-                  <Section title="Reviews">
-                    <AgentRatings agentId={settingsRow._id} />
+                  <Section title="Support Rating">
+                    {settingsRow.supportRating?.count > 0 ? (
+                      <div className="flex items-center gap-3 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3">
+                        <span className="text-2xl font-bold text-amber-600 leading-none">
+                          {settingsRow.supportRating.avg.toFixed(1)}
+                        </span>
+                        <div className="text-sm">
+                          <p className="text-amber-500 leading-none">★★★★★</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            averaged from {settingsRow.supportRating.count} customer rating{settingsRow.supportRating.count === 1 ? '' : 's'}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">No support ratings yet.</p>
+                    )}
                   </Section>
                 )}
               </div>
