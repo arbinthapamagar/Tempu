@@ -49,6 +49,7 @@ import { Emergency } from './src/models/emergency.model.js';
 import { SupportTicket } from './src/models/supportTicket.model.js';
 import { Document } from './src/models/doeument.model.js';
 import { Review } from './src/models/review.model.js';
+import { SupportReview } from './src/models/supportReview.model.js';
 import { Admin } from './src/models/admin.model.js';
 import { Notification } from './src/models/notification.model.js';
 
@@ -340,26 +341,37 @@ async function run() {
     const CATS = ['trip_issue', 'payment_issue', 'driver_complaint', 'rider_complaint', 'document_issue', 'subscription_issue', 'account_issue', 'other'];
     const RATING_TAGS = ['Helpful', 'Fast', 'Polite', 'Resolved my issue'];
     const accrual = new Map(agents.map((a) => [String(a._id), { sum: 0, count: 0 }])); // per-agent rating totals
+    const reviewDocs = []; // persistent reviews (survive ticket deletion)
     let ratedTotal = 0;
     for (let i = 0; i < N; i++) {
         const agent = agents[i % agents.length]; // round-robin, even distribution
         const rated = i % 3 !== 0; // ~2 of every 3 tickets get a rating
         const score = 3 + (i % 3); // 3..5
         const status = rated ? pick(['resolved', 'closed'], i) : pick(['open', 'in_progress'], i);
-        await SupportTicket.create({
-            userId: pick(passengers, i)._id,
-            subject: `Demo ticket #${i + 1}: ${pick(CATS, i).replace('_', ' ')}`,
+        const passenger = pick(passengers, i);
+        const subject = `Demo ticket #${i + 1}: ${pick(CATS, i).replace('_', ' ')}`;
+        const comment = `Great support, thank you (#${i + 1}).`;
+        const tags = [pick(RATING_TAGS, i)];
+        const ticket = await SupportTicket.create({
+            userId: passenger._id,
+            subject,
             category: pick(CATS, i),
             status,
             assignedTo: agent._id,
             messages: [{ senderType: 'user', text: 'Hello, I need help with my recent trip.' }],
             resolvedAt: rated ? daysAgo(i) : null,
             rating: rated
-                ? { score, comment: `Great support, thank you (#${i + 1}).`, tags: [pick(RATING_TAGS, i)], ratedAt: daysAgo(i), agentId: agent._id }
+                ? { score, comment, tags, ratedAt: daysAgo(i), agentId: agent._id }
                 : { score: null, comment: '', tags: [], ratedAt: null, agentId: null },
         });
-        if (rated) { const a = accrual.get(String(agent._id)); a.sum += score; a.count += 1; ratedTotal++; }
+        if (rated) {
+            const a = accrual.get(String(agent._id)); a.sum += score; a.count += 1; ratedTotal++;
+            reviewDocs.push({ agentId: agent._id, ticketId: ticket._id, subject, score, comment, tags, customer: passenger.name, ratedAt: daysAgo(i) });
+        }
     }
+    // Persistent review records — independent of the tickets above.
+    await SupportReview.deleteMany({ agentId: { $in: agents.map((a) => a._id) } });
+    if (reviewDocs.length) await SupportReview.insertMany(reviewDocs);
     console.log(`Created ${N} support tickets (${ratedTotal} rated), assigned across ${agents.length} agents`);
 
     // ---- Persist each agent's single support rating (independent of tickets) ----

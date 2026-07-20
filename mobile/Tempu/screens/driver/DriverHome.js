@@ -248,10 +248,14 @@ function SlideToGoOnline({ onConfirm, disabled, resetSignal }) {
   );
 }
 
-// Offline illustration by vehicle type: taxi drivers see the car image;
-// everyone else sees the tuktuk (default for now).
+// Offline illustration matched to the driver's vehicle type.
 const OFFLINE_IMAGES = {
+  tuktuk: require('../../assets/ev-tuktuk.png'),          // Tempu
+  tuktuk_delivery: require('../../assets/ev-delivery.png'), // loader
+  scooter: require('../../assets/ev-scooter.png'),
+  bike: require('../../assets/ev-scooter.png'),           // two-wheeler → scooter image
   taxi: require('../../assets/ev-car.png'),
+  comfort: require('../../assets/ev-car.png'),
 };
 const DEFAULT_OFFLINE_IMAGE = require('../../assets/ev-tuktuk.png');
 
@@ -264,7 +268,7 @@ const VEHICLE_LABELS = {
   comfort: 'Comfort',
 };
 
-export default function DriverHome({ flow, vehicleType }) {
+export default function DriverHome({ flow, vehicleType, subscriptionDriver }) {
   const { user } = useAuth();
   const [bidTrip, setBidTrip] = useState(null);
   const offlineImage = OFFLINE_IMAGES[vehicleType] || DEFAULT_OFFLINE_IMAGE;
@@ -358,6 +362,13 @@ export default function DriverHome({ flow, vehicleType }) {
             style={styles.carImg}
             resizeMode="contain"
           />
+          {subscriptionDriver && (
+            <Image
+              source={require('../../assets/subscription.png')}
+              style={styles.subImg}
+              resizeMode="cover"
+            />
+          )}
           <Text style={styles.emptyTitle}>You're offline</Text>
           <Text style={styles.emptySub}>
             Go online to start receiving nearby ride requests.
@@ -472,6 +483,7 @@ const styles = StyleSheet.create({
 
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl, gap: spacing.sm },
   carImg: { width: 260, height: 180, marginBottom: spacing.sm },
+  subImg: { width: 260, height: 120, borderRadius: radius.lg, marginBottom: spacing.sm },
   emptyTitle: { ...type.h3, color: colors.text, marginTop: spacing.sm },
   emptySub: { ...type.body, color: colors.textMuted, textAlign: 'center' },
 

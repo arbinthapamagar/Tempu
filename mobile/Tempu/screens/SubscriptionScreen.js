@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -27,19 +28,6 @@ const PLAN_INFO = {
     price: 5000,
     period: 'month',
   },
-  business: {
-    name: 'Business plan',
-    tagline: 'Regular delivery or commute service',
-    features: [
-      'Flexible pickup times',
-      'Goods or passenger transport',
-      'Priority driver matching',
-      'Invoice billing',
-      'Dedicated support',
-    ],
-    price: 8000,
-    period: 'month',
-  },
 };
 
 function formatDate(value) {
@@ -51,8 +39,8 @@ function formatDate(value) {
   });
 }
 
-export default function SubscriptionScreen({ onBack }) {
-  const [tab, setTab] = useState('active');
+export default function SubscriptionScreen({ onBack, initialTab = 'active' }) {
+  const [tab, setTab] = useState(initialTab);
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -159,9 +147,12 @@ export default function SubscriptionScreen({ onBack }) {
             </View>
           )
         ) : (
-          Object.entries(PLAN_INFO).map(([id, plan]) => (
-            <PlanCard key={id} plan={{ id, ...plan }} onSubscribe={() => handleSubscribe(id)} />
-          ))
+          <>
+            <Image source={require('../assets/subscription.png')} style={styles.subBanner} resizeMode="cover" />
+            {Object.entries(PLAN_INFO).map(([id, plan]) => (
+              <PlanCard key={id} plan={{ id, ...plan }} onSubscribe={() => handleSubscribe(id)} />
+            ))}
+          </>
         )}
       </ScrollView>
     </View>
@@ -300,6 +291,7 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#fff' },
 
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl + spacing.sm, paddingTop: spacing.xs },
+  subBanner: { width: '100%', height: 170, borderRadius: radius.xl, marginBottom: spacing.lg },
 
   emptyWrap: { alignItems: 'center', paddingTop: 72, paddingHorizontal: spacing.lg },
   emptyTitle: { ...type.h1, color: colors.text },

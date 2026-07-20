@@ -10,6 +10,7 @@ import { Withdrawal } from '../models/withdrawal.model.js';
 import { Pricing, defaultPricing, VEHICLE_TYPES } from '../models/pricing.model.js';
 import { Emergency } from '../models/emergency.model.js';
 import { SupportTicket } from '../models/supportTicket.model.js';
+import { SupportReview } from '../models/supportReview.model.js';
 import { Supplier } from '../models/supplier.model.js';
 import { getSupportSettings } from '../models/supportSettings.model.js';
 import { AdminNotification } from '../models/adminNotification.model.js';
@@ -2017,33 +2018,24 @@ const updateSupportSettings = asyncHandler(async (req, res) => {
 const getSupportAgents = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
     const agents = await Admin.find({ isActive: { $ne: false }, 'permissions.handleSupport': true })
-        .select('name email role')
+        .select('name email role supportRating')
         .sort({ name: 1 })
         .lean();
 
-    // Per-agent active load (open/in_progress) and support rating (avg + count).
-    const [loads, ratings] = await Promise.all([
-        SupportTicket.aggregate([
-            { $match: { assignedTo: { $ne: null }, status: { $in: ['open', 'in_progress'] } } },
-            { $group: { _id: '$assignedTo', n: { $sum: 1 } } },
-        ]),
-        SupportTicket.aggregate([
-            { $match: { 'rating.score': { $gte: 1 }, 'rating.agentId': { $ne: null } } },
-            { $group: { _id: '$rating.agentId', avg: { $avg: '$rating.score' }, count: { $sum: 1 } } },
-        ]),
+    // Active load (open/in_progress) is genuinely "live". The rating comes from
+    // the persistent Admin.supportRating, so it never resets when tickets are deleted.
+    const loads = await SupportTicket.aggregate([
+        { $match: { assignedTo: { $ne: null }, status: { $in: ['open', 'in_progress'] } } },
+        { $group: { _id: '$assignedTo', n: { $sum: 1 } } },
     ]);
     const loadMap = new Map(loads.map((l) => [String(l._id), l.n]));
-    const ratingMap = new Map(ratings.map((r) => [String(r._id), r]));
 
-    const enriched = agents.map((a) => {
-        const r = ratingMap.get(String(a._id));
-        return {
-            ...a,
-            activeTickets: loadMap.get(String(a._id)) || 0,
-            avgRating: r ? Math.round(r.avg * 10) / 10 : null,
-            ratingCount: r ? r.count : 0,
-        };
-    });
+    const enriched = agents.map((a) => ({
+        ...a,
+        activeTickets: loadMap.get(String(a._id)) || 0,
+        avgRating: a.supportRating?.count ? a.supportRating.average : null,
+        ratingCount: a.supportRating?.count || 0,
+    }));
     return res.status(200).json(new apiResponse(200, enriched, 'Support agents fetched'));
 });
 
@@ -2059,21 +2051,21 @@ const getSupportAgentRatings = asyncHandler(async (req, res) => {
         throw new apiError(403, 'You can only view your own ratings');
     }
 
-    const tickets = await SupportTicket.find({ 'rating.agentId': agentId, 'rating.score': { $gte: 1 } })
-        .select('subject rating userId guest')
-        .populate('userId', 'name')
-        .sort({ 'rating.ratedAt': -1 })
+    // Read from the persistent SupportReview store so reviews survive even after
+    // their tickets are deleted.
+    const reviews = await SupportReview.find({ agentId })
+        .sort({ ratedAt: -1 })
         .limit(100)
         .lean();
 
-    const items = tickets.map((t) => ({
-        ticketId: t._id,
-        subject: t.subject,
-        score: t.rating.score,
-        comment: t.rating.comment || '',
-        tags: t.rating.tags || [],
-        ratedAt: t.rating.ratedAt,
-        customer: t.userId?.name || t.guest?.name || 'Customer',
+    const items = reviews.map((r) => ({
+        ticketId: r.ticketId,
+        subject: r.subject,
+        score: r.score,
+        comment: r.comment || '',
+        tags: r.tags || [],
+        ratedAt: r.ratedAt,
+        customer: r.customer || 'Customer',
     }));
     const count = items.length;
     const avg = count ? Math.round((items.reduce((s, i) => s + i.score, 0) / count) * 10) / 10 : 0;

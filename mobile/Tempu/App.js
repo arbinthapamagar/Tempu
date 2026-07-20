@@ -53,6 +53,7 @@ function AppShell() {
   const [role, setRole] = useState('passenger'); // 'passenger' | 'driver'
   const [pendingPhone, setPendingPhone] = useState('');
   const [tab, setTab] = useState('home');
+  const [subInitialTab, setSubInitialTab] = useState('active'); // which subscription tab to open on
   const [menuOpen, setMenuOpen] = useState(false);
   const [overlay, setOverlay] = useState(null);
   const [mode, setModeState] = useState('passenger'); // 'passenger' | 'driver'
@@ -246,16 +247,20 @@ function AppShell() {
             </Pressable>
           </View>
           <View style={styles.content}>
-            {tab === 'home' && <HomeScreen />}
+            {tab === 'home' && (
+              <HomeScreen
+                onOpenSubscription={() => { setSubInitialTab('browse'); setTab('subscribe'); }}
+              />
+            )}
             {tab === 'trips' && <TripsScreen />}
-            {tab === 'subscribe' && <SubscriptionScreen onBack={() => setTab('home')} />}
+            {tab === 'subscribe' && <SubscriptionScreen onBack={() => setTab('home')} initialTab={subInitialTab} />}
             {tab === 'inbox' && <InboxScreen />}
             {tab === 'support' && <SupportScreen role="passenger" onBack={() => setTab('home')} />}
             {tab === 'account' && (
               <ProfileScreen
                 onBack={() => setTab('home')}
                 onSignOut={signOut}
-                onOpenSubscription={() => setTab('subscribe')}
+                onOpenSubscription={() => { setSubInitialTab('active'); setTab('subscribe'); }}
                 onSwitchToDriver={() => setMode('driver')}
               />
             )}
@@ -264,7 +269,7 @@ function AppShell() {
             open={menuOpen}
             onClose={() => setMenuOpen(false)}
             active={tab}
-            onChange={setTab}
+            onChange={(t) => { if (t === 'subscribe') setSubInitialTab('active'); setTab(t); }}
             isDriver={approvedDriver}
           />
         </View>

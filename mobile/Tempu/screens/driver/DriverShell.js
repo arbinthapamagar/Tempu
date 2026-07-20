@@ -178,6 +178,7 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
   const [totalRides, setTotalRides] = useState(null);
   const [unread, setUnread] = useState(0);
   const [vehicleType, setVehicleType] = useState(null);
+  const [subscriptionDriver, setSubscriptionDriver] = useState(false);
   const [sosOpen, setSosOpen] = useState(false);
   const flow = useDriverFlow(initialOnline);
 
@@ -193,7 +194,10 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
       })
       .catch(() => {});
     userApi.getMyDriverProfile()
-      .then((r) => setVehicleType((r.data?.driver || r.data)?.vehicleType || null))
+      .then((r) => {
+        setVehicleType((r.data?.driver || r.data)?.vehicleType || null);
+        setSubscriptionDriver(!!r.data?.subscriptionDriver);
+      })
       .catch(() => {});
   }, []);
 
@@ -240,7 +244,7 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
         />
       )}
       <View style={styles.body}>
-        {tab === 'home' && <DriverHome flow={flow} vehicleType={vehicleType} />}
+        {tab === 'home' && <DriverHome flow={flow} vehicleType={vehicleType} subscriptionDriver={subscriptionDriver} />}
         {tab === 'earnings' && <DriverEarnings />}
         {tab === 'support' && <SupportScreen role="driver" onBack={() => setTab('home')} />}
         {tab === 'account' && (

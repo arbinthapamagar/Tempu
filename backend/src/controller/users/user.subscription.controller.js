@@ -17,20 +17,17 @@ const getMySubscriptions = asyncHandler(async (req, res) => {
 
 const createSubscription = asyncHandler(async (req, res) => {
     const {
-        plan, vehicleType, monthlyPrice,
+        vehicleType, monthlyPrice,
         pickup, dropoff, pickupTime, dropoffTime, startDate, endDate,
         childName, childAge, schoolName, childPhoto,
-        businessName, businessAddress, goodsType,
     } = req.body;
 
-    if (!plan || !vehicleType || !monthlyPrice || !pickup || !dropoff || !startDate || !endDate) {
+    // Subscriptions are parent/kid plans only.
+    if (!vehicleType || !monthlyPrice || !pickup || !dropoff || !startDate || !endDate) {
         throw new apiError(400, 'Required fields are missing');
     }
-    if (plan === 'parent' && (!childName || !schoolName)) {
-        throw new apiError(400, 'Child name and school name are required for parent plan');
-    }
-    if (plan === 'business' && !businessName) {
-        throw new apiError(400, 'Business name is required for business plan');
+    if (!childName || !schoolName) {
+        throw new apiError(400, 'Child name and school name are required');
     }
     if (!pickup.address || !pickup.location?.coordinates) {
         throw new apiError(400, 'Pickup address and coordinates are required');
@@ -41,7 +38,8 @@ const createSubscription = asyncHandler(async (req, res) => {
 
     const subscription = await Subscription.create({
         userId: req.user._id,
-        plan, vehicleType,
+        plan: 'parent',
+        vehicleType,
         monthlyPrice: parseFloat(monthlyPrice),
         pickup, dropoff, pickupTime, dropoffTime,
         startDate: new Date(startDate),
@@ -50,14 +48,11 @@ const createSubscription = asyncHandler(async (req, res) => {
         childAge: childAge || null,
         schoolName: schoolName || null,
         childPhoto: childPhoto || null,
-        businessName: businessName || null,
-        businessAddress: businessAddress || null,
-        goodsType: goodsType || null,
     });
 
     await User.findByIdAndUpdate(req.user._id, {
         subscription: subscription._id,
-        userType: plan === 'parent' ? 'parent' : 'business',
+        userType: 'parent',
     });
 
     return res.status(201).json(new apiResponse(201, subscription, 'Subscription created'));

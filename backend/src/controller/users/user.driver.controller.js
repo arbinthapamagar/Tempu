@@ -1,5 +1,6 @@
 import { User } from '../../models/user.model.js';
 import { Driver } from '../../models/driver.model.js';
+import { Subscription } from '../../models/subscription.model.js';
 import { Document } from '../../models/doeument.model.js';
 import { Trip } from '../../models/trip.model.js';
 import { Withdrawal } from '../../models/withdrawal.model.js';
@@ -65,7 +66,13 @@ const getMyDriverProfile = asyncHandler(async (req, res) => {
     if (!driver) throw new apiError(404, 'Driver profile not found');
 
     const documents = await Document.find({ driverId: driver._id }).sort({ type: 1 });
-    return res.status(200).json(new apiResponse(200, { driver, documents }, 'Driver profile fetched'));
+    // Is this driver also serving a subscription (primary or backup on an
+    // active/paused parent plan)? Used to show the subscription illustration too.
+    const subscriptionDriver = !!(await Subscription.exists({
+        status: { $in: ['active', 'paused'] },
+        $or: [{ primaryDriver: driver._id }, { backupDrivers: driver._id }],
+    }));
+    return res.status(200).json(new apiResponse(200, { driver, documents, subscriptionDriver }, 'Driver profile fetched'));
 });
 
 const updateDriverProfile = asyncHandler(async (req, res) => {

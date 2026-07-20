@@ -19,7 +19,7 @@ import OptionsSheet from './OptionsSheet';
 import SearchSheet from './SearchSheet';
 import useRideFlow, { VEHICLE_TYPES } from './useRideFlow';
 
-export default function HomeScreen() {
+export default function HomeScreen({ onOpenSubscription }) {
   const flow = useRideFlow();
   const {
     step,
@@ -71,6 +71,7 @@ export default function HomeScreen() {
       <HomeView
         onTapSearch={() => setStep('search')}
         onPickSaved={goToOptions}
+        onSubscribe={onOpenSubscription}
       />
     );
   }

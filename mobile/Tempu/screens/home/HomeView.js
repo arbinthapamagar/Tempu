@@ -17,10 +17,11 @@ import Map from './Map';
 import { HOME_REFRESH_MS } from './constants';
 
 const SERVICES = [
-  { id: 'rickshaw', label: 'Tempu', sub: 'Local', img: require('../../assets/logo-icon.png') },
-  { id: 'scooter', label: 'Scooter', sub: 'Eco', icon: 'moped', lib: 'mci' },
-  { id: 'delivery', label: 'Delivery', sub: 'Parcels', icon: 'package-variant-closed', lib: 'mci' },
-  { id: 'subscribe', label: 'Subscribe', sub: 'Daily', icon: 'calendar-check', lib: 'mci', dark: true },
+  { id: 'rickshaw', label: 'Tempu', img: require('../../assets/ev-tuktuk.png'), bigLabel: true },
+  { id: 'scooter', label: 'Scooter', img: require('../../assets/ev-scooter.png'), bigLabel: true },
+  { id: 'delivery', label: 'Delivery', img: require('../../assets/ev-delivery.png'), bigLabel: true },
+  { id: 'taxi', label: 'Taxi', img: require('../../assets/ev-car.png'), bigLabel: true },
+  { id: 'subscribe', label: 'Subscribe', img: require('../../assets/subscription.png'), bigLabel: true, cover: true },
 ];
 
 const SAVED_PLACE_ICON = { home: 'home', work: 'briefcase' };
@@ -33,9 +34,15 @@ function titleCase(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function ServiceIcon({ icon, lib, color, img }) {
+function ServiceIcon({ icon, lib, color, img, cover }) {
   if (img) {
-    return <Image source={img} style={{ width: 30, height: 30 }} resizeMode="contain" />;
+    return (
+      <Image
+        source={img}
+        style={[{ width: '100%', height: '100%' }, cover && { borderRadius: 18 }]}
+        resizeMode={cover ? 'cover' : 'contain'}
+      />
+    );
   }
   if (lib === 'mci') {
     return <MaterialCommunityIcons name={icon} size={28} color={color} />;
@@ -43,7 +50,7 @@ function ServiceIcon({ icon, lib, color, img }) {
   return <Ionicons name={icon} size={28} color={color} />;
 }
 
-export default function HomeView({ onTapSearch, onPickSaved }) {
+export default function HomeView({ onTapSearch, onPickSaved, onSubscribe }) {
   const { user } = useAuth();
   const savedAddresses = user?.savedAddresses || [];
   const [refreshing, setRefreshing] = useState(false);
@@ -57,14 +64,6 @@ export default function HomeView({ onTapSearch, onPickSaved }) {
 
   return (
     <View style={styles.root}>
-      {/* Sticky top bar */}
-      <View style={styles.header}>
-        <Image source={require('../../assets/logo-wordmark.png')} style={styles.brand} resizeMode="contain" />
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
-        </View>
-      </View>
-
       <ScrollView
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
@@ -117,6 +116,7 @@ export default function HomeView({ onTapSearch, onPickSaved }) {
                 key={s.id}
                 onPress={() => {
                   hapticPick();
+                  if (s.id === 'subscribe') { onSubscribe?.(); return; }
                   setSelected(s.id);
                 }}
                 style={[
@@ -129,21 +129,25 @@ export default function HomeView({ onTapSearch, onPickSaved }) {
                   style={[
                     styles.serviceIcon,
                     dark && styles.serviceIconDark,
+                    s.img && styles.serviceIconImage,
                   ]}
                 >
                   <ServiceIcon
                     icon={s.icon}
                     lib={s.lib}
                     img={s.img}
+                    cover={s.cover}
                     color={dark ? '#ffffff' : colors.primary}
                   />
                 </View>
-                <Text style={[styles.serviceLabel, dark && styles.textOnDark]}>
+                <Text style={[styles.serviceLabel, s.bigLabel && styles.serviceLabelBig, dark && styles.textOnDark]}>
                   {s.label}
                 </Text>
-                <Text style={[styles.serviceSub, dark && styles.subOnDark]}>
-                  {s.sub}
-                </Text>
+                {s.sub ? (
+                  <Text style={[styles.serviceSub, dark && styles.subOnDark]}>
+                    {s.sub}
+                  </Text>
+                ) : null}
               </Pressable>
             );
           })}
@@ -320,10 +324,10 @@ const styles = StyleSheet.create({
 
   serviceRow: { gap: 16, paddingHorizontal: 20, paddingVertical: 8 },
   serviceCard: {
-    width: 120,
+    width: 152,
     backgroundColor: colors.surface,
     borderRadius: 24,
-    padding: 16,
+    padding: 10,
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
@@ -341,7 +345,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   serviceIconDark: { backgroundColor: 'rgba(255,255,255,0.1)' },
+  // Vehicle photo icons: large and no background bubble.
+  serviceIconImage: { width: 128, height: 128, borderRadius: 0, backgroundColor: 'transparent' },
   serviceLabel: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },
+  serviceLabelBig: { fontSize: 19 },
   serviceSub: { fontFamily: fonts.body, fontSize: 11, color: colors.textMuted },
   textOnDark: { color: '#ffffff' },
   subOnDark: { color: 'rgba(255,255,255,0.7)' },

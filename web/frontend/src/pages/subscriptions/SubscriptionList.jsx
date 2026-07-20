@@ -15,7 +15,6 @@ import toast from 'react-hot-toast'
 
 const PLAN_OPTIONS = [
   { value: 'parent', label: 'Parent' },
-  { value: 'business', label: 'Business' },
 ]
 
 export default function SubscriptionList() {
@@ -69,11 +68,8 @@ export default function SubscriptionList() {
       render: (val, row) => (
         <div>
           <StatusBadge status={val} />
-          {val === 'parent' && row.childName && (
+          {row.childName && (
             <p className="text-xs text-gray-400 mt-0.5">Child: {row.childName}</p>
-          )}
-          {val === 'business' && row.businessName && (
-            <p className="text-xs text-gray-400 mt-0.5">{row.businessName}</p>
           )}
         </div>
       ),

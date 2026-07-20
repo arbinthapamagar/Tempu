@@ -1,5 +1,6 @@
 import { SupportTicket } from '../../models/supportTicket.model.js';
 import { Admin } from '../../models/admin.model.js';
+import { SupportReview } from '../../models/supportReview.model.js';
 import { Driver } from '../../models/driver.model.js';
 import { AdminNotification } from '../../models/adminNotification.model.js';
 import { getSupportSettings } from '../../models/supportSettings.model.js';
@@ -186,6 +187,25 @@ const rateTicket = asyncHandler(async (req, res) => {
         // First rating, or the ticket was reassigned since the last rating.
         if (prevScore && prevAgentId) await applyRatingDelta(prevAgentId, -prevScore, -1);
         await applyRatingDelta(newAgentId, score, 1);
+    }
+
+    // Persist the review independently of the ticket so it survives ticket
+    // deletion. Upsert by ticketId so re-rating updates the same review.
+    if (newAgentId) {
+        await SupportReview.findOneAndUpdate(
+            { ticketId: ticket._id },
+            {
+                agentId: newAgentId,
+                ticketId: ticket._id,
+                subject: ticket.subject,
+                score,
+                comment,
+                tags,
+                customer: req.user?.name || ticket.guest?.name || 'Customer',
+                ratedAt: new Date(),
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+        ).catch((e) => console.error('[rateTicket] review persist failed:', e.message));
     }
 
     // Notify the handling agent about their new rating (best-effort).

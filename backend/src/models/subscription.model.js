@@ -8,10 +8,11 @@ const subscriptionSchema = new mongoose.Schema(
             required: true,
         },
 
+        // Subscriptions are parent/kid plans only.
         plan: {
             type: String,
-            enum: ['parent', 'business'],
-            required: true,
+            enum: ['parent'],
+            default: 'parent',
         },
 
         childName: {
@@ -30,19 +31,6 @@ const subscriptionSchema = new mongoose.Schema(
             type: String,
             default: null,
         },
-
-        businessName: {
-            type: String,
-            default: null,
-        },
-        businessAddress: {
-            type: String,
-            default: null,
-        },
-        goodsType: {
-            type: String,
-            default: null,
-        }, // what they deliver
 
         pickup: {
             address: {
