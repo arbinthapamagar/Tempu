@@ -55,10 +55,10 @@ export default function SubscriptionList() {
       header: 'Subscriber',
       render: (val) => (
         <div className="flex items-center gap-2">
-          <Avatar name={val?.name} size="sm" />
-          <div>
-            <p className="text-sm font-medium text-gray-900">{val?.name || '-'}</p>
-            <p className="text-xs text-gray-400">{val?.phone}</p>
+          <Avatar name={val?.name} size="xxs" />
+          <div className="leading-tight">
+            <p className="text-[13px] font-medium text-gray-900">{val?.name || '-'}</p>
+            <p className="text-[11px] text-gray-400">{val?.phone}</p>
           </div>
         </div>
       ),

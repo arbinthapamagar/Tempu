@@ -53,11 +53,11 @@ export default function EmergencyList() {
       key: 'userId',
       header: 'Person',
       render: (u, row) => (
-        <div className="flex items-center gap-3">
-          <Avatar name={u?.name} size="sm" />
-          <div>
-            <p className="text-sm font-medium text-gray-900">{u?.name || '-'}</p>
-            <p className="text-xs text-gray-400">{row.contactPhone || u?.phone || ''} · {row.role}</p>
+        <div className="flex items-center gap-2.5">
+          <Avatar name={u?.name} size="xxs" />
+          <div className="leading-tight">
+            <p className="text-[13px] font-medium text-gray-900">{u?.name || '-'}</p>
+            <p className="text-[11px] text-gray-400">{row.contactPhone || u?.phone || ''} · {row.role}</p>
           </div>
         </div>
       ),

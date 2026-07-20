@@ -251,10 +251,10 @@ export default function AdminList() {
       header: 'Admin',
       render: (val, row) => (
         <div className="flex items-center gap-3">
-          <Avatar src={row.avatarUrl} name={val} size="xs" />
-          <div>
-            <p className="text-sm font-medium text-gray-900">{val}</p>
-            <p className="text-xs text-gray-400">{row.email}</p>
+          <Avatar src={row.avatarUrl} name={val} size="xxs" />
+          <div className="leading-tight">
+            <p className="text-[13px] font-medium text-gray-900">{val}</p>
+            <p className="text-[11px] text-gray-400">{row.email}</p>
           </div>
         </div>
       ),
@@ -303,8 +303,8 @@ export default function AdminList() {
     {
       key: '_id',
       header: 'Actions',
-      render: (id, row) => {
-        const viewBtn = (
+      render: (id, row) => (
+        <div className="flex items-center gap-1">
           <button
             onClick={(e) => { e.stopPropagation(); setViewAdmin(row) }}
             className="p-1.5 hover:bg-orange-50 rounded text-gray-400 hover:text-orange-600"
@@ -312,17 +312,6 @@ export default function AdminList() {
           >
             <Eye className="h-4 w-4" />
           </button>
-        )
-        const notifyBtn = (
-          <button
-            onClick={(e) => { e.stopPropagation(); setNotify({ recipients: [{ id, label: labelOf(row) }] }) }}
-            className="p-1.5 hover:bg-orange-50 rounded text-gray-400 hover:text-orange-600"
-            title="Send notification"
-          >
-            <Bell className="h-4 w-4" />
-          </button>
-        )
-        const settingsBtn = (
           <button
             onClick={(e) => { e.stopPropagation(); setSettingsRow(row) }}
             className="p-1.5 hover:bg-orange-50 rounded text-gray-400 hover:text-orange-600"
@@ -330,38 +319,9 @@ export default function AdminList() {
           >
             <Settings className="h-4 w-4" />
           </button>
-        )
-        if (row._id === currentAdmin?._id) return <div className="flex items-center gap-1">{viewBtn}{settingsBtn}<span className="text-xs text-orange-500 font-medium">You</span></div>
-        if (row.role === 'superadmin') return <div className="flex items-center gap-1">{viewBtn}{notifyBtn}{settingsBtn}</div>
-        return (
-          <div className="flex items-center gap-1">
-            {viewBtn}
-            {notifyBtn}
-            {settingsBtn}
-            <button
-              onClick={(e) => { e.stopPropagation(); setEditAdmin(row) }}
-              className="p-1.5 hover:bg-orange-50 rounded text-gray-400 hover:text-orange-600"
-              title="Edit permissions"
-            >
-              <Edit className="h-4 w-4" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleMutation.mutate({ id, isActive: !row.isActive }) }}
-              className="p-1.5 hover:bg-amber-50 rounded text-gray-400 hover:text-amber-600"
-              title={row.isActive ? 'Deactivate' : 'Activate'}
-            >
-              {row.isActive ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); setDeleteAdmin(row) }}
-              className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-600"
-              title="Delete"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        )
-      },
+          {row._id === currentAdmin?._id && <span className="text-xs text-orange-500 font-medium">You</span>}
+        </div>
+      ),
     },
   ]
 
@@ -452,7 +412,86 @@ export default function AdminList() {
         size="xl"
       >
         <div className="min-h-[70vh]">
-          {settingsRow && <AdminSettingsDetail admin={settingsRow} />}
+          {settingsRow && (() => {
+            const isSelf = settingsRow._id === currentAdmin?._id
+            const isSuper = settingsRow.role === 'superadmin'
+            const canManage = !isSelf && !isSuper
+            const permCount = isSuper ? PERMISSIONS.length : PERMISSIONS.filter((p) => settingsRow.permissions?.[p.key]).length
+            const showReviews = isSuper || settingsRow.permissions?.handleSupport
+            return (
+              <div className="space-y-6">
+                {/* Header: profile + action buttons */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <Avatar src={settingsRow.avatarUrl} name={settingsRow.name} size="lg" />
+                    <div className="min-w-0">
+                      <p className="text-lg font-bold text-gray-900 truncate">
+                        {settingsRow.name || '-'}
+                        {isSelf && <span className="ml-2 text-xs text-orange-500 font-medium">(You)</span>}
+                      </p>
+                      {settingsRow.email && <p className="text-sm text-gray-500 truncate">{settingsRow.email}</p>}
+                      <p className="text-sm text-gray-500">{settingsRow.phone || '-'}</p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        <StatusBadge status={settingsRow.role} />
+                        <StatusBadge status={settingsRow.isActive ? 'active' : 'suspended'} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    {!isSelf && (
+                      <Button size="sm" variant="secondary" icon={Bell}
+                        onClick={() => setNotify({ recipients: [{ id: settingsRow._id, label: labelOf(settingsRow) }] })}>
+                        Notify
+                      </Button>
+                    )}
+                    {canManage && (
+                      <>
+                        <Button size="sm" variant="secondary" icon={Edit}
+                          onClick={() => { setSettingsRow(null); setEditAdmin(settingsRow) }}>
+                          Edit
+                        </Button>
+                        <Button size="sm" variant="warning" icon={settingsRow.isActive ? ToggleLeft : ToggleRight}
+                          onClick={() => toggleMutation.mutate({ id: settingsRow._id, isActive: !settingsRow.isActive })}>
+                          {settingsRow.isActive ? 'Deactivate' : 'Activate'}
+                        </Button>
+                        <Button size="sm" variant="danger" icon={Trash2}
+                          onClick={() => { setSettingsRow(null); setDeleteAdmin(settingsRow) }}>
+                          Delete
+                        </Button>
+                      </>
+                    )}
+                    {isSelf && (
+                      <Button size="sm" variant="secondary" icon={Edit}
+                        onClick={() => { setSettingsRow(null); setEditProfile(true) }}>
+                        Edit My Profile
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Details grid */}
+                <Section title="Details">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <StatField label="Email" value={settingsRow.email} />
+                    <StatField label="Phone" value={settingsRow.phone} />
+                    <StatField label="Role" value={settingsRow.role} />
+                    <StatField label="Status" value={settingsRow.isActive ? 'Active' : 'Inactive'} />
+                    <StatField label="Permissions" value={`${permCount} of ${PERMISSIONS.length}`} />
+                    <StatField label="Last Login" value={settingsRow.lastLoginAt ? formatRelative(settingsRow.lastLoginAt) : 'Never'} />
+                    <StatField label="Created" value={settingsRow.createdAt ? formatDate(settingsRow.createdAt) : null} />
+                  </div>
+                </Section>
+
+                {/* Reviews (support agents only) */}
+                {showReviews && (
+                  <Section title="Reviews">
+                    <AgentRatings agentId={settingsRow._id} />
+                  </Section>
+                )}
+              </div>
+            )
+          })()}
         </div>
       </Modal>
 
@@ -526,34 +565,22 @@ export default function AdminList() {
   )
 }
 
-// Compact key/value list pinned to the top-left of the settings popup, leaving
-// the rest of the (wide) dialog free for controls we'll add later.
-function DetailRow({ label, value }) {
+// Labelled section wrapper used throughout the settings popup.
+function Section({ title, children }) {
   return (
-    <div className="flex justify-between gap-4">
-      <dt className="text-gray-400 shrink-0">{label}</dt>
-      <dd className="text-gray-700 font-medium text-right capitalize truncate">{value || '-'}</dd>
+    <div className="space-y-2.5">
+      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{title}</p>
+      {children}
     </div>
   )
 }
 
-function AdminSettingsDetail({ admin }) {
+// A single labelled value shown as a soft card in the details grid.
+function StatField({ label, value }) {
   return (
-    <div className="max-w-xs space-y-3">
-      <div className="flex items-center gap-2.5">
-        <Avatar src={admin.avatarUrl} name={admin.name} size="md" />
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-900 truncate">{admin.name || '-'}</p>
-          {admin.email && <p className="text-xs text-gray-500 truncate">{admin.email}</p>}
-          <p className="text-xs text-gray-500 truncate">{admin.phone || '-'}</p>
-        </div>
-      </div>
-      <dl className="space-y-1.5 text-xs">
-        <DetailRow label="Role" value={admin.role} />
-        <DetailRow label="Status" value={admin.isActive ? 'Active' : 'Inactive'} />
-        <DetailRow label="Last Login" value={admin.lastLoginAt ? formatRelative(admin.lastLoginAt) : 'Never'} />
-        <DetailRow label="Created" value={admin.createdAt ? formatDate(admin.createdAt) : null} />
-      </dl>
+    <div className="rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2">
+      <p className="text-[11px] text-gray-400 mb-0.5">{label}</p>
+      <p className="text-sm font-semibold text-gray-800 capitalize truncate">{value || '-'}</p>
     </div>
   )
 }

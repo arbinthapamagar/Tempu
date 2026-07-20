@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle, XCircle, Pause, Play, Eye, Bell, Send, X, Download, Settings } from '@/components/ui/icons'
+import { CheckCircle, XCircle, Pause, Play, Eye, Bell, Send, X, Download, Settings, Edit, Trash2 } from '@/components/ui/icons'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
+import { Input } from '../../components/ui/Input'
+import { Select } from '../../components/ui/Select'
 import { SendNotificationModal } from '../../components/shared/SendNotificationModal'
 import { DataTable } from '../../components/shared/DataTable'
 import { Pagination } from '../../components/shared/Pagination'
@@ -68,6 +70,8 @@ export default function DriverList() {
   const [earningsFilter, setEarningsFilter] = useState('')
   const [confirmAction, setConfirmAction] = useState(null)
   const [settingsRow, setSettingsRow] = useState(null) // row whose settings popup is open
+  const [editingDriver, setEditingDriver] = useState(false) // edit form visible inside settings popup
+  const [driverToDelete, setDriverToDelete] = useState(null) // pending delete confirmation
   const [selected, setSelected] = useState([]) // [{ id, label }]
   const [notify, setNotify] = useState(null)   // { recipients }
   const [exporting, setExporting] = useState(false)
@@ -111,6 +115,28 @@ export default function DriverList() {
       toast.success('Driver verified')
     },
     onError: (err) => toast.error(err?.message || 'Failed to verify'),
+  })
+
+  const updateProfile = useMutation({
+    mutationFn: ({ id, data }) => driversApi.update(id, data),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['drivers'] })
+      toast.success('Driver updated')
+      const updated = res?.data || res
+      setSettingsRow((prev) => (prev ? { ...prev, ...updated } : prev))
+    },
+    onError: (err) => toast.error(err?.message || 'Failed to update driver'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => driversApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['drivers'] })
+      toast.success('Driver deleted')
+      setDriverToDelete(null)
+      setSettingsRow(null)
+    },
+    onError: (err) => toast.error(err?.message || 'Failed to delete driver'),
   })
 
   const drivers = data?.data?.drivers || data?.data || []
@@ -187,10 +213,10 @@ export default function DriverList() {
       header: 'Driver',
       render: (val, row) => (
         <div className="flex items-center gap-3">
-          <Avatar src={val?.avatarUrl} name={val?.name} size="xs" />
-          <div>
-            <p className="font-medium text-gray-900 text-sm">{val?.name || '-'}</p>
-            <p className="text-xs text-gray-400">{val?.phone || '-'}</p>
+          <Avatar src={val?.avatarUrl} name={val?.name} size="xxs" />
+          <div className="leading-tight">
+            <p className="font-medium text-gray-900 text-[13px]">{val?.name || '-'}</p>
+            <p className="text-[11px] text-gray-400">{val?.phone || '-'}</p>
           </div>
         </div>
       ),
@@ -219,11 +245,6 @@ export default function DriverList() {
       header: 'Online',
       render: (val) => <StatusBadge status={val ? 'online' : 'offline'} />,
     },
-    {
-      key: 'rating',
-      header: 'Rating',
-      render: (val, row) => `⭐ ${(row.rating || 0).toFixed(1)} (${row.totalRatings || 0})`,
-    },
     { key: 'totalRides', header: 'Rides', render: (val) => (val || 0).toLocaleString() },
     { key: 'earnings', header: 'Earnings', render: (val) => formatCurrency(val || 0) },
     {
@@ -239,55 +260,12 @@ export default function DriverList() {
             <Eye className="h-4 w-4" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); setNotify({ recipients: [{ id, label: labelOf(row) }] }) }}
-            className="p-1.5 hover:bg-orange-50 rounded text-gray-400 hover:text-orange-600"
-            title="Send notification"
-          >
-            <Bell className="h-4 w-4" />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); setSettingsRow(row) }}
+            onClick={(e) => { e.stopPropagation(); setEditingDriver(false); setSettingsRow(row) }}
             className="p-1.5 hover:bg-orange-50 rounded text-gray-400 hover:text-orange-600"
             title="Settings"
           >
             <Settings className="h-4 w-4" />
           </button>
-          {row.status === 'pending' && (
-            <>
-              <button
-                onClick={(e) => { e.stopPropagation(); setConfirmAction({ driver: row, action: 'approved' }) }}
-                className="p-1.5 hover:bg-emerald-50 rounded text-gray-400 hover:text-emerald-600"
-                title="Approve"
-              >
-                <CheckCircle className="h-4 w-4" />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setConfirmAction({ driver: row, action: 'rejected' }) }}
-                className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-600"
-                title="Reject"
-              >
-                <XCircle className="h-4 w-4" />
-              </button>
-            </>
-          )}
-          {row.status === 'approved' && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setConfirmAction({ driver: row, action: 'suspended' }) }}
-              className="p-1.5 hover:bg-amber-50 rounded text-gray-400 hover:text-amber-600"
-              title="Suspend"
-            >
-              <Pause className="h-4 w-4" />
-            </button>
-          )}
-          {row.status === 'suspended' && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setConfirmAction({ driver: row, action: 'approved' }) }}
-              className="p-1.5 hover:bg-emerald-50 rounded text-gray-400 hover:text-emerald-600"
-              title="Reactivate"
-            >
-              <Play className="h-4 w-4" />
-            </button>
-          )}
         </div>
       ),
     },
@@ -410,7 +388,111 @@ export default function DriverList() {
         size="xl"
       >
         <div className="min-h-[70vh]">
-          {settingsRow && <DriverSettingsDetail driver={settingsRow} />}
+          {settingsRow && (() => {
+            const u = settingsRow.userId || {}
+            return (
+              <div className="space-y-6">
+                {/* Header: profile + action buttons */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <Avatar src={u.avatarUrl} name={u.name} size="lg" />
+                    <div className="min-w-0">
+                      <p className="text-lg font-bold text-gray-900 truncate">{u.name || '-'}</p>
+                      {u.email && <p className="text-sm text-gray-500 truncate">{u.email}</p>}
+                      <p className="text-sm text-gray-500">{u.phone || '-'}</p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        <StatusBadge status={settingsRow.status} />
+                        <StatusBadge status={settingsRow.isOnline ? 'online' : 'offline'} />
+                        <Badge variant={settingsRow.isVerified ? 'success' : 'default'}>
+                          {settingsRow.isVerified ? 'Verified' : 'Unverified'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    <Button size="sm" variant="secondary" icon={Bell}
+                      onClick={() => setNotify({ recipients: [{ id: settingsRow._id, label: labelOf(settingsRow) }] })}>
+                      Notify
+                    </Button>
+                    {settingsRow.status === 'pending' && (
+                      <>
+                        <Button size="sm" variant="success" icon={CheckCircle}
+                          onClick={() => setConfirmAction({ driver: settingsRow, action: 'approved' })}>
+                          Approve
+                        </Button>
+                        <Button size="sm" variant="danger" icon={XCircle}
+                          onClick={() => setConfirmAction({ driver: settingsRow, action: 'rejected' })}>
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                    {settingsRow.status === 'approved' && (
+                      <Button size="sm" variant="warning" icon={Pause}
+                        onClick={() => setConfirmAction({ driver: settingsRow, action: 'suspended' })}>
+                        Suspend
+                      </Button>
+                    )}
+                    {settingsRow.status === 'suspended' && (
+                      <Button size="sm" variant="success" icon={Play}
+                        onClick={() => setConfirmAction({ driver: settingsRow, action: 'approved' })}>
+                        Reactivate
+                      </Button>
+                    )}
+                    <Button size="sm" variant="secondary" icon={Edit}
+                      onClick={() => setEditingDriver((v) => !v)}>
+                      Edit
+                    </Button>
+                    <Button size="sm" variant="danger" icon={Trash2}
+                      onClick={() => setDriverToDelete(settingsRow)}>
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Details grid */}
+                <Section title="Details">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <StatField label="Gender" value={u.gender} />
+                    <StatField label="Role" value="Acceptor (driver)" />
+                    <StatField label="Vehicle" value={settingsRow.vehicleType} />
+                    <StatField label="Plate" value={settingsRow.vehiclePlate} />
+                    <StatField label="Model" value={settingsRow.vehicleModel} />
+                    <StatField label="Color" value={settingsRow.vehicleColor} />
+                    <StatField label="Year" value={settingsRow.vehicleYear} />
+                    <StatField label="Rides" value={(settingsRow.totalRides || 0).toLocaleString()} />
+                    <StatField label="Earnings" value={formatCurrency(settingsRow.earnings || 0)} />
+                    <StatField label="Wallet" value={formatCurrency(settingsRow.walletBalance || 0)} />
+                    <StatField label="Last Login" value={u.lastLoginAt ? formatRelative(u.lastLoginAt) : null} />
+                    <StatField label="Joined" value={settingsRow.createdAt ? formatDate(settingsRow.createdAt) : null} />
+                  </div>
+                </Section>
+
+                {/* Reviews */}
+                <Section title="Reviews">
+                  <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/60 px-4 py-3">
+                    <span className="text-2xl font-bold text-gray-900">{(settingsRow.rating || 0).toFixed(1)}</span>
+                    <div className="text-sm">
+                      <p className="text-amber-500 leading-none">★★★★★</p>
+                      <p className="text-xs text-gray-400 mt-1">{settingsRow.totalRatings || 0} reviews</p>
+                    </div>
+                  </div>
+                </Section>
+
+                {/* Edit form (toggled by the Edit button) */}
+                {editingDriver && (
+                  <Section title="Edit vehicle details">
+                    <DriverEditForm
+                      key={settingsRow._id}
+                      driver={settingsRow}
+                      loading={updateProfile.isPending}
+                      onSave={(data) => updateProfile.mutate({ id: settingsRow._id, data })}
+                    />
+                  </Section>
+                )}
+              </div>
+            )
+          })()}
         </div>
       </Modal>
 
@@ -425,6 +507,18 @@ export default function DriverList() {
         variant={ACTION_LABELS[confirmAction?.action]?.variant}
       />
 
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        open={!!driverToDelete}
+        onClose={() => setDriverToDelete(null)}
+        onConfirm={() => deleteMutation.mutate(driverToDelete?._id)}
+        loading={deleteMutation.isPending}
+        title="Delete Driver"
+        message={`Are you sure you want to delete ${driverToDelete?.userId?.name || 'this driver'}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+      />
+
       <SendNotificationModal
         open={!!notify}
         onClose={() => setNotify(null)}
@@ -436,58 +530,65 @@ export default function DriverList() {
   )
 }
 
-// Compact key/value list pinned to the top-left of the settings popup, leaving
-// the rest of the (wide) dialog free for controls we'll add later.
-function DetailRow({ label, value }) {
+// Labelled section wrapper used throughout the settings popup.
+function Section({ title, children }) {
   return (
-    <div className="flex justify-between gap-4">
-      <dt className="text-gray-400 shrink-0">{label}</dt>
-      <dd className="text-gray-700 font-medium text-right capitalize truncate">{value || '-'}</dd>
+    <div className="space-y-2.5">
+      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{title}</p>
+      {children}
     </div>
   )
 }
 
-function DriverSettingsDetail({ driver }) {
-  const u = driver.userId || {}
+// A single labelled value shown as a soft card in the details grid.
+function StatField({ label, value }) {
   return (
-    <div className="max-w-xs space-y-3">
-      <div className="flex items-center gap-2.5">
-        <Avatar src={u.avatarUrl} name={u.name} size="md" />
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-900 truncate">{u.name || '-'}</p>
-          {u.email && <p className="text-xs text-gray-500 truncate">{u.email}</p>}
-          <p className="text-xs text-gray-500 truncate">{u.phone || '-'}</p>
-        </div>
-      </div>
-      <dl className="space-y-1.5 text-xs">
-        <DetailRow label="Gender" value={u.gender} />
-        <DetailRow label="Date of Birth" value={u.dateOfBirth ? formatDate(u.dateOfBirth) : null} />
-        <DetailRow label="Vehicle" value={driver.vehicleType} />
-        <DetailRow label="Plate" value={driver.vehiclePlate} />
-        <DetailRow label="Model" value={driver.vehicleModel} />
-        <DetailRow label="Color" value={driver.vehicleColor} />
-        <DetailRow label="Status" value={driver.status} />
-        <DetailRow label="Verified" value={driver.isVerified ? 'Yes' : 'No'} />
-        <DetailRow label="Online" value={driver.isOnline ? 'Yes' : 'No'} />
-        <DetailRow label="Rating" value={`${(driver.rating || 0).toFixed(1)} (${driver.totalRatings || 0})`} />
-        <DetailRow label="Rides" value={(driver.totalRides || 0).toLocaleString()} />
-        <DetailRow label="Earnings" value={formatCurrency(driver.earnings || 0)} />
-        <DetailRow label="Wallet" value={formatCurrency(driver.walletBalance || 0)} />
-        <DetailRow label="Last Login" value={u.lastLoginAt ? formatRelative(u.lastLoginAt) : null} />
-        <DetailRow label="Joined" value={driver.createdAt ? formatDate(driver.createdAt) : null} />
-      </dl>
-      {u.savedAddresses?.length > 0 && (
-        <div className="pt-1">
-          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Addresses</p>
-          <div className="space-y-1 text-xs">
-            {u.savedAddresses.map((addr, i) => (
-              <p key={i} className="text-gray-600 truncate">
-                <span className="text-gray-400">{addr.label || 'Address'}: </span>{addr.address}
-              </p>
-            ))}
-          </div>
-        </div>
-      )}
+    <div className="rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2">
+      <p className="text-[11px] text-gray-400 mb-0.5">{label}</p>
+      <p className="text-sm font-semibold text-gray-800 capitalize truncate">{value || '-'}</p>
     </div>
+  )
+}
+
+const VEHICLE_EDIT_OPTIONS = [
+  { value: 'bike', label: 'Bike' },
+  { value: 'scooter', label: 'Scooter' },
+  { value: 'tuktuk', label: 'Tuk-tuk' },
+  { value: 'tuktuk_delivery', label: 'Tuk-tuk (delivery)' },
+  { value: 'taxi', label: 'Taxi' },
+  { value: 'comfort', label: 'Comfort' },
+]
+
+// Edit form shown inside the settings popup (vehicle fields).
+function DriverEditForm({ driver, loading, onSave }) {
+  const [form, setForm] = useState({
+    vehicleType: driver.vehicleType || 'bike',
+    vehiclePlate: driver.vehiclePlate || '',
+    vehicleModel: driver.vehicleModel || '',
+    vehicleColor: driver.vehicleColor || '',
+    vehicleYear: driver.vehicleYear || '',
+  })
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  const submit = (e) => {
+    e.preventDefault()
+    onSave({ ...form, vehicleYear: form.vehicleYear === '' ? '' : Number(form.vehicleYear) })
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4 max-w-lg">
+      <div className="grid grid-cols-2 gap-3">
+        <Select label="Vehicle Type" options={VEHICLE_EDIT_OPTIONS} value={form.vehicleType} onChange={set('vehicleType')} />
+        <Input label="Plate" value={form.vehiclePlate} onChange={set('vehiclePlate')} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Input label="Model" value={form.vehicleModel} onChange={set('vehicleModel')} />
+        <Input label="Color" value={form.vehicleColor} onChange={set('vehicleColor')} />
+      </div>
+      <Input label="Year" type="number" value={form.vehicleYear} onChange={set('vehicleYear')} />
+      <div className="flex justify-end pt-2">
+        <Button type="submit" loading={loading}>Save Changes</Button>
+      </div>
+    </form>
   )
 }

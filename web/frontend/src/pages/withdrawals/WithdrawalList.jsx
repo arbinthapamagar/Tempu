@@ -70,11 +70,11 @@ export default function WithdrawalList() {
       key: 'driverId',
       header: 'Driver',
       render: (driver) => (
-        <div className="flex items-center gap-3">
-          <Avatar name={driver?.userId?.name} size="sm" />
-          <div>
-            <p className="text-sm font-medium text-gray-900">{driver?.userId?.name || '-'}</p>
-            <p className="text-xs text-gray-400">{driver?.userId?.phone || ''}</p>
+        <div className="flex items-center gap-2.5">
+          <Avatar name={driver?.userId?.name} size="xxs" />
+          <div className="leading-tight">
+            <p className="text-[13px] font-medium text-gray-900">{driver?.userId?.name || '-'}</p>
+            <p className="text-[11px] text-gray-400">{driver?.userId?.phone || ''}</p>
           </div>
         </div>
       ),

@@ -1,6 +1,7 @@
 import { cn } from '../../utils/cn'
 
 const sizes = {
+  xxs: 'h-5 w-5 text-[10px]',
   xs: 'h-6 w-6 text-xs',
   sm: 'h-8 w-8 text-sm',
   md: 'h-10 w-10 text-base',

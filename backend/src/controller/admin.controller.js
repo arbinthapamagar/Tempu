@@ -910,6 +910,44 @@ const updateDriverStatus = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, driver, `Driver status updated to ${status}`));
 });
 
+const updateDriver = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.manageDrivers) throw new apiError(403, 'Insufficient permissions');
+
+    // Editable vehicle fields from the admin settings popup.
+    const allowed = ['vehicleType', 'vehiclePlate', 'vehicleModel', 'vehicleColor', 'vehicleYear', 'vehicleCapacity'];
+    const vehicleTypes = ['bike', 'scooter', 'tuktuk', 'tuktuk_delivery', 'taxi', 'comfort'];
+
+    const update = {};
+    for (const key of allowed) {
+        if (req.body[key] === undefined) continue;
+        const value = req.body[key];
+        if (key === 'vehicleType' && value !== '' && !vehicleTypes.includes(value)) {
+            throw new apiError(400, `vehicleType must be one of: ${vehicleTypes.join(', ')}`);
+        }
+        update[key] = value === '' ? null : value;
+    }
+
+    if (!Object.keys(update).length) throw new apiError(400, 'No editable fields provided');
+
+    const driver = await Driver.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true })
+        .populate('userId', 'name phone email gender avatarUrl');
+    if (!driver) throw new apiError(404, 'Driver not found');
+
+    return res.status(200).json(new apiResponse(200, driver, 'Driver updated'));
+});
+
+const deleteDriver = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.manageDrivers) throw new apiError(403, 'Insufficient permissions');
+
+    const driver = await Driver.findByIdAndDelete(req.params.id);
+    if (!driver) throw new apiError(404, 'Driver not found');
+
+    // The person reverts to a plain passenger once their driver profile is removed.
+    await User.findByIdAndUpdate(driver.userId, { role: 'passenger', driverProfile: null });
+
+    return res.status(200).json(new apiResponse(200, { _id: driver._id }, 'Driver deleted'));
+});
+
 const verifyDriver = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.manageDrivers) throw new apiError(403, 'Insufficient permissions');
 
@@ -2316,7 +2354,7 @@ export {
     getAnalyticsOverview, getAnalyticsTrips, getAnalyticsUsers, getAnalyticsTopDrivers, getAnalyticsVehicleDistribution,
     getUsers, getUserById, updateUserStatus, updateUser, getUserTrips, getUserTransactions,
     getSuppliers, getSupplierById, verifySupplier, updateSupplierPlan, toggleSupplierStatus,
-    getDrivers, getDriverById, updateDriverStatus, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
+    getDrivers, getDriverById, updateDriverStatus, updateDriver, deleteDriver, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
     grantDriverMoney, getWithdrawals, processWithdrawal,
     getPricing, updatePricing,
     getEmergencies, getEmergencyById, updateEmergency, assignEmergency, addEmergencyNote,

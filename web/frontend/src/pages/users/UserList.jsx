@@ -189,10 +189,10 @@ export default function UserList() {
       header: 'User',
       render: (val, row) => (
         <div className="flex items-center gap-3">
-          <Avatar src={row.avatarUrl} name={val} size="xs" />
-          <div>
-            <p className="font-medium text-gray-900 text-sm">{val}</p>
-            <p className="text-xs text-gray-400">{row.phone}</p>
+          <Avatar src={row.avatarUrl} name={val} size="xxs" />
+          <div className="leading-tight">
+            <p className="font-medium text-gray-900 text-[13px]">{val}</p>
+            <p className="text-[11px] text-gray-400">{row.phone}</p>
           </div>
         </div>
       ),

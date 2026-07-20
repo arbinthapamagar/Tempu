@@ -13,7 +13,7 @@ import {
     getAnalyticsOverview, getAnalyticsTrips, getAnalyticsUsers, getAnalyticsTopDrivers, getAnalyticsVehicleDistribution,
     getUsers, getUserById, updateUserStatus, updateUser, getUserTrips, getUserTransactions,
     getSuppliers, getSupplierById, verifySupplier, updateSupplierPlan, toggleSupplierStatus,
-    getDrivers, getDriverById, updateDriverStatus, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
+    getDrivers, getDriverById, updateDriverStatus, updateDriver, deleteDriver, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
     grantDriverMoney, getWithdrawals, processWithdrawal,
     getPricing, updatePricing,
     getEmergencies, getEmergencyById, updateEmergency, assignEmergency, addEmergencyNote,
@@ -83,6 +83,9 @@ adminRouter.get('/drivers/:id', getDriverById);
 adminRouter.put('/drivers/:id/status', updateDriverStatus);
 adminRouter.patch('/drivers/:id/status', updateDriverStatus);
 adminRouter.patch('/drivers/:id/verify', verifyDriver);
+adminRouter.put('/drivers/:id', updateDriver);
+adminRouter.patch('/drivers/:id', updateDriver);
+adminRouter.delete('/drivers/:id', deleteDriver);
 adminRouter.get('/drivers/:id/documents', getDriverDocuments);
 adminRouter.get('/drivers/:id/trips', getDriverTrips);
 adminRouter.get('/drivers/:id/earnings', getDriverEarnings);
