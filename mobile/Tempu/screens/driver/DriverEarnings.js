@@ -215,15 +215,15 @@ export default function DriverEarnings() {
         {/* Today / week / month totals */}
         <View style={styles.statRow}>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{money(breakdown.totals?.today)}</Text>
+            <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit>{money(breakdown.totals?.today)}</Text>
             <Text style={styles.statLabel}>Today</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{money(breakdown.totals?.week)}</Text>
+            <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit>{money(breakdown.totals?.week)}</Text>
             <Text style={styles.statLabel}>This week</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{money(breakdown.totals?.month)}</Text>
+            <Text style={styles.totalValue} numberOfLines={1} adjustsFontSizeToFit>{money(breakdown.totals?.month)}</Text>
             <Text style={styles.statLabel}>This month</Text>
           </View>
         </View>
@@ -450,6 +450,38 @@ export default function DriverEarnings() {
   );
 }
 
+// Simple hand-drawn bar chart (no chart library). One bar per day in the range.
+function EarningsChart({ series }) {
+  if (!series.length) {
+    return <Text style={styles.chartEmpty}>No earnings in this range.</Text>;
+  }
+  const max = Math.max(1, ...series.map((s) => Number(s.amount) || 0));
+  const CHART_H = 130;
+  return (
+    <View style={styles.chartCard}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chartRow}
+      >
+        {series.map((s) => {
+          const amt = Number(s.amount) || 0;
+          const h = amt > 0 ? Math.max(4, (amt / max) * CHART_H) : 3;
+          return (
+            <View key={s.date} style={styles.barCol}>
+              <Text style={styles.barValue} numberOfLines={1}>{amt > 0 ? Math.round(amt) : ''}</Text>
+              <View style={styles.barTrack}>
+                <View style={[styles.bar, { height: h }, amt === 0 && styles.barEmpty]} />
+              </View>
+              <Text style={styles.barLabel}>{s.date.slice(5)}</Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceMuted },
   center: { alignItems: 'center', justifyContent: 'center' },
@@ -479,7 +511,25 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, padding: spacing.lg, alignItems: 'center',
   },
   statValue: { ...type.h2, color: colors.text },
+  totalValue: { ...type.bodyBold, fontSize: 15, color: colors.text },
   statLabel: { ...type.caption, color: colors.textMuted, marginTop: 2 },
+
+  // ── Earnings chart + date filter ──────────────────────────────
+  rangeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
+  customRange: { gap: spacing.sm, marginBottom: spacing.md },
+  customFields: { flexDirection: 'row', gap: spacing.md },
+  chartCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1,
+    borderColor: colors.border, padding: spacing.lg, marginBottom: spacing.md,
+  },
+  chartRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, paddingVertical: spacing.xs },
+  barCol: { width: 34, alignItems: 'center', gap: 4 },
+  barValue: { ...type.micro, color: colors.textMuted, height: 14 },
+  barTrack: { height: 130, width: 22, justifyContent: 'flex-end', backgroundColor: colors.surfaceMuted, borderRadius: radius.sm, overflow: 'hidden' },
+  bar: { width: 22, backgroundColor: colors.primary, borderRadius: radius.sm },
+  barEmpty: { backgroundColor: colors.border },
+  barLabel: { ...type.micro, color: colors.textFaint },
+  chartEmpty: { ...type.body, color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.lg },
 
   sectionTitle: { ...type.bodyBold, color: colors.text, marginTop: spacing.xl, marginBottom: spacing.md },
   empty: { ...type.body, color: colors.textMuted },
