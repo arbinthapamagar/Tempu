@@ -101,7 +101,7 @@ export default function DocumentQueue() {
               <FileText className={`h-5 w-5 ${row.fileUrl ? 'text-orange-500' : 'text-gray-300'}`} />
             )}
           </div>
-          <span className="text-sm font-medium text-gray-900">{docTypeLabel(val)}</span>
+          <span className="text-[13px] font-medium text-gray-900">{docTypeLabel(val)}</span>
         </div>
       ),
     },
@@ -110,20 +110,20 @@ export default function DocumentQueue() {
       header: 'Driver',
       render: (_val, row) => (
         <div className="flex items-center gap-2">
-          <Avatar name={row.driverId?.userId?.name} size="xs" />
-          <span className="text-sm text-gray-700">{row.driverId?.userId?.name || '-'}</span>
+          <Avatar name={row.driverId?.userId?.name} size="xxs" />
+          <span className="text-[13px] text-gray-700">{row.driverId?.userId?.name || '-'}</span>
         </div>
       ),
     },
     {
       key: 'expiresAt',
       header: 'Expires',
-      render: (val) => <span className="text-xs text-gray-500">{val ? formatDate(val) : '-'}</span>,
+      render: (val) => <span className="text-[11px] text-gray-500">{val ? formatDate(val) : '-'}</span>,
     },
     {
       key: 'createdAt',
       header: 'Submitted',
-      render: (val) => <span className="text-xs text-gray-500">{formatRelative(val)}</span>,
+      render: (val) => <span className="text-[11px] text-gray-500">{formatRelative(val)}</span>,
     },
     {
       key: 'status',
@@ -132,12 +132,12 @@ export default function DocumentQueue() {
         <div>
           <StatusBadge status={val} />
           {val === 'rejected' && row.rejectionReason && (
-            <p className="text-xs text-red-500 mt-1 max-w-[200px] truncate" title={row.rejectionReason}>
+            <p className="text-[11px] text-red-500 mt-1 max-w-[200px] truncate" title={row.rejectionReason}>
               {row.rejectionReason}
             </p>
           )}
           {val === 'approved' && row.verifiedAt && (
-            <p className="text-xs text-emerald-600 mt-1">Verified {formatRelative(row.verifiedAt)}</p>
+            <p className="text-[11px] text-emerald-600 mt-1">Verified {formatRelative(row.verifiedAt)}</p>
           )}
         </div>
       ),

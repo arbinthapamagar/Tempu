@@ -2176,7 +2176,11 @@ const deleteTicketComment = asyncHandler(async (req, res) => {
 // Permanently delete a ticket. Restricted to super admins, and only once the
 // ticket is closed - so an active conversation can never be wiped out.
 const deleteTicket = asyncHandler(async (req, res) => {
-    if (req.admin.role !== 'superadmin') throw new apiError(403, 'Only a super admin can delete tickets');
+    // Anyone who can handle support (moderators/headmasters, and superadmin) may
+    // delete a ticket — but only once it has been closed.
+    if (req.admin.role !== 'superadmin' && !req.admin.permissions?.handleSupport) {
+        throw new apiError(403, 'You do not have permission to delete tickets');
+    }
 
     const ticket = await SupportTicket.findById(req.params.id);
     if (!ticket) throw new apiError(404, 'Ticket not found');

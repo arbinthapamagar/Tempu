@@ -62,12 +62,12 @@ export default function TripList() {
     {
       key: '_id',
       header: 'Trip ID',
-      render: (val) => <span className="text-xs font-mono text-gray-400">{val?.slice(-8).toUpperCase()}</span>,
+      render: (val) => <span className="text-[11px] font-mono text-gray-400">{val?.slice(-8).toUpperCase()}</span>,
     },
     {
       key: 'userId',
       header: 'Rider',
-      render: (val) => <span className="text-sm font-medium">{val?.name || '-'}</span>,
+      render: (val) => <span className="text-[13px] font-medium">{val?.name || '-'}</span>,
     },
     {
       key: 'driverId',
@@ -77,13 +77,13 @@ export default function TripList() {
     {
       key: 'vehicleType',
       header: 'Vehicle',
-      render: (val) => <span className="capitalize text-sm">{val}</span>,
+      render: (val) => <span className="capitalize text-[13px]">{val}</span>,
     },
     {
       key: 'pickup',
       header: 'Pickup',
       render: (val) => (
-        <span className="text-xs text-gray-600 max-w-[120px] block truncate" title={val?.address}>
+        <span className="text-[11px] text-gray-600 max-w-[120px] block truncate" title={val?.address}>
           {val?.address || '-'}
         </span>
       ),
@@ -92,7 +92,7 @@ export default function TripList() {
       key: 'dropoff',
       header: 'Drop-off',
       render: (val) => (
-        <span className="text-xs text-gray-600 max-w-[120px] block truncate" title={val?.address}>
+        <span className="text-[11px] text-gray-600 max-w-[120px] block truncate" title={val?.address}>
           {val?.address || '-'}
         </span>
       ),
@@ -106,10 +106,10 @@ export default function TripList() {
       key: 'finalPrice',
       header: 'Price',
       render: (val, row) => (
-        <div>
-          <p className="font-medium text-sm">{formatCurrency(val || row.offeredPrice)}</p>
+        <div className="leading-tight">
+          <p className="font-medium text-[13px]">{formatCurrency(val || row.offeredPrice)}</p>
           {row.platformFee > 0 && (
-            <p className="text-xs text-gray-400">Fee: {formatCurrency(row.platformFee)}</p>
+            <p className="text-[11px] text-gray-400">Fee: {formatCurrency(row.platformFee)}</p>
           )}
         </div>
       ),
@@ -131,9 +131,9 @@ export default function TripList() {
       key: 'createdAt',
       header: 'Date',
       render: (val) => (
-        <div>
-          <p className="text-sm">{formatDate(val, 'MMM dd')}</p>
-          <p className="text-xs text-gray-400">{formatDate(val, 'hh:mm a')}</p>
+        <div className="leading-tight">
+          <p className="text-[13px]">{formatDate(val, 'MMM dd')}</p>
+          <p className="text-[11px] text-gray-400">{formatDate(val, 'hh:mm a')}</p>
         </div>
       ),
     },

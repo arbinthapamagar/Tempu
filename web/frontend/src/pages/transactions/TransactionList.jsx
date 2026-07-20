@@ -84,15 +84,15 @@ export default function TransactionList() {
     {
       key: '_id',
       header: 'Transaction ID',
-      render: (val) => <span className="text-xs font-mono text-gray-400">{val?.slice(-10).toUpperCase()}</span>,
+      render: (val) => <span className="text-[11px] font-mono text-gray-400">{val?.slice(-10).toUpperCase()}</span>,
     },
     {
       key: 'userId',
       header: 'User',
       render: (val, row) => (
-        <div>
-          <p className="text-sm font-medium text-gray-800">{val?.name || row.driverId?.userId?.name || '-'}</p>
-          <p className="text-xs text-gray-400">{val ? 'Rider' : 'Driver'}</p>
+        <div className="leading-tight">
+          <p className="text-[13px] font-medium text-gray-800">{val?.name || row.driverId?.userId?.name || '-'}</p>
+          <p className="text-[11px] text-gray-400">{val ? 'Rider' : 'Driver'}</p>
         </div>
       ),
     },
@@ -100,7 +100,7 @@ export default function TransactionList() {
       key: 'type',
       header: 'Type',
       render: (val) => (
-        <span className="text-xs capitalize bg-gray-100 px-2 py-1 rounded-full">
+        <span className="text-[11px] capitalize bg-gray-100 px-2 py-1 rounded-full">
           {val?.replace(/_/g, ' ')}
         </span>
       ),
@@ -109,7 +109,7 @@ export default function TransactionList() {
       key: 'amount',
       header: 'Amount',
       render: (val, row) => (
-        <span className={`font-semibold text-sm ${['trip_payment', 'subscription_payment'].includes(row.type) ? 'text-red-600' : 'text-emerald-600'}`}>
+        <span className={`font-semibold text-[13px] ${['trip_payment', 'subscription_payment'].includes(row.type) ? 'text-red-600' : 'text-emerald-600'}`}>
           {formatCurrency(val)}
         </span>
       ),
@@ -127,15 +127,15 @@ export default function TransactionList() {
     {
       key: 'gatewayRef',
       header: 'Gateway Ref',
-      render: (val) => val ? <span className="text-xs font-mono text-gray-400">{val}</span> : '-',
+      render: (val) => val ? <span className="text-[11px] font-mono text-gray-400">{val}</span> : '-',
     },
     {
       key: 'createdAt',
       header: 'Date',
       render: (val) => (
-        <div>
-          <p className="text-sm">{formatDate(val, 'MMM dd, yyyy')}</p>
-          <p className="text-xs text-gray-400">{formatDate(val, 'hh:mm a')}</p>
+        <div className="leading-tight">
+          <p className="text-[13px]">{formatDate(val, 'MMM dd, yyyy')}</p>
+          <p className="text-[11px] text-gray-400">{formatDate(val, 'hh:mm a')}</p>
         </div>
       ),
     },

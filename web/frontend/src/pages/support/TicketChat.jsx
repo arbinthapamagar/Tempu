@@ -13,7 +13,7 @@ import { Avatar } from '../../components/ui/Avatar'
 import { TableSpinner } from '../../components/ui/Spinner'
 import { cn } from '../../utils/cn'
 import { supportApi } from '../../api/support.api'
-import { useAuthStore } from '../../store/authStore'
+import { useAuthStore, hasPermission } from '../../store/authStore'
 import { formatDateTime, formatRelative } from '../../utils/format'
 import toast from 'react-hot-toast'
 
@@ -195,7 +195,7 @@ export default function TicketChat() {
     onError: (err) => toast.error(err?.message || 'Failed to delete note'),
   })
 
-  // Permanently delete a closed ticket - super admins only (enforced server-side too).
+  // Permanently delete a closed ticket - anyone with Manage Support (enforced server-side too).
   const [confirmDelete, setConfirmDelete] = useState(false)
   const deleteMutation = useMutation({
     mutationFn: () => supportApi.remove(id),
@@ -294,10 +294,10 @@ export default function TicketChat() {
             {ticket.status === 'closed' && (
               <Button size="xs" variant="secondary" icon={CornerUpLeft} onClick={() => updateStatus.mutate('open')} loading={updateStatus.isPending}>Reopen</Button>
             )}
-            {ticket.status === 'closed' && admin?.role === 'superadmin' && (
+            {ticket.status === 'closed' && hasPermission(admin, 'handleSupport') && (
               <button
                 onClick={() => setConfirmDelete(true)}
-                title="Delete ticket (super admin)"
+                title="Delete closed ticket"
                 className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
               >
                 <Trash2 className="h-4 w-4" />

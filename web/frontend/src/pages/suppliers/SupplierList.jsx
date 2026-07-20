@@ -62,9 +62,9 @@ export default function SupplierList() {
               <Building2 className="h-4 w-4 text-orange-600" />
             </div>
           )}
-          <div>
-            <p className="text-sm font-semibold text-gray-900">{val}</p>
-            <p className="text-xs text-gray-400">{row.contactPerson}</p>
+          <div className="leading-tight">
+            <p className="text-[13px] font-semibold text-gray-900">{val}</p>
+            <p className="text-[11px] text-gray-400">{row.contactPerson}</p>
           </div>
         </div>
       ),
@@ -74,7 +74,7 @@ export default function SupplierList() {
     {
       key: 'city',
       header: 'City',
-      render: (val) => <span className="capitalize text-sm">{val}</span>,
+      render: (val) => <span className="capitalize text-[13px]">{val}</span>,
     },
     {
       key: 'plan',
@@ -83,7 +83,7 @@ export default function SupplierList() {
         <div>
           <Badge variant={val === 'premium' ? 'purple' : 'default'}>{val}</Badge>
           {row.planExpiresAt && (
-            <p className="text-xs text-gray-400 mt-0.5">Expires: {formatDate(row.planExpiresAt)}</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">Expires: {formatDate(row.planExpiresAt)}</p>
           )}
         </div>
       ),
@@ -93,7 +93,7 @@ export default function SupplierList() {
       header: 'Verified',
       render: (val) => val
         ? <CheckCircle className="h-4 w-4 text-emerald-500" />
-        : <span className="text-xs text-amber-600 font-medium">Pending</span>,
+        : <span className="text-[11px] text-amber-600 font-medium">Pending</span>,
     },
     {
       key: 'isActive',
@@ -103,7 +103,7 @@ export default function SupplierList() {
     {
       key: 'vehicles',
       header: 'Vehicles',
-      render: (val) => <span className="text-sm">{val?.length || 0} listed</span>,
+      render: (val) => <span className="text-[13px]">{val?.length || 0} listed</span>,
     },
     {
       key: 'createdAt',
