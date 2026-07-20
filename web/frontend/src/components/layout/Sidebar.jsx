@@ -205,11 +205,16 @@ export function Sidebar({ open, onClose, isCollapsed, onToggle }) {
           className="flex items-center gap-2 min-w-0 text-left"
           title="Go to home"
         >
-          <img src={logoIcon} alt="Tempu" className="h-9 w-9 shrink-0 object-contain" />
+          {/* Full logo when expanded; just the mark on the slim rail. */}
+          <img
+            src={logoIcon}
+            alt="Tempu"
+            className={cn('h-9 w-9 shrink-0 object-contain', !isCollapsed && 'hidden')}
+          />
           <img
             src={logoWordmark}
             alt="Tempu"
-            className={cn('h-6 w-auto object-contain', isCollapsed && 'lg:hidden')}
+            className={cn('h-8 w-auto object-contain', isCollapsed && 'lg:hidden')}
           />
         </button>
         {/* Mobile drawer close */}
