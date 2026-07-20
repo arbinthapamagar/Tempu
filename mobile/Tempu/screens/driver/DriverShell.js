@@ -307,6 +307,34 @@ const styles = StyleSheet.create({
   },
   overlayTitle: { ...type.h2, color: colors.text },
 
+  // SOS confirmation modal
+  sosBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
+  sosWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
+  sosCard: {
+    width: '100%', maxWidth: 360, backgroundColor: colors.surface,
+    borderRadius: radius.xl, padding: spacing.xl, alignItems: 'center', ...shadow.card,
+  },
+  sosIconWrap: {
+    width: 60, height: 60, borderRadius: 30, backgroundColor: colors.dangerSoft || '#ffdad6',
+    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md,
+  },
+  sosTitle: { ...type.h2, color: colors.text, textAlign: 'center' },
+  sosDesc: { ...type.body, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm, lineHeight: 20 },
+  sosLocRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.lg,
+    backgroundColor: colors.surfaceMuted, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    alignSelf: 'stretch', justifyContent: 'center',
+  },
+  sosLocText: { ...type.caption, color: colors.textMuted },
+  sosSend: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    alignSelf: 'stretch', height: 52, borderRadius: radius.pill, backgroundColor: colors.danger,
+    marginTop: spacing.lg,
+  },
+  sosSendText: { color: '#fff', ...type.bodyBold, fontSize: 16 },
+  sosCancel: { alignSelf: 'stretch', height: 46, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
+  sosCancelText: { ...type.bodyBold, color: colors.textMuted },
+
   // Tab bar
   tabbar: {
     flexDirection: 'row',
