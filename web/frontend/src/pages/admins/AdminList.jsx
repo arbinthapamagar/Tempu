@@ -266,26 +266,6 @@ export default function AdminList() {
       render: (val) => <StatusBadge status={val} />,
     },
     {
-      key: 'permissions',
-      header: 'Access',
-      render: (val, row) => {
-        if (row.role === 'superadmin') return <span className="text-xs text-orange-600 font-medium">Full Access</span>
-        const active = PERMISSIONS.filter((p) => val?.[p.key])
-        return (
-          <div className="flex flex-wrap gap-1 max-w-[200px]">
-            {active.slice(0, 3).map((p) => (
-              <span key={p.key} className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
-                {p.label.replace('Manage ', '').replace('Handle ', '').replace('View ', '')}
-              </span>
-            ))}
-            {active.length > 3 && (
-              <span className="text-xs text-gray-400">+{active.length - 3} more</span>
-            )}
-          </div>
-        )
-      },
-    },
-    {
       key: 'isActive',
       header: 'Status',
       render: (val) => <StatusBadge status={val ? 'active' : 'suspended'} />,
@@ -481,6 +461,26 @@ export default function AdminList() {
                     <StatField label="Last Login" value={settingsRow.lastLoginAt ? formatRelative(settingsRow.lastLoginAt) : 'Never'} />
                     <StatField label="Created" value={settingsRow.createdAt ? formatDate(settingsRow.createdAt) : null} />
                   </div>
+                </Section>
+
+                {/* Access / permissions */}
+                <Section title="Access">
+                  {isSuper ? (
+                    <p className="text-sm font-medium text-orange-600">Full access — all {PERMISSIONS.length} permissions</p>
+                  ) : (() => {
+                    const active = PERMISSIONS.filter((p) => settingsRow.permissions?.[p.key])
+                    return active.length ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {active.map((p) => (
+                          <span key={p.key} className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
+                            {p.label}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">No permissions assigned</p>
+                    )
+                  })()}
                 </Section>
 
                 {/* Reviews (support agents only) */}
