@@ -379,7 +379,7 @@ export default function DriverHome({ flow, vehicleType, subscriptionDriver }) {
               <Image
                 source={require('../../assets/subscription.png')}
                 style={styles.subImg}
-                resizeMode="cover"
+                resizeMode="contain"
               />
             )}
             <Text style={styles.emptyTitle}>You're offline</Text>
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
   emptyScroll: { flexGrow: 1 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl, gap: spacing.sm },
   carImg: { width: 260, height: 180, marginBottom: spacing.sm },
-  subImg: { width: 260, height: 120, borderRadius: radius.lg, marginBottom: spacing.sm },
+  subImg: { width: 300, height: 165, borderRadius: radius.lg, marginBottom: spacing.sm },
   emptyTitle: { ...type.h3, color: colors.text, marginTop: spacing.sm },
   emptySub: { ...type.body, color: colors.textMuted, textAlign: 'center' },
 

@@ -21,7 +21,7 @@ const SERVICES = [
   { id: 'scooter', label: 'Scooter', img: require('../../assets/ev-scooter.png'), bigLabel: true },
   { id: 'delivery', label: 'Delivery', img: require('../../assets/ev-delivery.png'), bigLabel: true },
   { id: 'taxi', label: 'Taxi', img: require('../../assets/ev-car.png'), bigLabel: true },
-  { id: 'subscribe', label: 'Subscribe', img: require('../../assets/subscription.png'), bigLabel: true, cover: true },
+  { id: 'subscribe', label: 'Subscribe', img: require('../../assets/subscription.png'), bigLabel: true },
 ];
 
 const SAVED_PLACE_ICON = { home: 'home', work: 'briefcase' };

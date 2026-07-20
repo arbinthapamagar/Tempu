@@ -148,7 +148,7 @@ export default function SubscriptionScreen({ onBack, initialTab = 'active' }) {
           )
         ) : (
           <>
-            <Image source={require('../assets/subscription.png')} style={styles.subBanner} resizeMode="cover" />
+            <Image source={require('../assets/subscription-scene.png')} style={styles.subBanner} resizeMode="cover" />
             {Object.entries(PLAN_INFO).map(([id, plan]) => (
               <PlanCard key={id} plan={{ id, ...plan }} onSubscribe={() => handleSubscribe(id)} />
             ))}
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#fff' },
 
   scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl + spacing.sm, paddingTop: spacing.xs },
-  subBanner: { width: '100%', height: 170, borderRadius: radius.xl, marginBottom: spacing.lg },
+  subBanner: { width: '100%', height: 230, borderRadius: radius.xl, marginBottom: spacing.lg },
 
   emptyWrap: { alignItems: 'center', paddingTop: 72, paddingHorizontal: spacing.lg },
   emptyTitle: { ...type.h1, color: colors.text },
