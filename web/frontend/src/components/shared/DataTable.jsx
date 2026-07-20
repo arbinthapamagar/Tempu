@@ -46,7 +46,7 @@ export function DataTable({
         <thead>
           <tr className="border-b border-gray-200">
             {selectable && (
-              <th className="sticky top-0 z-10 bg-gray-50 px-3.5 py-2.5 w-10">
+              <th className="sticky top-0 z-10 bg-gray-50 px-3.5 py-1.5 w-10">
                 <Checkbox checked={allChecked} onClick={onToggleAll} title="Select all on page" />
               </th>
             )}
@@ -54,7 +54,7 @@ export function DataTable({
               <th
                 key={col.key}
                 className={cn(
-                  'sticky top-0 z-10 bg-gray-50 px-3.5 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap',
+                  'sticky top-0 z-10 bg-gray-50 px-3.5 py-1.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap',
                   col.className
                 )}
               >
@@ -83,7 +83,7 @@ export function DataTable({
                 )}
               >
                 {selectable && (
-                  <td className="px-3.5 py-2.5">
+                  <td className="px-3.5 py-1.5">
                     <Checkbox checked={checked} onClick={() => onToggleRow?.(row)} title="Select" />
                   </td>
                 )}
@@ -91,7 +91,7 @@ export function DataTable({
                   <td
                     key={col.key}
                     className={cn(
-                      'px-3.5 py-2.5 text-[13px] text-gray-700 whitespace-nowrap',
+                      'px-3.5 py-1.5 text-[13px] text-gray-700 whitespace-nowrap',
                       col.cellClassName
                     )}
                   >

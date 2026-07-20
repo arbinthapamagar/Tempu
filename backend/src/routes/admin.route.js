@@ -11,7 +11,7 @@ import {
     createAdmin, listAdmins, updateAdminPermissions, toggleAdminStatus, deleteAdmin,
     getDashboardStats, getDashboardRecentTrips, getNavCounts, markNavSeen,
     getAnalyticsOverview, getAnalyticsTrips, getAnalyticsUsers, getAnalyticsTopDrivers, getAnalyticsVehicleDistribution,
-    getUsers, getUserById, updateUserStatus, getUserTrips, getUserTransactions,
+    getUsers, getUserById, updateUserStatus, updateUser, getUserTrips, getUserTransactions,
     getSuppliers, getSupplierById, verifySupplier, updateSupplierPlan, toggleSupplierStatus,
     getDrivers, getDriverById, updateDriverStatus, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
     grantDriverMoney, getWithdrawals, processWithdrawal,
@@ -65,6 +65,8 @@ adminRouter.get('/users', getUsers);
 adminRouter.get('/users/:id', getUserById);
 adminRouter.put('/users/:id/status', updateUserStatus);
 adminRouter.patch('/users/:id/status', updateUserStatus);
+adminRouter.put('/users/:id', updateUser);
+adminRouter.patch('/users/:id', updateUser);
 adminRouter.get('/users/:id/trips', getUserTrips);
 adminRouter.get('/users/:id/transactions', getUserTransactions);
 

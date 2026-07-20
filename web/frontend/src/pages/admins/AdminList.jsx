@@ -4,7 +4,7 @@ import {
   Plus, Edit, Trash2, ToggleLeft, ToggleRight, Shield,
   Users, Car, Navigation, CreditCard, FileText, MessageSquare,
   ShieldCheck, BarChart2, Repeat, Building2, CheckCircle, XCircle, Info,
-  Mail, Phone, Calendar, Clock, Eye, Bell, Send, X, BookOpen, Zap
+  Mail, Phone, Calendar, Clock, Eye, Bell, Send, X, BookOpen, Zap, Settings
 } from '@/components/ui/icons'
 import { SendNotificationModal } from '../../components/shared/SendNotificationModal'
 import { useForm } from 'react-hook-form'
@@ -186,6 +186,7 @@ export default function AdminList() {
   const [editAdmin, setEditAdmin] = useState(null)
   const [deleteAdmin, setDeleteAdmin] = useState(null)
   const [viewAdmin, setViewAdmin] = useState(null)
+  const [settingsRow, setSettingsRow] = useState(null) // row whose settings popup is open
   const [editProfile, setEditProfile] = useState(false)
   const [selected, setSelected] = useState([]) // [{ id, label }]
   const [notify, setNotify] = useState(null)   // { recipients }
@@ -250,7 +251,7 @@ export default function AdminList() {
       header: 'Admin',
       render: (val, row) => (
         <div className="flex items-center gap-3">
-          <Avatar src={row.avatarUrl} name={val} size="sm" />
+          <Avatar src={row.avatarUrl} name={val} size="xs" />
           <div>
             <p className="text-sm font-medium text-gray-900">{val}</p>
             <p className="text-xs text-gray-400">{row.email}</p>
@@ -321,12 +322,22 @@ export default function AdminList() {
             <Bell className="h-4 w-4" />
           </button>
         )
-        if (row._id === currentAdmin?._id) return <div className="flex items-center gap-1">{viewBtn}<span className="text-xs text-orange-500 font-medium">You</span></div>
-        if (row.role === 'superadmin') return <div className="flex items-center gap-1">{viewBtn}{notifyBtn}</div>
+        const settingsBtn = (
+          <button
+            onClick={(e) => { e.stopPropagation(); setSettingsRow(row) }}
+            className="p-1.5 hover:bg-orange-50 rounded text-gray-400 hover:text-orange-600"
+            title="Settings"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+        )
+        if (row._id === currentAdmin?._id) return <div className="flex items-center gap-1">{viewBtn}{settingsBtn}<span className="text-xs text-orange-500 font-medium">You</span></div>
+        if (row.role === 'superadmin') return <div className="flex items-center gap-1">{viewBtn}{notifyBtn}{settingsBtn}</div>
         return (
           <div className="flex items-center gap-1">
             {viewBtn}
             {notifyBtn}
+            {settingsBtn}
             <button
               onClick={(e) => { e.stopPropagation(); setEditAdmin(row) }}
               className="p-1.5 hover:bg-orange-50 rounded text-gray-400 hover:text-orange-600"
@@ -433,6 +444,18 @@ export default function AdminList() {
         />
       </div>
 
+      {/* Settings popup (empty for now) */}
+      <Modal
+        open={!!settingsRow}
+        onClose={() => setSettingsRow(null)}
+        title=""
+        size="xl"
+      >
+        <div className="min-h-[70vh]">
+          {settingsRow && <AdminSettingsDetail admin={settingsRow} />}
+        </div>
+      </Modal>
+
       {/* Create Admin Modal */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create Admin Account" size="lg">
         <CreateAdminForm
@@ -499,6 +522,38 @@ export default function AdminList() {
         recipients={notify?.recipients || []}
         onSent={() => setSelected([])}
       />
+    </div>
+  )
+}
+
+// Compact key/value list pinned to the top-left of the settings popup, leaving
+// the rest of the (wide) dialog free for controls we'll add later.
+function DetailRow({ label, value }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <dt className="text-gray-400 shrink-0">{label}</dt>
+      <dd className="text-gray-700 font-medium text-right capitalize truncate">{value || '-'}</dd>
+    </div>
+  )
+}
+
+function AdminSettingsDetail({ admin }) {
+  return (
+    <div className="max-w-xs space-y-3">
+      <div className="flex items-center gap-2.5">
+        <Avatar src={admin.avatarUrl} name={admin.name} size="md" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-900 truncate">{admin.name || '-'}</p>
+          {admin.email && <p className="text-xs text-gray-500 truncate">{admin.email}</p>}
+          <p className="text-xs text-gray-500 truncate">{admin.phone || '-'}</p>
+        </div>
+      </div>
+      <dl className="space-y-1.5 text-xs">
+        <DetailRow label="Role" value={admin.role} />
+        <DetailRow label="Status" value={admin.isActive ? 'Active' : 'Inactive'} />
+        <DetailRow label="Last Login" value={admin.lastLoginAt ? formatRelative(admin.lastLoginAt) : 'Never'} />
+        <DetailRow label="Created" value={admin.createdAt ? formatDate(admin.createdAt) : null} />
+      </dl>
     </div>
   )
 }

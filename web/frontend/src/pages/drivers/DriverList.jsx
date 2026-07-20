@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle, XCircle, Pause, Play, Eye, Bell, Send, X, Download } from '@/components/ui/icons'
+import { CheckCircle, XCircle, Pause, Play, Eye, Bell, Send, X, Download, Settings } from '@/components/ui/icons'
 import { Button } from '../../components/ui/Button'
+import { Modal } from '../../components/ui/Modal'
 import { SendNotificationModal } from '../../components/shared/SendNotificationModal'
 import { DataTable } from '../../components/shared/DataTable'
 import { Pagination } from '../../components/shared/Pagination'
@@ -66,6 +67,7 @@ export default function DriverList() {
   const [ridesFilter, setRidesFilter] = useState('')
   const [earningsFilter, setEarningsFilter] = useState('')
   const [confirmAction, setConfirmAction] = useState(null)
+  const [settingsRow, setSettingsRow] = useState(null) // row whose settings popup is open
   const [selected, setSelected] = useState([]) // [{ id, label }]
   const [notify, setNotify] = useState(null)   // { recipients }
   const [exporting, setExporting] = useState(false)
@@ -185,7 +187,7 @@ export default function DriverList() {
       header: 'Driver',
       render: (val, row) => (
         <div className="flex items-center gap-3">
-          <Avatar src={val?.avatarUrl} name={val?.name} size="sm" />
+          <Avatar src={val?.avatarUrl} name={val?.name} size="xs" />
           <div>
             <p className="font-medium text-gray-900 text-sm">{val?.name || '-'}</p>
             <p className="text-xs text-gray-400">{val?.phone || '-'}</p>
@@ -242,6 +244,13 @@ export default function DriverList() {
             title="Send notification"
           >
             <Bell className="h-4 w-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setSettingsRow(row) }}
+            className="p-1.5 hover:bg-orange-50 rounded text-gray-400 hover:text-orange-600"
+            title="Settings"
+          >
+            <Settings className="h-4 w-4" />
           </button>
           {row.status === 'pending' && (
             <>
@@ -393,6 +402,18 @@ export default function DriverList() {
         )}
       </div>
 
+      {/* Settings popup (empty for now) */}
+      <Modal
+        open={!!settingsRow}
+        onClose={() => setSettingsRow(null)}
+        title=""
+        size="xl"
+      >
+        <div className="min-h-[70vh]">
+          {settingsRow && <DriverSettingsDetail driver={settingsRow} />}
+        </div>
+      </Modal>
+
       <ConfirmDialog
         open={!!confirmAction}
         onClose={() => setConfirmAction(null)}
@@ -411,6 +432,62 @@ export default function DriverList() {
         recipients={notify?.recipients || []}
         onSent={() => setSelected([])}
       />
+    </div>
+  )
+}
+
+// Compact key/value list pinned to the top-left of the settings popup, leaving
+// the rest of the (wide) dialog free for controls we'll add later.
+function DetailRow({ label, value }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <dt className="text-gray-400 shrink-0">{label}</dt>
+      <dd className="text-gray-700 font-medium text-right capitalize truncate">{value || '-'}</dd>
+    </div>
+  )
+}
+
+function DriverSettingsDetail({ driver }) {
+  const u = driver.userId || {}
+  return (
+    <div className="max-w-xs space-y-3">
+      <div className="flex items-center gap-2.5">
+        <Avatar src={u.avatarUrl} name={u.name} size="md" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-900 truncate">{u.name || '-'}</p>
+          {u.email && <p className="text-xs text-gray-500 truncate">{u.email}</p>}
+          <p className="text-xs text-gray-500 truncate">{u.phone || '-'}</p>
+        </div>
+      </div>
+      <dl className="space-y-1.5 text-xs">
+        <DetailRow label="Gender" value={u.gender} />
+        <DetailRow label="Date of Birth" value={u.dateOfBirth ? formatDate(u.dateOfBirth) : null} />
+        <DetailRow label="Vehicle" value={driver.vehicleType} />
+        <DetailRow label="Plate" value={driver.vehiclePlate} />
+        <DetailRow label="Model" value={driver.vehicleModel} />
+        <DetailRow label="Color" value={driver.vehicleColor} />
+        <DetailRow label="Status" value={driver.status} />
+        <DetailRow label="Verified" value={driver.isVerified ? 'Yes' : 'No'} />
+        <DetailRow label="Online" value={driver.isOnline ? 'Yes' : 'No'} />
+        <DetailRow label="Rating" value={`${(driver.rating || 0).toFixed(1)} (${driver.totalRatings || 0})`} />
+        <DetailRow label="Rides" value={(driver.totalRides || 0).toLocaleString()} />
+        <DetailRow label="Earnings" value={formatCurrency(driver.earnings || 0)} />
+        <DetailRow label="Wallet" value={formatCurrency(driver.walletBalance || 0)} />
+        <DetailRow label="Last Login" value={u.lastLoginAt ? formatRelative(u.lastLoginAt) : null} />
+        <DetailRow label="Joined" value={driver.createdAt ? formatDate(driver.createdAt) : null} />
+      </dl>
+      {u.savedAddresses?.length > 0 && (
+        <div className="pt-1">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Addresses</p>
+          <div className="space-y-1 text-xs">
+            {u.savedAddresses.map((addr, i) => (
+              <p key={i} className="text-gray-600 truncate">
+                <span className="text-gray-400">{addr.label || 'Address'}: </span>{addr.address}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

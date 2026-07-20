@@ -665,6 +665,37 @@ const updateUserStatus = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, user, `User status updated to ${newStatus}`));
 });
 
+const updateUser = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.manageUsers) throw new apiError(403, 'Insufficient permissions');
+
+    // Only these profile fields are editable from the admin settings popup.
+    const allowed = ['name', 'email', 'phone', 'gender', 'dateOfBirth', 'userType', 'accountStatus', 'preferredPaymentMethod'];
+    const enums = {
+        gender: ['female', 'male', 'other'],
+        userType: ['regular', 'parent', 'business'],
+        accountStatus: ['active', 'suspended', 'banned'],
+        preferredPaymentMethod: ['cash', 'khalti', 'esewa', 'wallet'],
+    };
+
+    const update = {};
+    for (const key of allowed) {
+        if (req.body[key] === undefined) continue;
+        const value = req.body[key];
+        if (enums[key] && value !== '' && !enums[key].includes(value)) {
+            throw new apiError(400, `${key} must be one of: ${enums[key].join(', ')}`);
+        }
+        update[key] = value === '' ? undefined : value;
+    }
+
+    if (!Object.keys(update).length) throw new apiError(400, 'No editable fields provided');
+
+    const user = await User.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true })
+        .select('-password -refreshToken -otp');
+    if (!user) throw new apiError(404, 'User not found');
+
+    return res.status(200).json(new apiResponse(200, user, 'User updated'));
+});
+
 const getUserTrips = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.manageUsers) throw new apiError(403, 'Insufficient permissions');
 
@@ -2283,7 +2314,7 @@ export {
     createAdmin, listAdmins, updateAdminPermissions, toggleAdminStatus, deleteAdmin,
     getDashboardStats, getDashboardRecentTrips, getNavCounts, markNavSeen,
     getAnalyticsOverview, getAnalyticsTrips, getAnalyticsUsers, getAnalyticsTopDrivers, getAnalyticsVehicleDistribution,
-    getUsers, getUserById, updateUserStatus, getUserTrips, getUserTransactions,
+    getUsers, getUserById, updateUserStatus, updateUser, getUserTrips, getUserTransactions,
     getSuppliers, getSupplierById, verifySupplier, updateSupplierPlan, toggleSupplierStatus,
     getDrivers, getDriverById, updateDriverStatus, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
     grantDriverMoney, getWithdrawals, processWithdrawal,

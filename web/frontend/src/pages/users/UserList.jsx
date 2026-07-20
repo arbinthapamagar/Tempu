@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Users, UserX, Eye, Ban, CheckCircle, Bell, Send, X, Download } from '@/components/ui/icons'
+import { Users, UserX, Eye, Ban, CheckCircle, Bell, Send, X, Download, Settings, Edit, Trash2 } from '@/components/ui/icons'
 import { SendNotificationModal } from '../../components/shared/SendNotificationModal'
 import { DataTable } from '../../components/shared/DataTable'
 import { Pagination } from '../../components/shared/Pagination'
@@ -11,6 +11,8 @@ import { ConfirmDialog } from '../../components/shared/ConfirmDialog'
 import { Avatar } from '../../components/ui/Avatar'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
+import { Input } from '../../components/ui/Input'
+import { Select } from '../../components/ui/Select'
 import { Badge } from '../../components/ui/Badge'
 import { usersApi } from '../../api/users.api'
 import { formatDate, formatCurrency, formatRelative } from '../../utils/format'
@@ -68,6 +70,9 @@ export default function UserList() {
   const [verifiedFilter, setVerifiedFilter] = useState('')
   const [joinedFilter, setJoinedFilter] = useState('')
   const [selectedUser, setSelectedUser] = useState(null)
+  const [settingsRow, setSettingsRow] = useState(null) // row whose settings popup is open
+  const [editingUser, setEditingUser] = useState(false) // edit form visible inside settings popup
+  const [userToDelete, setUserToDelete] = useState(null) // pending delete confirmation
   const [confirmAction, setConfirmAction] = useState(null) // { user, action }
   const [selected, setSelected] = useState([]) // [{ id, label }] for notifications
   const [notify, setNotify] = useState(null)   // { recipients: [{id,label}] }
@@ -99,6 +104,28 @@ export default function UserList() {
       setConfirmAction(null)
     },
     onError: (err) => toast.error(err?.message || 'Failed to update status'),
+  })
+
+  const updateProfile = useMutation({
+    mutationFn: ({ id, data }) => usersApi.update(id, data),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['users'] })
+      toast.success('User updated')
+      const updated = res?.data || res
+      setSettingsRow((prev) => (prev ? { ...prev, ...updated } : prev))
+    },
+    onError: (err) => toast.error(err?.message || 'Failed to update user'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => usersApi.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] })
+      toast.success('User deleted')
+      setUserToDelete(null)
+      setSettingsRow(null)
+    },
+    onError: (err) => toast.error(err?.message || 'Failed to delete user'),
   })
 
   const users = data?.data?.users || data?.data || []
@@ -162,7 +189,7 @@ export default function UserList() {
       header: 'User',
       render: (val, row) => (
         <div className="flex items-center gap-3">
-          <Avatar src={row.avatarUrl} name={val} size="sm" />
+          <Avatar src={row.avatarUrl} name={val} size="xs" />
           <div>
             <p className="font-medium text-gray-900 text-sm">{val}</p>
             <p className="text-xs text-gray-400">{row.phone}</p>
@@ -180,16 +207,6 @@ export default function UserList() {
       key: 'accountStatus',
       header: 'Status',
       render: (val) => <StatusBadge status={val} />,
-    },
-    {
-      key: 'rating',
-      header: 'Rating',
-      render: (val, row) => (
-        <span className="text-sm">
-          ⭐ {row.rating?.average?.toFixed(1) || '-'}
-          <span className="text-gray-400 text-xs ml-1">({row.rating?.total || 0})</span>
-        </span>
-      ),
     },
     {
       key: 'walletBalance',
@@ -221,39 +238,12 @@ export default function UserList() {
             <Eye className="h-4 w-4" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); setNotify({ recipients: [{ id: row._id, label: labelOf(row) }] }) }}
+            onClick={(e) => { e.stopPropagation(); setEditingUser(false); setSettingsRow(row) }}
             className="p-1.5 hover:bg-gray-100 rounded text-gray-400 hover:text-orange-600"
-            title="Send notification"
+            title="Settings"
           >
-            <Bell className="h-4 w-4" />
+            <Settings className="h-4 w-4" />
           </button>
-          {row.accountStatus === 'active' && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setConfirmAction({ user: row, action: 'suspended' }) }}
-              className="p-1.5 hover:bg-amber-50 rounded text-gray-400 hover:text-amber-600"
-              title="Suspend"
-            >
-              <UserX className="h-4 w-4" />
-            </button>
-          )}
-          {row.accountStatus !== 'banned' && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setConfirmAction({ user: row, action: 'banned' }) }}
-              className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-600"
-              title="Ban"
-            >
-              <Ban className="h-4 w-4" />
-            </button>
-          )}
-          {row.accountStatus !== 'active' && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setConfirmAction({ user: row, action: 'active' }) }}
-              className="p-1.5 hover:bg-emerald-50 rounded text-gray-400 hover:text-emerald-600"
-              title="Activate"
-            >
-              <CheckCircle className="h-4 w-4" />
-            </button>
-          )}
         </div>
       ),
     },
@@ -366,6 +356,125 @@ export default function UserList() {
         {selectedUser && <UserDetailContent user={selectedUser} />}
       </Modal>
 
+      {/* Settings popup (empty for now) */}
+      <Modal
+        open={!!settingsRow}
+        onClose={() => setSettingsRow(null)}
+        title=""
+        size="xl"
+      >
+        <div className="min-h-[70vh]">
+          {settingsRow && (
+            <div className="space-y-6">
+              {/* Header: profile + action buttons */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <Avatar src={settingsRow.avatarUrl} name={settingsRow.name} size="lg" />
+                  <div className="min-w-0">
+                    <p className="text-lg font-bold text-gray-900 truncate">{settingsRow.name || '-'}</p>
+                    {settingsRow.email && <p className="text-sm text-gray-500 truncate">{settingsRow.email}</p>}
+                    <p className="text-sm text-gray-500">{settingsRow.phone || '-'}</p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                      <StatusBadge status={settingsRow.accountStatus} />
+                      <StatusBadge status={settingsRow.userType} />
+                      <Badge variant={settingsRow.subscription ? 'success' : 'default'}>
+                        {settingsRow.subscription ? 'Subscriber' : 'No subscription'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  <Button size="sm" variant="secondary" icon={Bell}
+                    onClick={() => setNotify({ recipients: [{ id: settingsRow._id, label: labelOf(settingsRow) }] })}>
+                    Notify
+                  </Button>
+                  {settingsRow.accountStatus === 'active' ? (
+                    <Button size="sm" variant="warning" icon={UserX}
+                      onClick={() => setConfirmAction({ user: settingsRow, action: 'suspended' })}>
+                      Suspend
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="success" icon={CheckCircle}
+                      onClick={() => setConfirmAction({ user: settingsRow, action: 'active' })}>
+                      Activate
+                    </Button>
+                  )}
+                  {settingsRow.accountStatus !== 'banned' && (
+                    <Button size="sm" variant="danger" icon={Ban}
+                      onClick={() => setConfirmAction({ user: settingsRow, action: 'banned' })}>
+                      Block
+                    </Button>
+                  )}
+                  <Button size="sm" variant="secondary" icon={Edit}
+                    onClick={() => setEditingUser((v) => !v)}>
+                    Edit
+                  </Button>
+                  <Button size="sm" variant="danger" icon={Trash2}
+                    onClick={() => setUserToDelete(settingsRow)}>
+                    Delete
+                  </Button>
+                </div>
+              </div>
+
+              {/* Details grid */}
+              <Section title="Details">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <StatField label="Gender" value={settingsRow.gender} />
+                  <StatField label="Date of Birth" value={settingsRow.dateOfBirth ? formatDate(settingsRow.dateOfBirth) : null} />
+                  <StatField label="Type" value={settingsRow.userType} />
+                  <StatField label="Role" value={settingsRow.role === 'driver' ? 'Acceptor (driver)' : 'Subscriber / passenger'} />
+                  <StatField label="Subscription" value={settingsRow.subscription ? 'Subscribed' : 'None'} />
+                  <StatField label="Wallet" value={formatCurrency(settingsRow.walletBalance || 0)} />
+                  <StatField label="Phone Verified" value={settingsRow.isPhoneVerified ? 'Yes' : 'No'} />
+                  <StatField label="Email Verified" value={settingsRow.isEmailVerified ? 'Yes' : 'No'} />
+                  <StatField label="Payment" value={settingsRow.preferredPaymentMethod} />
+                  <StatField label="Last Login" value={settingsRow.lastLoginAt ? formatRelative(settingsRow.lastLoginAt) : null} />
+                  <StatField label="Joined" value={settingsRow.createdAt ? formatDate(settingsRow.createdAt) : null} />
+                </div>
+              </Section>
+
+              {/* Reviews */}
+              <Section title="Reviews">
+                <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/60 px-4 py-3">
+                  <span className="text-2xl font-bold text-gray-900">{settingsRow.rating?.average?.toFixed(1) || '-'}</span>
+                  <div className="text-sm">
+                    <p className="text-amber-500 leading-none">★★★★★</p>
+                    <p className="text-xs text-gray-400 mt-1">{settingsRow.rating?.total || 0} reviews</p>
+                  </div>
+                </div>
+              </Section>
+
+              {/* Addresses */}
+              {settingsRow.savedAddresses?.length > 0 && (
+                <Section title="Addresses">
+                  <div className="space-y-2">
+                    {settingsRow.savedAddresses.map((addr, i) => (
+                      <div key={i} className="flex items-start gap-2 rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2 text-sm">
+                        <Badge variant="default">{addr.label || 'Address'}</Badge>
+                        <span className="text-gray-600">{addr.address}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+              )}
+
+              {/* Edit form (toggled by the Edit button) */}
+              {editingUser && (
+                <Section title="Edit details">
+                  <UserEditForm
+                    key={settingsRow._id}
+                    user={settingsRow}
+                    loading={updateProfile.isPending}
+                    onSave={(data) => updateProfile.mutate({ id: settingsRow._id, data })}
+                  />
+                </Section>
+              )}
+            </div>
+          )}
+        </div>
+      </Modal>
+
       {/* Confirm action dialog */}
       <ConfirmDialog
         open={!!confirmAction}
@@ -378,6 +487,18 @@ export default function UserList() {
         variant={confirmAction?.action === 'active' ? 'success' : 'danger'}
       />
 
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        open={!!userToDelete}
+        onClose={() => setUserToDelete(null)}
+        onConfirm={() => deleteMutation.mutate(userToDelete?._id)}
+        loading={deleteMutation.isPending}
+        title="Delete User"
+        message={`Are you sure you want to delete ${userToDelete?.name}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+      />
+
       {/* Send notification */}
       <SendNotificationModal
         open={!!notify}
@@ -387,6 +508,77 @@ export default function UserList() {
         onSent={() => setSelected([])}
       />
     </div>
+  )
+}
+
+// Labelled section wrapper used throughout the settings popup.
+function Section({ title, children }) {
+  return (
+    <div className="space-y-2.5">
+      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{title}</p>
+      {children}
+    </div>
+  )
+}
+
+// A single labelled value shown as a soft card in the details grid.
+function StatField({ label, value }) {
+  return (
+    <div className="rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2">
+      <p className="text-[11px] text-gray-400 mb-0.5">{label}</p>
+      <p className="text-sm font-semibold text-gray-800 capitalize truncate">{value || '-'}</p>
+    </div>
+  )
+}
+
+const GENDER_OPTIONS = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+  { value: 'other', label: 'Other' },
+]
+
+const PAYMENT_OPTIONS = [
+  { value: 'cash', label: 'Cash' },
+  { value: 'khalti', label: 'Khalti' },
+  { value: 'esewa', label: 'eSewa' },
+  { value: 'wallet', label: 'Wallet' },
+]
+
+// Edit form shown on the right of the settings popup.
+function UserEditForm({ user, loading, onSave }) {
+  const [form, setForm] = useState({
+    name: user.name || '',
+    phone: user.phone || '',
+    email: user.email || '',
+    gender: user.gender || '',
+    userType: user.userType || 'regular',
+    accountStatus: user.accountStatus || 'active',
+    preferredPaymentMethod: user.preferredPaymentMethod || '',
+  })
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  const submit = (e) => { e.preventDefault(); onSave(form) }
+
+  return (
+    <form onSubmit={submit} className="space-y-4 max-w-lg">
+      <h3 className="text-sm font-semibold text-gray-800">Edit details</h3>
+      <div className="grid grid-cols-2 gap-3">
+        <Input label="Name" value={form.name} onChange={set('name')} />
+        <Input label="Phone" value={form.phone} onChange={set('phone')} />
+      </div>
+      <Input label="Email" type="email" value={form.email} onChange={set('email')} />
+      <div className="grid grid-cols-2 gap-3">
+        <Select label="Gender" placeholder="Not set" options={GENDER_OPTIONS} value={form.gender} onChange={set('gender')} />
+        <Select label="Type" options={USER_TYPE_OPTIONS} value={form.userType} onChange={set('userType')} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Select label="Status" options={STATUS_OPTIONS} value={form.accountStatus} onChange={set('accountStatus')} />
+        <Select label="Payment" placeholder="Not set" options={PAYMENT_OPTIONS} value={form.preferredPaymentMethod} onChange={set('preferredPaymentMethod')} />
+      </div>
+      <div className="flex justify-end pt-2">
+        <Button type="submit" loading={loading}>Save Changes</Button>
+      </div>
+    </form>
   )
 }
 
