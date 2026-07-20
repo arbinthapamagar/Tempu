@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, radius, shadow, spacing, STATUS_TOP_PAD, type } from '../../theme';
 import { userApi } from '../../api/user.api';
 import InboxScreen from '../InboxScreen';
@@ -76,13 +76,14 @@ function DriverTopBar({ online, totalRides, unread, onNotifications, onSos }) {
 // Nicer SOS confirmation: grabs the current location, then on confirm raises
 // the emergency AND opens a pre-filled SMS (with a maps link) to send to contacts.
 function SosModal({ visible, onClose, onConfirm }) {
-  const [loading, setLoading] = useState(true);
   const [coords, setCoords] = useState(null);
+  const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
 
+  // Grab the location silently in the background — never shown in the UI.
   useEffect(() => {
     if (!visible) return;
-    setLoading(true); setCoords(null); setSending(false);
+    setCoords(null); setNote(''); setSending(false);
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -91,17 +92,16 @@ function SosModal({ visible, onClose, onConfirm }) {
           setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         }
       } catch { /* location optional */ }
-      finally { setLoading(false); }
     })();
   }, [visible]);
-
-  const mapsLink = coords ? `https://maps.google.com/?q=${coords.lat},${coords.lng}` : null;
 
   const send = async () => {
     setSending(true);
     try {
-      await onConfirm(coords);
-      const body = `SOS! I need emergency help.${mapsLink ? ` My live location: ${mapsLink}` : ''}`;
+      const trimmed = note.trim();
+      await onConfirm(coords, trimmed);
+      const mapsLink = coords ? `https://maps.google.com/?q=${coords.lat},${coords.lng}` : null;
+      const body = `SOS! I need emergency help.${trimmed ? ` ${trimmed}` : ''}${mapsLink ? ` My live location: ${mapsLink}` : ''}`;
       Linking.openURL(`sms:?body=${encodeURIComponent(body)}`).catch(() => {});
       onClose();
     } catch (e) {
@@ -121,19 +121,19 @@ function SosModal({ visible, onClose, onConfirm }) {
           </View>
           <Text style={styles.sosTitle}>Send emergency SOS?</Text>
           <Text style={styles.sosDesc}>
-            This alerts the Tempu team, shares your live location, and opens a text message you can send to your contacts.
+            This alerts the Tempu team with your live location, and opens a text message you can send to your contacts.
           </Text>
 
-          <View style={styles.sosLocRow}>
-            <Ionicons name="location" size={16} color={colors.primary} />
-            {loading ? (
-              <Text style={styles.sosLocText}>Getting your location…</Text>
-            ) : coords ? (
-              <Text style={styles.sosLocText}>{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</Text>
-            ) : (
-              <Text style={styles.sosLocText}>Location unavailable — sending without it</Text>
-            )}
-          </View>
+          <TextInput
+            style={styles.sosNote}
+            placeholder="Add a note (optional) — what's happening?"
+            placeholderTextColor={colors.textFaint}
+            value={note}
+            onChangeText={setNote}
+            multiline
+            maxLength={300}
+            editable={!sending}
+          />
 
           <Pressable style={[styles.sosSend, sending && { opacity: 0.7 }]} onPress={send} disabled={sending}>
             {sending ? (
@@ -206,12 +206,12 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
   // SOS: raise an emergency alert to the Tempu team, using the freshly grabbed
   // location (falls back to the driver flow's last known coords). Throws on
   // failure so the modal can surface it.
-  const handleSosConfirm = async (coords) => {
+  const handleSosConfirm = async (coords, note) => {
     await userApi.triggerEmergency({
       role: 'driver',
       lat: coords?.lat ?? flow.coords?.lat,
       lng: coords?.lng ?? flow.coords?.lng,
-      message: 'Driver SOS — emergency help needed',
+      message: note || 'Driver SOS — emergency help needed',
     });
   };
 
@@ -320,12 +320,13 @@ const styles = StyleSheet.create({
   },
   sosTitle: { ...type.h2, color: colors.text, textAlign: 'center' },
   sosDesc: { ...type.body, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm, lineHeight: 20 },
-  sosLocRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.lg,
-    backgroundColor: colors.surfaceMuted, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    alignSelf: 'stretch', justifyContent: 'center',
+  sosNote: {
+    alignSelf: 'stretch', marginTop: spacing.lg, minHeight: 64,
+    backgroundColor: colors.surfaceMuted, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    ...type.body, color: colors.text, textAlignVertical: 'top',
   },
-  sosLocText: { ...type.caption, color: colors.textMuted },
   sosSend: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     alignSelf: 'stretch', height: 52, borderRadius: radius.pill, backgroundColor: colors.danger,

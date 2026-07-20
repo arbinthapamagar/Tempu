@@ -76,6 +76,20 @@ export default function EmergencyList() {
     { key: 'message', header: 'Note', render: (m) => <span className="text-sm text-gray-600 max-w-[220px] truncate inline-block" title={m || ''}>{m || '-'}</span> },
     { key: 'assignedTo', header: 'Assigned', render: (a) => a?.name ? <span className="text-xs text-gray-600">{a.name}</span> : <span className="text-xs text-gray-300">Unassigned</span> },
     { key: 'createdAt', header: 'Raised', render: (v) => <span className="text-xs text-gray-500">{formatRelative(v)}</span> },
+    {
+      key: 'priority',
+      header: 'Priority',
+      render: (v) => {
+        const p = v || 'normal'
+        const cls = {
+          normal: 'bg-blue-100 text-blue-700',
+          urgent: 'bg-orange-100 text-orange-700',
+          very_urgent: 'bg-red-100 text-red-700',
+        }[p]
+        const label = { normal: 'Normal', urgent: 'Urgent', very_urgent: 'Very Urgent' }[p]
+        return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>{label}</span>
+      },
+    },
     { key: 'status', header: 'Status', render: (v) => <StatusBadge status={v} /> },
     {
       key: '_id',
@@ -144,6 +158,7 @@ function EmergencyDetail({ id, onUpdateStatus, statusPending }) {
   const qc = useQueryClient()
   const [note, setNote] = useState('')
   const [assignee, setAssignee] = useState('')
+  const [priorityChoice, setPriorityChoice] = useState(null)
 
   const { data: res, isLoading } = useQuery({
     queryKey: ['emergency', id],
@@ -171,6 +186,17 @@ function EmergencyDetail({ id, onUpdateStatus, statusPending }) {
       toast.success('Note added')
     },
     onError: (err) => toast.error(err?.message || 'Failed to add note'),
+  })
+
+  const setPriority = useMutation({
+    mutationFn: (priority) => emergenciesApi.setPriority(id, priority),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['emergency', id] })
+      qc.invalidateQueries({ queryKey: ['emergencies'] })
+      setPriorityChoice(null)
+      toast.success('Priority saved')
+    },
+    onError: (err) => toast.error(err?.message || 'Failed to set priority'),
   })
 
   if (isLoading) return <div className="py-10 text-center text-sm text-gray-400">Loading…</div>
@@ -214,6 +240,47 @@ function EmergencyDetail({ id, onUpdateStatus, statusPending }) {
         </p>
         <p className="text-sm text-red-800">{e.message || 'No message was provided with this alert.'}</p>
       </div>
+
+      {/* Priority - chosen then saved by the handling admin */}
+      {(() => {
+        const currentPriority = e.priority || 'normal'
+        const selectedPriority = priorityChoice ?? currentPriority
+        const dirty = selectedPriority !== currentPriority
+        return (
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Priority</p>
+            <div className="flex gap-2">
+              {[
+                { value: 'normal', label: 'Normal', active: 'bg-blue-600 text-white border-blue-600' },
+                { value: 'urgent', label: 'Urgent', active: 'bg-orange-500 text-white border-orange-500' },
+                { value: 'very_urgent', label: 'Very Urgent', active: 'bg-red-600 text-white border-red-600' },
+              ].map((p) => {
+                const isActive = selectedPriority === p.value
+                return (
+                  <button
+                    key={p.value}
+                    onClick={() => setPriorityChoice(p.value)}
+                    className={`flex-1 text-sm font-medium px-3 py-2 rounded-lg border transition-colors ${isActive ? p.active : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                  >
+                    {p.label}
+                  </button>
+                )
+              })}
+            </div>
+            <div className="flex justify-end mt-2">
+              <Button
+                size="sm"
+                icon={Save}
+                disabled={!dirty || setPriority.isPending}
+                loading={setPriority.isPending}
+                onClick={() => setPriority.mutate(selectedPriority)}
+              >
+                Save priority
+              </Button>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Location + facts */}
       <div className="grid grid-cols-2 gap-3">

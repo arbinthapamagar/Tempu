@@ -1291,6 +1291,17 @@ const getEmergencyById = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, payload, 'Emergency fetched'));
 });
 
+const updateEmergencyPriority = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
+    const { priority } = req.body;
+    if (!['normal', 'urgent', 'very_urgent'].includes(priority)) {
+        throw new apiError(400, 'Priority must be normal, urgent or very_urgent');
+    }
+    const emergency = await Emergency.findByIdAndUpdate(req.params.id, { priority }, { new: true });
+    if (!emergency) throw new apiError(404, 'Emergency not found');
+    return res.status(200).json(new apiResponse(200, { _id: emergency._id, priority }, `Priority set to ${priority}`));
+});
+
 const assignEmergency = asyncHandler(async (req, res) => {
     if (!req.admin.permissions.handleSupport) throw new apiError(403, 'Insufficient permissions');
     const { adminId } = req.body;
@@ -2366,7 +2377,7 @@ export {
     getDrivers, getDriverById, updateDriverStatus, updateDriver, deleteDriver, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
     grantDriverMoney, getWithdrawals, processWithdrawal,
     getPricing, updatePricing,
-    getEmergencies, getEmergencyById, updateEmergency, assignEmergency, addEmergencyNote,
+    getEmergencies, getEmergencyById, updateEmergency, updateEmergencyPriority, assignEmergency, addEmergencyNote,
     getAllDocuments, verifyDocument, rejectDocument, updateDocument, deleteDocument, seedTestDocument,
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
     getTransactions, getTransactionById, getTransactionSummary, exportTransactions,

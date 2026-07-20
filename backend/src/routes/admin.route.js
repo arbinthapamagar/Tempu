@@ -16,7 +16,7 @@ import {
     getDrivers, getDriverById, updateDriverStatus, updateDriver, deleteDriver, verifyDriver, getDriverDocuments, getDriverTrips, getDriverEarnings,
     grantDriverMoney, getWithdrawals, processWithdrawal,
     getPricing, updatePricing,
-    getEmergencies, getEmergencyById, updateEmergency, assignEmergency, addEmergencyNote,
+    getEmergencies, getEmergencyById, updateEmergency, updateEmergencyPriority, assignEmergency, addEmergencyNote,
     getAllDocuments, verifyDocument, rejectDocument, updateDocument, deleteDocument, seedTestDocument,
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
     getTransactions, getTransactionById, getTransactionSummary, exportTransactions,
@@ -103,6 +103,7 @@ adminRouter.put('/pricing', updatePricing);
 adminRouter.get('/emergencies', getEmergencies);
 adminRouter.get('/emergencies/:id', getEmergencyById);
 adminRouter.patch('/emergencies/:id', updateEmergency);
+adminRouter.patch('/emergencies/:id/priority', updateEmergencyPriority);
 adminRouter.patch('/emergencies/:id/assign', assignEmergency);
 adminRouter.post('/emergencies/:id/notes', addEmergencyNote);
 

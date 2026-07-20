@@ -23,6 +23,12 @@ const emergencySchema = new mongoose.Schema(
       enum: ['active', 'acknowledged', 'resolved'],
       default: 'active',
     },
+    // Triage priority set by the admin handling the alert.
+    priority: {
+      type: String,
+      enum: ['normal', 'urgent', 'very_urgent'],
+      default: 'normal',
+    },
     handledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },
     // Admin/agent this alert is assigned to for follow-up.
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', default: null },

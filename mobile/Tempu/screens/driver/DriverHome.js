@@ -248,12 +248,21 @@ function SlideToGoOnline({ onConfirm, disabled, resetSignal }) {
   );
 }
 
-// Offline illustration by vehicle type — tuktuk gets its own image.
+// Offline illustration by vehicle type: taxi drivers see the car image;
+// everyone else sees the tuktuk (default for now).
 const OFFLINE_IMAGES = {
-  tuktuk: require('../../assets/ev-tuktuk.png'),
-  tuktuk_delivery: require('../../assets/ev-tuktuk.png'),
+  taxi: require('../../assets/ev-car.png'),
 };
-const DEFAULT_OFFLINE_IMAGE = require('../../assets/ev-car.png');
+const DEFAULT_OFFLINE_IMAGE = require('../../assets/ev-tuktuk.png');
+
+const VEHICLE_LABELS = {
+  bike: 'Bike',
+  scooter: 'Scooter',
+  tuktuk: 'Tuk-tuk',
+  tuktuk_delivery: 'Tuk-tuk (Delivery)',
+  taxi: 'Taxi',
+  comfort: 'Comfort',
+};
 
 export default function DriverHome({ flow, vehicleType }) {
   const { user } = useAuth();
@@ -318,16 +327,24 @@ export default function DriverHome({ flow, vehicleType }) {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Text style={styles.hi}>Hi, {user?.name?.split(' ')[0] || 'Driver'}</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.hi}>Hi, {user?.name?.split(' ')[0] || 'Driver'}</Text>
+          {vehicleType && (
+            <View style={styles.vehiclePill}>
+              <Ionicons name="car-sport" size={13} color={colors.primary} />
+              <Text style={styles.vehicleText}>{VEHICLE_LABELS[vehicleType] || vehicleType}</Text>
+            </View>
+          )}
+        </View>
         {/* The toggle only appears once online — offline uses the slider below. */}
         {online && (
           <View style={styles.headerToggle}>
-            <Text style={[styles.onlineLabel, { color: colors.primary }]}>Online</Text>
+            <Text style={[styles.onlineLabel, { color: colors.success }]}>Online</Text>
             <Switch
               value={online}
               onValueChange={onToggle}
               disabled={togglingOnline}
-              trackColor={{ true: colors.primary, false: colors.border }}
+              trackColor={{ true: colors.success, false: colors.border }}
               thumbColor="#fff"
             />
           </View>
@@ -403,7 +420,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
+  headerCenter: { alignItems: 'center', gap: 4 },
   hi: { ...type.bodyBold, color: colors.text, textAlign: 'center' },
+  vehiclePill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.primarySoft, borderRadius: radius.pill,
+    paddingHorizontal: 10, paddingVertical: 3,
+  },
+  vehicleText: { ...type.caption, color: colors.primary, fontWeight: '700', textTransform: 'capitalize' },
   brand: { ...type.h2, color: colors.text },
   headerToggle: {
     position: 'absolute', right: spacing.xl, top: 0, bottom: 0,
