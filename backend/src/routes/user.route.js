@@ -15,7 +15,7 @@ import { createTicket, getMyTickets, getTicketById, addMessage, getSupportConfig
 import {
     registerAsDriver, getMyDriverProfile, updateDriverProfile, uploadDriverDocument,
     goOnline, goOffline, updateDriverLocation, getNearbyTrips, getMyEarnings,
-    requestWithdrawal, getMyWithdrawals,
+    requestWithdrawal, getMyWithdrawals, topUpDriverBalance,
 } from '../controller/users/user.driver.controller.js';
 import { triggerEmergency, getMyEmergencies } from '../controller/users/user.emergency.controller.js';
 import { verifyDriverProfile } from '../middlewares/driver.middleware.js';
@@ -89,6 +89,7 @@ userRouter.put('/driver/go-offline', goOffline);
 userRouter.put('/driver/location', updateDriverLocation);
 userRouter.get('/driver/nearby-trips', getNearbyTrips);
 userRouter.get('/driver/earnings', getMyEarnings);
+userRouter.post('/driver/topup', verifyDriverProfile, topUpDriverBalance);
 userRouter.post('/driver/withdrawals', verifyDriverProfile, requestWithdrawal);
 userRouter.get('/driver/withdrawals', verifyDriverProfile, getMyWithdrawals);
 

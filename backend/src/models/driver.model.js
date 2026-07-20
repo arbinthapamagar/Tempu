@@ -67,6 +67,10 @@ const driverSchema = new mongoose.Schema(
         totalRides: { type: Number, default: 0 },
         earnings: { type: Number, default: 0 },        // lifetime gross earnings (never decreases)
         walletBalance: { type: Number, default: 0 },   // withdrawable balance (earnings + admin credits − cashouts)
+        // Prepaid balance the flat per-ride platform fee is deducted from. The
+        // driver tops this up (eSewa/Khalti/bank); each completed ride debits the
+        // ride fee here. Kept separate from walletBalance (earnings) on purpose.
+        topupBalance: { type: Number, default: 0 },
         cancelledRides: { type: Number, default: 0 },
 
         lastActiveAt: { type: Date, default: null },

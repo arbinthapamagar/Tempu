@@ -41,6 +41,9 @@ const METHODS = [
   { key: 'esewa', label: 'eSewa' },
 ];
 
+// Quick top-up amounts for the prepaid fee balance (Rs 100 is the default).
+const TOPUP_OPTIONS = [100, 200, 500, 1000];
+
 export default function DriverEarnings() {
   const [stats, setStats] = useState(null);
   const [bids, setBids] = useState([]);
@@ -57,6 +60,12 @@ export default function DriverEarnings() {
   const [accountNumber, setAccountNumber] = useState('');
   const [walletId, setWalletId] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Top-up form (prepaid fee balance)
+  const [showTopup, setShowTopup] = useState(false);
+  const [topupMethod, setTopupMethod] = useState('esewa');
+  const [topupAmount, setTopupAmount] = useState('100');
+  const [toppingUp, setToppingUp] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -79,6 +88,7 @@ export default function DriverEarnings() {
   useEffect(() => { load(); }, [load]);
 
   const balance = Number(stats?.walletBalance || 0);
+  const feeBalance = Number(stats?.topupBalance || 0);
 
   const resetForm = () => {
     setAmount(''); setBankName(''); setAccountName(''); setAccountNumber(''); setWalletId('');
@@ -118,6 +128,26 @@ export default function DriverEarnings() {
       Alert.alert('Failed', e?.message || 'Could not submit withdrawal.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const submitTopup = async () => {
+    const parsed = parseFloat(topupAmount);
+    if (!parsed || parsed <= 0) {
+      Alert.alert('Invalid amount', 'Enter a valid top-up amount.');
+      return;
+    }
+    setToppingUp(true);
+    try {
+      await userApi.topUpDriverBalance({ amount: parsed, method: topupMethod });
+      setShowTopup(false);
+      setTopupAmount('100');
+      Alert.alert('Top-up successful', `${money(parsed)} added to your fee balance.`);
+      load();
+    } catch (e) {
+      Alert.alert('Failed', e?.message || 'Could not top up.');
+    } finally {
+      setToppingUp(false);
     }
   };
 
@@ -161,6 +191,20 @@ export default function DriverEarnings() {
             onPress={() => setShowCashout(true)}
             disabled={balance < MIN_WITHDRAWAL}
           />
+        </View>
+
+        {/* Prepaid fee balance — the per-ride platform fee is deducted from here */}
+        <View style={styles.balanceCard}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.balanceLabel}>Fee balance</Text>
+            <Text style={[styles.balanceValue, feeBalance < 0 && { color: colors.danger }]}>{money(feeBalance)}</Text>
+            <Text style={styles.feeHint}>
+              {feeBalance < 0
+                ? 'Negative — please top up to clear your dues.'
+                : 'Rs 5–10 per ride (Rs 3–6 after 10 rides) is deducted from here.'}
+            </Text>
+          </View>
+          <Button label="Top up" size="sm" onPress={() => setShowTopup(true)} />
         </View>
 
         <View style={styles.statRow}>
@@ -272,6 +316,56 @@ export default function DriverEarnings() {
           </Sheet>
         </View>
       </Modal>
+
+      {/* Top-up sheet (prepaid fee balance) */}
+      <Modal visible={showTopup} transparent animationType="slide" onRequestClose={() => setShowTopup(false)}>
+        <Pressable style={styles.overlay} onPress={() => setShowTopup(false)} />
+        <View style={styles.sheetWrap}>
+          <Sheet tall>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.sheetTitle}>Top up fee balance</Text>
+              <Text style={styles.sheetSub}>Current: {money(feeBalance)}</Text>
+
+              <Text style={styles.fieldLabel}>Payment method</Text>
+              <View style={styles.methodRow}>
+                {METHODS.map((m) => (
+                  <Chip key={m.key} label={m.label} active={topupMethod === m.key} onPress={() => setTopupMethod(m.key)} />
+                ))}
+              </View>
+
+              <View style={{ height: spacing.md }} />
+              <Text style={styles.fieldLabel}>Amount</Text>
+              <View style={styles.methodRow}>
+                {TOPUP_OPTIONS.map((a) => (
+                  <Chip key={a} label={money(a)} active={String(a) === String(topupAmount)} onPress={() => setTopupAmount(String(a))} />
+                ))}
+              </View>
+
+              <View style={{ height: spacing.md }} />
+              <FormField
+                label="Or enter amount (NPR)"
+                value={topupAmount}
+                onChangeText={setTopupAmount}
+                placeholder="100"
+                keyboardType="numeric"
+              />
+
+              <Text style={styles.standbyNote}>
+                Payments are in stand-by mode — eSewa / Khalti / bank aren't wired up yet, so the amount is credited instantly for now.
+              </Text>
+
+              <View style={{ height: spacing.sm }} />
+              <Button
+                label={toppingUp ? 'Processing…' : `Top up ${money(parseFloat(topupAmount) || 0)}`}
+                onPress={submitTopup}
+                disabled={toppingUp}
+              />
+              <View style={{ height: spacing.sm }} />
+              <Button label="Cancel" variant="ghost" onPress={() => setShowTopup(false)} />
+            </ScrollView>
+          </Sheet>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -296,6 +390,8 @@ const styles = StyleSheet.create({
   },
   balanceLabel: { ...type.caption, color: colors.textMuted },
   balanceValue: { ...type.h2, color: colors.text, marginTop: 2 },
+  feeHint: { ...type.caption, color: colors.textFaint, marginTop: 4, maxWidth: 220 },
+  standbyNote: { ...type.caption, color: colors.textFaint, marginTop: spacing.md, lineHeight: 18 },
 
   statRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
   statBox: {

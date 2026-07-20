@@ -7,6 +7,7 @@ import { Transaction } from '../models/transaction.model.js';
 import { Notification } from '../models/notification.model.js';
 import { Pricing } from '../models/pricing.model.js';
 import { computeStandardFare } from '../utils/fareCalc.js';
+import { computeRideFee } from '../utils/rideFee.js';
 import { apiError } from '../utils/apiError.js';
 import { apiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -221,8 +222,14 @@ const updateTripStatusByDriver = asyncHandler(async (req, res) => {
             driver.totalRides += 1;
 
             const finalPrice = trip.finalPrice || trip.offeredPrice;
-            const platformFee = parseFloat((finalPrice * 0.05).toFixed(2));
-            const driverEarning = parseFloat((finalPrice - platformFee).toFixed(2));
+            // Flat per-ride platform fee (Rs 5/10, or Rs 3/6 after the driver's
+            // first 10 rides) based on the AGREED price. driver.totalRides was
+            // already incremented above, so it is this ride's 1-based number.
+            const platformFee = computeRideFee(finalPrice, driver.totalRides);
+            // The commission is collected from the driver's prepaid top-up
+            // balance (inDrive-style), NOT netted from the fare — so the driver
+            // keeps the full agreed price they earned this ride.
+            const driverEarning = parseFloat(finalPrice.toFixed(2));
 
             trip.platformFee = platformFee;
             trip.paymentStatus = trip.paymentMethod === 'wallet' ? 'paid' : 'pending';
@@ -232,13 +239,16 @@ const updateTripStatusByDriver = asyncHandler(async (req, res) => {
                 [
                     { userId: trip.userId, tripId: trip._id, amount: finalPrice, type: 'trip_payment', method: trip.paymentMethod, status: 'completed' },
                     { driverId: driver._id, tripId: trip._id, amount: driverEarning, type: 'trip_earning', method: trip.paymentMethod, status: 'completed' },
-                    { tripId: trip._id, amount: platformFee, type: 'platform_fee', method: trip.paymentMethod, status: 'completed' },
+                    { driverId: driver._id, tripId: trip._id, amount: platformFee, type: 'platform_fee', method: trip.paymentMethod, status: 'completed', note: `Per-ride fee (ride #${driver.totalRides}, fare NPR ${finalPrice})` },
                 ],
                 { session }
             );
 
             driver.earnings = parseFloat((driver.earnings + driverEarning).toFixed(2));
             driver.walletBalance = parseFloat(((driver.walletBalance || 0) + driverEarning).toFixed(2));
+            // Debit the flat fee from the driver's prepaid top-up balance. May go
+            // negative — the driver then has to top up to keep a healthy balance.
+            driver.topupBalance = parseFloat(((driver.topupBalance || 0) - platformFee).toFixed(2));
 
             if (trip.paymentMethod === 'wallet') {
                 const updated = await User.findOneAndUpdate(

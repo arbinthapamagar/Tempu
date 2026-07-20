@@ -131,4 +131,6 @@ export const userApi = {
   },
   requestWithdrawal: (data) => api.post('/users/driver/withdrawals', data),
   getMyWithdrawals: () => api.get('/users/driver/withdrawals'),
+  // Top up the prepaid fee balance (standby payment — no real gateway yet).
+  topUpDriverBalance: ({ amount, method }) => api.post('/users/driver/topup', { amount, method }),
 };
