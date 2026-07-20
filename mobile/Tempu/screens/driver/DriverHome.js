@@ -318,22 +318,20 @@ export default function DriverHome({ flow, vehicleType }) {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.hi}>Hi, {user?.name?.split(' ')[0] || 'Driver'}</Text>
-          <Text style={styles.brand}>{online ? 'You are online' : 'You are offline'}</Text>
-        </View>
-        <View style={styles.onlineToggle}>
-          <Text style={[styles.onlineLabel, online && { color: colors.primary }]}>
-            {online ? 'Online' : 'Offline'}
-          </Text>
-          <Switch
-            value={online}
-            onValueChange={onToggle}
-            disabled={togglingOnline}
-            trackColor={{ true: colors.primary, false: colors.border }}
-            thumbColor="#fff"
-          />
-        </View>
+        <Text style={styles.hi}>Hi, {user?.name?.split(' ')[0] || 'Driver'}</Text>
+        {/* The toggle only appears once online — offline uses the slider below. */}
+        {online && (
+          <View style={styles.headerToggle}>
+            <Text style={[styles.onlineLabel, { color: colors.primary }]}>Online</Text>
+            <Switch
+              value={online}
+              onValueChange={onToggle}
+              disabled={togglingOnline}
+              trackColor={{ true: colors.primary, false: colors.border }}
+              thumbColor="#fff"
+            />
+          </View>
+        )}
       </View>
 
       {!online ? (
@@ -397,7 +395,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
@@ -405,8 +403,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  hi: { ...type.caption, color: colors.textMuted },
+  hi: { ...type.bodyBold, color: colors.text, textAlign: 'center' },
   brand: { ...type.h2, color: colors.text },
+  headerToggle: {
+    position: 'absolute', right: spacing.xl, top: 0, bottom: 0,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+  },
   onlineToggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   onlineLabel: { ...type.bodyBold, color: colors.textMuted },
 

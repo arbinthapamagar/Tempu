@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, shadow, spacing, STATUS_TOP_PAD, type } from '../../theme';
 import { userApi } from '../../api/user.api';
 import InboxScreen from '../InboxScreen';
@@ -72,6 +73,87 @@ function DriverTopBar({ online, totalRides, unread, onNotifications, onSos }) {
   );
 }
 
+// Nicer SOS confirmation: grabs the current location, then on confirm raises
+// the emergency AND opens a pre-filled SMS (with a maps link) to send to contacts.
+function SosModal({ visible, onClose, onConfirm }) {
+  const [loading, setLoading] = useState(true);
+  const [coords, setCoords] = useState(null);
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (!visible) return;
+    setLoading(true); setCoords(null); setSending(false);
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+          setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        }
+      } catch { /* location optional */ }
+      finally { setLoading(false); }
+    })();
+  }, [visible]);
+
+  const mapsLink = coords ? `https://maps.google.com/?q=${coords.lat},${coords.lng}` : null;
+
+  const send = async () => {
+    setSending(true);
+    try {
+      await onConfirm(coords);
+      const body = `SOS! I need emergency help.${mapsLink ? ` My live location: ${mapsLink}` : ''}`;
+      Linking.openURL(`sms:?body=${encodeURIComponent(body)}`).catch(() => {});
+      onClose();
+    } catch (e) {
+      Alert.alert('Could not send SOS', e?.message || 'Please try again.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.sosBackdrop} onPress={() => !sending && onClose()} />
+      <View style={styles.sosWrap} pointerEvents="box-none">
+        <View style={styles.sosCard}>
+          <View style={styles.sosIconWrap}>
+            <Ionicons name="warning" size={32} color={colors.danger} />
+          </View>
+          <Text style={styles.sosTitle}>Send emergency SOS?</Text>
+          <Text style={styles.sosDesc}>
+            This alerts the Tempu team, shares your live location, and opens a text message you can send to your contacts.
+          </Text>
+
+          <View style={styles.sosLocRow}>
+            <Ionicons name="location" size={16} color={colors.primary} />
+            {loading ? (
+              <Text style={styles.sosLocText}>Getting your location…</Text>
+            ) : coords ? (
+              <Text style={styles.sosLocText}>{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</Text>
+            ) : (
+              <Text style={styles.sosLocText}>Location unavailable — sending without it</Text>
+            )}
+          </View>
+
+          <Pressable style={[styles.sosSend, sending && { opacity: 0.7 }]} onPress={send} disabled={sending}>
+            {sending ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="alert-circle" size={18} color="#fff" />
+                <Text style={styles.sosSendText}>Send SOS now</Text>
+              </>
+            )}
+          </Pressable>
+          <Pressable style={styles.sosCancel} onPress={() => !sending && onClose()} disabled={sending}>
+            <Text style={styles.sosCancelText}>Cancel</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function OverlayHeader({ title, onBack }) {
   return (
     <View style={styles.overlayHeader}>
@@ -96,6 +178,7 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
   const [totalRides, setTotalRides] = useState(null);
   const [unread, setUnread] = useState(0);
   const [vehicleType, setVehicleType] = useState(null);
+  const [sosOpen, setSosOpen] = useState(false);
   const flow = useDriverFlow(initialOnline);
 
   // Load the trip count, unread notifications, and vehicle type for the UI.
@@ -120,27 +203,16 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
     userApi.markAllNotificationsRead().catch(() => {});
   };
 
-  // SOS: raise an emergency alert to the Tempu team (with location if we have it).
-  const onSos = () => {
-    Alert.alert(
-      'Send SOS alert?',
-      'This tells the Tempu team you need emergency help right now.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Send SOS',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await userApi.triggerEmergency({ role: 'driver', lat: flow.coords?.lat, lng: flow.coords?.lng });
-              Alert.alert('SOS sent', 'Help is on the way. Stay safe.');
-            } catch (e) {
-              Alert.alert('Could not send SOS', e?.message || 'Please try again.');
-            }
-          },
-        },
-      ]
-    );
+  // SOS: raise an emergency alert to the Tempu team, using the freshly grabbed
+  // location (falls back to the driver flow's last known coords). Throws on
+  // failure so the modal can surface it.
+  const handleSosConfirm = async (coords) => {
+    await userApi.triggerEmergency({
+      role: 'driver',
+      lat: coords?.lat ?? flow.coords?.lat,
+      lng: coords?.lng ?? flow.coords?.lng,
+      message: 'Driver SOS — emergency help needed',
+    });
   };
 
   // While driving an active trip, lock the tabs to the Drive screen.
@@ -164,7 +236,7 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
           totalRides={totalRides}
           unread={unread}
           onNotifications={openNotifications}
-          onSos={onSos}
+          onSos={() => setSosOpen(true)}
         />
       )}
       <View style={styles.body}>
@@ -183,6 +255,11 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
         active={drivingLocked ? 'home' : tab}
         onChange={setTab}
         locked={drivingLocked}
+      />
+      <SosModal
+        visible={sosOpen}
+        onClose={() => setSosOpen(false)}
+        onConfirm={handleSosConfirm}
       />
     </View>
   );
