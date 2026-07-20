@@ -226,18 +226,18 @@ function ConversationList() {
                 key={t._id}
                 to={`/support/${t._id}${status ? `?status=${status}` : view ? `?view=${view}` : ''}`}
                 className={cn(
-                  'flex gap-2.5 px-3 py-2.5 border-b border-gray-100 cursor-pointer border-l-2',
+                  'flex gap-2 px-3 py-1.5 border-b border-gray-100 cursor-pointer border-l-2',
                   isActive ? 'border-l-gray-900 bg-gray-50' : 'border-l-transparent hover:bg-gray-50/60'
                 )}
               >
-                <Avatar src={person?.avatarUrl} name={displayName} size="sm" />
-                <div className="flex-1 min-w-0">
+                <Avatar src={person?.avatarUrl} name={displayName} size="xs" />
+                <div className="flex-1 min-w-0 leading-tight">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
+                    <p className="text-[13px] font-semibold text-gray-900 truncate">{displayName}</p>
                     <span className="text-[10px] text-gray-400 shrink-0">{formatRelative(t.updatedAt || t.createdAt)}</span>
                   </div>
-                  <p className="text-xs text-gray-500 truncate mt-0.5">{preview}</p>
-                  <div className="flex items-center gap-1.5 mt-1">
+                  <p className="text-[11px] text-gray-500 truncate mt-0.5">{preview}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
                     <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[t.status] || 'bg-gray-300')} />
                     <span className="text-[10px] text-gray-400">{CATEGORY_LABELS[t.category] || t.category}</span>
                     {/* Who's handling it — or flag the unassigned queue. */}
