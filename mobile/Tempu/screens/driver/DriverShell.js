@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, shadow, spacing, STATUS_TOP_PAD, type } from '../../theme';
 import { userApi } from '../../api/user.api';
 import InboxScreen from '../InboxScreen';
@@ -44,7 +44,7 @@ function DriverTabBar({ active, onChange, locked }) {
 
 // Always-visible driver status strip: shows they're in driving mode + total
 // trips, with support and notifications reachable from the top-right anywhere.
-function DriverTopBar({ online, totalRides, unread, onNotifications }) {
+function DriverTopBar({ online, totalRides, unread, onNotifications, onSos }) {
   return (
     <View style={styles.topbar}>
       <View style={styles.topbarLeft}>
@@ -55,6 +55,10 @@ function DriverTopBar({ online, totalRides, unread, onNotifications }) {
         )}
       </View>
       <View style={styles.topbarRight}>
+        <Pressable style={styles.sosBtn} onPress={onSos} hitSlop={8}>
+          <Ionicons name="warning" size={14} color="#fff" />
+          <Text style={styles.sosText}>SOS</Text>
+        </Pressable>
         <Pressable style={styles.iconBtn} onPress={onNotifications} hitSlop={8}>
           <Ionicons name="notifications-outline" size={22} color={colors.text} />
           {unread > 0 && (
@@ -112,6 +116,29 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
     userApi.markAllNotificationsRead().catch(() => {});
   };
 
+  // SOS: raise an emergency alert to the Tempu team (with location if we have it).
+  const onSos = () => {
+    Alert.alert(
+      'Send SOS alert?',
+      'This tells the Tempu team you need emergency help right now.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send SOS',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await userApi.triggerEmergency({ role: 'driver', lat: flow.coords?.lat, lng: flow.coords?.lng });
+              Alert.alert('SOS sent', 'Help is on the way. Stay safe.');
+            } catch (e) {
+              Alert.alert('Could not send SOS', e?.message || 'Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // While driving an active trip, lock the tabs to the Drive screen.
   const drivingLocked = !!flow.activeTrip && flow.activeTrip.status !== 'completed';
 
@@ -133,6 +160,7 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
           totalRides={totalRides}
           unread={unread}
           onNotifications={openNotifications}
+          onSos={onSos}
         />
       )}
       <View style={styles.body}>
@@ -176,7 +204,13 @@ const styles = StyleSheet.create({
   dot: { width: 9, height: 9, borderRadius: 5 },
   topbarTitle: { ...type.bodyBold, color: colors.text },
   topbarSub: { ...type.caption, color: colors.textMuted },
-  topbarRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  topbarRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  sosBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 12, height: 32, borderRadius: 16,
+    backgroundColor: colors.danger,
+  },
+  sosText: { color: '#fff', fontWeight: '800', fontSize: 13, letterSpacing: 0.5 },
   iconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   badge: {
     position: 'absolute', top: 4, right: 4, minWidth: 16, height: 16, paddingHorizontal: 3,

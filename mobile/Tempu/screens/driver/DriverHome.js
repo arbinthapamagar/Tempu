@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Image,
   Linking,
   Modal,
   PanResponder,
@@ -329,7 +330,11 @@ export default function DriverHome({ flow }) {
 
       {!online ? (
         <View style={styles.empty}>
-          <Ionicons name="car-outline" size={56} color={colors.textFaint} />
+          <Image
+            source={require('../../assets/ev-car.png')}
+            style={styles.carImg}
+            resizeMode="contain"
+          />
           <Text style={styles.emptyTitle}>You're offline</Text>
           <Text style={styles.emptySub}>
             Go online to start receiving nearby ride requests.
@@ -432,6 +437,7 @@ const styles = StyleSheet.create({
   error: { color: colors.danger, marginBottom: spacing.md },
 
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl, gap: spacing.sm },
+  carImg: { width: 260, height: 180, marginBottom: spacing.sm },
   emptyTitle: { ...type.h3, color: colors.text, marginTop: spacing.sm },
   emptySub: { ...type.body, color: colors.textMuted, textAlign: 'center' },
 
