@@ -83,6 +83,22 @@ export default function useDriverFlow(initialOnline = false) {
     };
   }, [online]);
 
+  // Manual refresh (pull-to-refresh) of the nearby-trips list.
+  const refreshNearby = useCallback(async () => {
+    const c = coordsRef.current;
+    if (!c) return;
+    setLoadingTrips(true);
+    try {
+      const res = await userApi.getNearbyTrips({ longitude: c.lng, latitude: c.lat });
+      setNearbyTrips(res.data || []);
+      setError('');
+    } catch (err) {
+      setError(err.message || '');
+    } finally {
+      setLoadingTrips(false);
+    }
+  }, []);
+
   // Poll nearby trips while online and not already driving
   useEffect(() => {
     if (!online || activeTripId) {
@@ -210,6 +226,7 @@ export default function useDriverFlow(initialOnline = false) {
     togglingOnline,
     toggleOnline,
     coords,
+    refreshNearby,
     nearbyTrips,
     loadingTrips,
     bidTripIds,

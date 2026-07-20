@@ -9,6 +9,7 @@ import {
   Modal,
   PanResponder,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Switch,
@@ -271,12 +272,15 @@ const VEHICLE_LABELS = {
 export default function DriverHome({ flow, vehicleType, subscriptionDriver }) {
   const { user } = useAuth();
   const [bidTrip, setBidTrip] = useState(null);
-  const offlineImage = OFFLINE_IMAGES[vehicleType] || DEFAULT_OFFLINE_IMAGE;
+  // Only resolve an image once the vehicle type has loaded — avoids briefly
+  // flashing the default (tuktuk) then switching to the real vehicle.
+  const offlineImage = vehicleType ? (OFFLINE_IMAGES[vehicleType] || DEFAULT_OFFLINE_IMAGE) : null;
 
   const {
     online,
     togglingOnline,
     toggleOnline,
+    refreshNearby,
     nearbyTrips,
     loadingTrips,
     bidTripIds,
@@ -289,6 +293,11 @@ export default function DriverHome({ flow, vehicleType, subscriptionDriver }) {
   } = flow;
 
   const [slideReset, setSlideReset] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try { await refreshNearby?.(); } finally { setRefreshing(false); }
+  };
 
   const onToggle = async (val) => {
     try {
@@ -356,31 +365,39 @@ export default function DriverHome({ flow, vehicleType, subscriptionDriver }) {
       </View>
 
       {!online ? (
-        <View style={styles.empty}>
-          <Image
-            source={offlineImage}
-            style={styles.carImg}
-            resizeMode="contain"
-          />
-          {subscriptionDriver && (
-            <Image
-              source={require('../../assets/subscription.png')}
-              style={styles.subImg}
-              resizeMode="cover"
+        <ScrollView
+          contentContainerStyle={styles.emptyScroll}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        >
+          <View style={styles.empty}>
+            {offlineImage ? (
+              <Image source={offlineImage} style={styles.carImg} resizeMode="contain" />
+            ) : (
+              <View style={styles.carImg} />
+            )}
+            {subscriptionDriver && (
+              <Image
+                source={require('../../assets/subscription.png')}
+                style={styles.subImg}
+                resizeMode="cover"
+              />
+            )}
+            <Text style={styles.emptyTitle}>You're offline</Text>
+            <Text style={styles.emptySub}>
+              Go online to start receiving nearby ride requests.
+            </Text>
+            <SlideToGoOnline
+              onConfirm={onSlideConfirm}
+              disabled={togglingOnline}
+              resetSignal={slideReset}
             />
-          )}
-          <Text style={styles.emptyTitle}>You're offline</Text>
-          <Text style={styles.emptySub}>
-            Go online to start receiving nearby ride requests.
-          </Text>
-          <SlideToGoOnline
-            onConfirm={onSlideConfirm}
-            disabled={togglingOnline}
-            resetSignal={slideReset}
-          />
-        </View>
+          </View>
+        </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.list}>
+        <ScrollView
+          contentContainerStyle={styles.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        >
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <Text style={styles.sectionTitle}>
             Ride requests {nearbyTrips.length ? `(${nearbyTrips.length})` : ''}
@@ -481,6 +498,7 @@ const styles = StyleSheet.create({
   sectionTitle: { ...type.bodyBold, color: colors.text, marginBottom: spacing.md },
   error: { color: colors.danger, marginBottom: spacing.md },
 
+  emptyScroll: { flexGrow: 1 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl, gap: spacing.sm },
   carImg: { width: 260, height: 180, marginBottom: spacing.sm },
   subImg: { width: 260, height: 120, borderRadius: radius.lg, marginBottom: spacing.sm },
