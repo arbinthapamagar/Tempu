@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, MapPin, CheckCircle, BellRing, Phone, Navigation, Lock, Mail, Car } from '@/components/ui/icons'
+import { AlertTriangle, MapPin, CheckCircle, BellRing, Phone, Navigation, Lock, Mail, Car, Save } from '@/components/ui/icons'
 import { DataTable } from '../../components/shared/DataTable'
 import { Pagination } from '../../components/shared/Pagination'
 import { StatusBadge } from '../../components/shared/StatusBadge'
@@ -73,7 +73,6 @@ export default function EmergencyList() {
         </a>
       ) : <span className="text-xs text-gray-400">No location</span>),
     },
-    { key: 'message', header: 'Note', render: (m) => <span className="text-sm text-gray-600 max-w-[220px] truncate inline-block" title={m || ''}>{m || '-'}</span> },
     { key: 'assignedTo', header: 'Assigned', render: (a) => a?.name ? <span className="text-xs text-gray-600">{a.name}</span> : <span className="text-xs text-gray-300">Unassigned</span> },
     { key: 'createdAt', header: 'Raised', render: (v) => <span className="text-xs text-gray-500">{formatRelative(v)}</span> },
     {
