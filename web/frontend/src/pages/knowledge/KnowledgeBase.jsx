@@ -258,24 +258,24 @@ export default function KnowledgeBase() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs text-gray-400 border-b border-gray-100 bg-gray-50">
-                      <th className="px-4 py-2 font-medium">Source</th>
-                      <th className="px-4 py-2 font-medium">Chunks</th>
-                      <th className="px-4 py-2 font-medium">Updated</th>
-                      <th className="px-4 py-2" />
+                      <th className="px-4 py-1 font-medium">Source</th>
+                      <th className="px-4 py-1 font-medium">Chunks</th>
+                      <th className="px-4 py-1 font-medium">Updated</th>
+                      <th className="px-4 py-1" />
                     </tr>
                   </thead>
                   <tbody>
                     {sources.map((s) => (
                       <tr key={s.source} className="border-b border-gray-50 last:border-0">
-                        <td className="px-4 py-3 text-gray-800 font-medium flex items-center gap-2">
+                        <td className="px-4 py-1 text-gray-800 font-medium flex items-center gap-2">
                           <FileText className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                           <span className="truncate max-w-xs">{s.source}</span>
                         </td>
-                        <td className="px-4 py-3 text-gray-500">{s.chunks}</td>
-                        <td className="px-4 py-3 text-gray-500">
+                        <td className="px-4 py-1 text-gray-500">{s.chunks}</td>
+                        <td className="px-4 py-1 text-gray-500">
                           {s.updatedAt ? new Date(s.updatedAt).toLocaleDateString() : '—'}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-1 text-right">
                           <button
                             onClick={() => setToDelete(s.source)}
                             className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"

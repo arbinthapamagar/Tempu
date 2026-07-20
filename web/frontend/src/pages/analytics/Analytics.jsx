@@ -270,28 +270,28 @@ export default function Analytics() {
             <table className="min-w-full">
               <thead>
                 <tr className="border-b border-gray-50">
-                  <th className="pb-3 text-left text-xs font-semibold text-gray-400 uppercase">#</th>
-                  <th className="pb-3 text-left text-xs font-semibold text-gray-400 uppercase">Driver</th>
-                  <th className="pb-3 text-right text-xs font-semibold text-gray-400 uppercase">Rides</th>
-                  <th className="pb-3 text-right text-xs font-semibold text-gray-400 uppercase">Rating</th>
-                  <th className="pb-3 text-right text-xs font-semibold text-gray-400 uppercase">Earnings</th>
+                  <th className="pb-1 text-left text-xs font-semibold text-gray-400 uppercase">#</th>
+                  <th className="pb-1 text-left text-xs font-semibold text-gray-400 uppercase">Driver</th>
+                  <th className="pb-1 text-right text-xs font-semibold text-gray-400 uppercase">Rides</th>
+                  <th className="pb-1 text-right text-xs font-semibold text-gray-400 uppercase">Rating</th>
+                  <th className="pb-1 text-right text-xs font-semibold text-gray-400 uppercase">Earnings</th>
                 </tr>
               </thead>
               <tbody>
                 {topDrivers.map((driver, i) => (
                   <tr key={driver._id || i} className="border-b border-gray-50 last:border-0">
-                    <td className="py-3 text-sm font-bold text-orange-600">#{i + 1}</td>
-                    <td className="py-3">
+                    <td className="py-1 text-sm font-bold text-orange-600">#{i + 1}</td>
+                    <td className="py-1">
                       <div>
                         <p className="text-sm font-medium text-gray-800">{driver.name}</p>
                         <p className="text-xs text-gray-400 capitalize">{driver.vehicleType}</p>
                       </div>
                     </td>
-                    <td className="py-3 text-sm text-gray-600 text-right">{driver.rides?.toLocaleString() ?? 0}</td>
-                    <td className="py-3 text-sm text-right">
+                    <td className="py-1 text-sm text-gray-600 text-right">{driver.rides?.toLocaleString() ?? 0}</td>
+                    <td className="py-1 text-sm text-right">
                       <span className="text-amber-500 font-semibold">⭐ {driver.rating?.toFixed(1) ?? '0.0'}</span>
                     </td>
-                    <td className="py-3 text-sm font-semibold text-emerald-600 text-right">{formatCurrency(driver.earnings || 0)}</td>
+                    <td className="py-1 text-sm font-semibold text-emerald-600 text-right">{formatCurrency(driver.earnings || 0)}</td>
                   </tr>
                 ))}
               </tbody>
