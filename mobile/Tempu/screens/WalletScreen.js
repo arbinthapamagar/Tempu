@@ -32,8 +32,6 @@ const TYPE_LABELS = {
   refund: 'Refund',
 };
 
-const TOPUP_AMOUNTS = [200, 500, 1000, 2000];
-
 function formatDate(value) {
   const d = new Date(value);
   return d.toLocaleString('en-GB', {
@@ -50,25 +48,6 @@ export default function WalletScreen() {
   const [walletBalance, setWalletBalance] = useState(user?.walletBalance ?? 0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [topUp, setTopUp] = useState(500);
-  const [topping, setTopping] = useState(false);
-
-  const handleTopUp = useCallback(async () => {
-    if (topping) return;
-    setTopping(true);
-    try {
-      await userApi.topUpWallet({ amount: topUp, method: 'esewa', gatewayRef: `MANUAL_${Date.now()}` });
-      // Reload wallet after top-up
-      const walletRes = await userApi.getWallet();
-      setWalletBalance(walletRes.data?.walletBalance ?? 0);
-      const txRes = await userApi.getTransactions();
-      setTransactions(txRes.data?.transactions || txRes.data || []);
-    } catch (err) {
-      console.warn('Top up failed:', err.message);
-    } finally {
-      setTopping(false);
-    }
-  }, [topUp, topping]);
 
   const load = useCallback(async () => {
     try {
@@ -114,50 +93,6 @@ export default function WalletScreen() {
         <View style={styles.balanceDecorSmall} />
         <Text style={styles.balanceLabel}>Available Balance</Text>
         <Text style={styles.balanceAmount}>Rs {walletBalance.toLocaleString()}</Text>
-        <View style={styles.balanceActions}>
-          <Pressable
-            style={[styles.balanceBtnPrimary, topping && { opacity: 0.6 }]}
-            onPress={handleTopUp}
-            disabled={topping}
-          >
-            <ArrowDownIcon size={15} color={colors.primaryDark} />
-            <Text style={styles.balanceBtnPrimaryText}>{topping ? 'Adding…' : 'Add Funds'}</Text>
-          </Pressable>
-          <Pressable
-            style={styles.balanceBtnGhost}
-            onPress={() => alert('Send feature coming soon')}
-          >
-            <ArrowUpIcon size={15} color="#fff" />
-            <Text style={styles.balanceBtnGhostText}>Withdraw</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Top Up</Text>
-        <View style={styles.topupGrid}>
-          {TOPUP_AMOUNTS.map((a) => {
-            const active = topUp === a;
-            return (
-              <Pressable
-                key={a}
-                onPress={() => setTopUp(a)}
-                style={[styles.topupChip, active && styles.topupChipActive]}
-              >
-                <Text style={[styles.topupChipText, active && styles.topupChipTextActive]}>
-                  Rs {a}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        <Pressable
-          style={[styles.cta, topping && { opacity: 0.6 }]}
-          onPress={handleTopUp}
-          disabled={topping}
-        >
-          <Text style={styles.ctaText}>{topping ? 'Adding…' : `Add Rs ${topUp}`}</Text>
-        </Pressable>
       </View>
 
       <View style={styles.section}>

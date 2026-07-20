@@ -174,6 +174,7 @@ async function run() {
             totalRides: i * 12,
             earnings: i * 1500,
             walletBalance: i * 300,
+            topupBalance: pick([100, 250, 500, 40, 0], i), // starting prepaid fee balance (some low, to test)
             currentLocation: { type: 'Point', coordinates: near(i) },
         });
         await User.findByIdAndUpdate(du._id, { driverProfile: d._id });
