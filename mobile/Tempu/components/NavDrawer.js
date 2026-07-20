@@ -24,9 +24,7 @@ import { STATUS_TOP_PAD } from '../theme';
 const NAV = [
   { id: 'home', label: 'Home', Icon: HomeIcon },
   { id: 'trips', label: 'Trips', Icon: DocIcon },
-  { id: 'wallet', label: 'Wallet', Icon: WalletIcon },
   { id: 'subscribe', label: 'Subscribe', Icon: CardIcon },
-  { id: 'inbox', label: 'Inbox', Icon: BellIcon },
   { id: 'support', label: 'Support', Icon: ChatIcon },
   { id: 'account', label: 'Account', Icon: UserIcon },
 ];
@@ -39,7 +37,7 @@ const PANEL_W = Math.min(320, Math.round(Dimensions.get('window').width * 0.82))
  * animation. `open` drives it; the panel animates out before unmounting.
  */
 export default function NavDrawer({ open, onClose, active, onChange, isDriver = false }) {
-  const items = NAV.filter((t) => t.id !== 'wallet' || isDriver);
+  const items = NAV;
   const [visible, setVisible] = useState(open);
   const slide = useRef(new Animated.Value(open ? 1 : 0)).current;
 

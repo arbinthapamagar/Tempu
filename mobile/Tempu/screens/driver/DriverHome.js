@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Linking,
   Modal,
+  PanResponder,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -185,6 +187,66 @@ function ActiveTrip({ trip, advancing, onAdvance, onFinish }) {
   );
 }
 
+// Slide-to-confirm control shown while offline: the driver drags the thumb to
+// the far end to go online. Falls back to a spring-back if not dragged far enough.
+const SLIDE_THUMB = 52;
+
+function SlideToGoOnline({ onConfirm, disabled, resetSignal }) {
+  const [trackW, setTrackW] = useState(0);
+  const maxXRef = useRef(0);
+  const x = useRef(new Animated.Value(0)).current;
+  const confirmed = useRef(false);
+  const onConfirmRef = useRef(onConfirm);
+  onConfirmRef.current = onConfirm;
+
+  // Reset the thumb to the start (e.g. after a failed go-online attempt).
+  useEffect(() => {
+    confirmed.current = false;
+    Animated.spring(x, { toValue: 0, useNativeDriver: false, bounciness: 0 }).start();
+  }, [resetSignal, x]);
+
+  const pan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, g) => {
+        const nx = Math.min(Math.max(0, g.dx), maxXRef.current);
+        x.setValue(nx);
+      },
+      onPanResponderRelease: (_, g) => {
+        const maxX = maxXRef.current;
+        const nx = Math.min(Math.max(0, g.dx), maxX);
+        if (maxX > 0 && nx >= maxX * 0.8 && !confirmed.current) {
+          confirmed.current = true;
+          Animated.timing(x, { toValue: maxX, duration: 120, useNativeDriver: false })
+            .start(() => onConfirmRef.current?.());
+        } else {
+          Animated.spring(x, { toValue: 0, useNativeDriver: false, bounciness: 0 }).start();
+        }
+      },
+    })
+  ).current;
+
+  const onLayout = (e) => {
+    const w = e.nativeEvent.layout.width;
+    setTrackW(w);
+    maxXRef.current = Math.max(0, w - SLIDE_THUMB - 8);
+  };
+
+  return (
+    <View style={[styles.slideTrack, disabled && { opacity: 0.6 }]} onLayout={onLayout}>
+      <Animated.View style={[styles.slideFill, { width: Animated.add(x, SLIDE_THUMB + 4) }]} />
+      <Text style={styles.slideLabel}>Slide to go online</Text>
+      <Animated.View
+        style={[styles.slideThumb, { transform: [{ translateX: x }] }]}
+        {...(disabled ? {} : pan.panHandlers)}
+      >
+        <Ionicons name="chevron-forward" size={26} color="#fff" />
+      </Animated.View>
+    </View>
+  );
+}
+
 export default function DriverHome({ flow }) {
   const { user } = useAuth();
   const [bidTrip, setBidTrip] = useState(null);
@@ -204,11 +266,23 @@ export default function DriverHome({ flow }) {
     finishActiveTrip,
   } = flow;
 
+  const [slideReset, setSlideReset] = useState(0);
+
   const onToggle = async (val) => {
     try {
       await toggleOnline(val);
     } catch (err) {
       Alert.alert('Status', err.message || 'Could not change status.');
+    }
+  };
+
+  // Slide-to-go-online: go online, and snap the slider back if it fails.
+  const onSlideConfirm = async () => {
+    try {
+      await toggleOnline(true);
+    } catch (err) {
+      Alert.alert('Status', err.message || 'Could not go online.');
+      setSlideReset((n) => n + 1);
     }
   };
 
@@ -260,6 +334,11 @@ export default function DriverHome({ flow }) {
           <Text style={styles.emptySub}>
             Go online to start receiving nearby ride requests.
           </Text>
+          <SlideToGoOnline
+            onConfirm={onSlideConfirm}
+            disabled={togglingOnline}
+            resetSignal={slideReset}
+          />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
@@ -307,7 +386,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.xl,
-    paddingTop: STATUS_TOP_PAD,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.md,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
@@ -317,6 +396,36 @@ const styles = StyleSheet.create({
   brand: { ...type.h2, color: colors.text },
   onlineToggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   onlineLabel: { ...type.bodyBold, color: colors.textMuted },
+
+  // Slide-to-go-online control
+  slideTrack: {
+    marginTop: spacing.xxl,
+    width: '100%',
+    maxWidth: 320,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  slideFill: {
+    position: 'absolute',
+    left: 0, top: 0, bottom: 0,
+    backgroundColor: colors.primarySoft,
+    borderRadius: 30,
+  },
+  slideLabel: { ...type.bodyBold, color: colors.primary, textAlign: 'center' },
+  slideThumb: {
+    position: 'absolute',
+    left: 4, top: 4,
+    width: SLIDE_THUMB, height: SLIDE_THUMB,
+    borderRadius: SLIDE_THUMB / 2,
+    backgroundColor: colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+    ...shadow.card,
+  },
 
   list: { padding: spacing.xl, paddingBottom: spacing.xxl },
   sectionTitle: { ...type.bodyBold, color: colors.text, marginBottom: spacing.md },

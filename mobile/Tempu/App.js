@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { useFonts, BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque';
 import {
@@ -11,7 +11,7 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { JetBrainsMono_500Medium, JetBrainsMono_600SemiBold, JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
 import NavDrawer from './components/NavDrawer';
-import { MenuIcon } from './components/Icons';
+import { MenuIcon, BellIcon } from './components/Icons';
 import { userApi } from './api/user.api';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import DriverShell from './screens/driver/DriverShell';
@@ -28,7 +28,6 @@ import RoleSelectScreen from './screens/RoleSelectScreen';
 import SubscriptionScreen from './screens/SubscriptionScreen';
 import SupportScreen from './screens/SupportScreen';
 import TripsScreen from './screens/TripsScreen';
-import WalletScreen from './screens/WalletScreen';
 import { colors, isDark } from './theme/colors';
 import { STATUS_TOP_PAD } from './theme';
 
@@ -39,9 +38,8 @@ const STATUS_BAR_STYLE = 'dark-content';
 const TAB_TITLES = {
   home: 'Home',
   trips: 'Trips',
-  wallet: 'Wallet',
   subscribe: 'Subscribe',
-  inbox: 'Inbox',
+  inbox: 'Notifications',
   support: 'Support',
   account: 'Account',
 };
@@ -91,6 +89,18 @@ function AppShell() {
   const approvedDriver =
     user?.driverProfile?.status === 'approved' || driverApproved;
   const effectiveMode = mode === 'driver' && approvedDriver ? 'driver' : 'passenger';
+
+  // Approved drivers land straight in driving mode on login — no passenger map,
+  // no manual "switch to driver" step. Runs once per login; they can still
+  // switch to passenger mode manually afterwards (won't be bounced back mid-session).
+  const autoDroveRef = useRef(false);
+  useEffect(() => { if (!user) autoDroveRef.current = false; }, [user]);
+  useEffect(() => {
+    if (user && approvedDriver && !autoDroveRef.current) {
+      autoDroveRef.current = true;
+      setMode('driver');
+    }
+  }, [user, approvedDriver]);
 
   // After OTP verification the user becomes set in context.
   // If they chose the driver role, transition to vehicle details form.
@@ -227,11 +237,17 @@ function AppShell() {
               <MenuIcon size={26} color={colors.text} />
             </Pressable>
             <Text style={styles.topbarTitle}>{TAB_TITLES[tab] || ''}</Text>
+            <Pressable
+              style={styles.menuBtn}
+              onPress={() => setTab('inbox')}
+              hitSlop={8}
+            >
+              <BellIcon size={24} color={colors.text} />
+            </Pressable>
           </View>
           <View style={styles.content}>
             {tab === 'home' && <HomeScreen />}
             {tab === 'trips' && <TripsScreen />}
-            {tab === 'wallet' && <WalletScreen />}
             {tab === 'subscribe' && <SubscriptionScreen onBack={() => setTab('home')} />}
             {tab === 'inbox' && <InboxScreen />}
             {tab === 'support' && <SupportScreen role="passenger" onBack={() => setTab('home')} />}
@@ -310,5 +326,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  topbarTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
+  topbarTitle: { flex: 1, fontSize: 18, fontWeight: '800', color: colors.text },
 });
