@@ -1,4 +1,5 @@
 import { SupportTicket } from '../../models/supportTicket.model.js';
+import { Admin } from '../../models/admin.model.js';
 import { Driver } from '../../models/driver.model.js';
 import { AdminNotification } from '../../models/adminNotification.model.js';
 import { getSupportSettings } from '../../models/supportSettings.model.js';
@@ -142,8 +143,50 @@ const rateTicket = asyncHandler(async (req, res) => {
     const tags = Array.isArray(req.body.tags)
         ? [...new Set(req.body.tags.map((t) => String(t).trim()).filter(Boolean))].slice(0, 8)
         : [];
+
+    // Remember the previous rating (if any) so re-rating adjusts the running
+    // total instead of double-counting.
+    const prevScore = ticket.rating?.score || 0;
+    const prevAgentId = ticket.rating?.agentId ? String(ticket.rating.agentId) : null;
+    const newAgentId = ticket.assignedTo ? String(ticket.assignedTo) : null;
+
     ticket.rating = { score, comment, tags, ratedAt: new Date(), agentId: ticket.assignedTo || null };
     await ticket.save();
+
+    // Persist the rating onto the handling admin so it is counted permanently
+    // and independently of this ticket (survives ticket deletion). Atomic
+    // pipeline update keeps sum/count/average consistent without the save hook.
+    const applyRatingDelta = (adminId, sumDelta, countDelta) => {
+        if (!adminId) return null;
+        return Admin.findByIdAndUpdate(adminId, [
+            {
+                $set: {
+                    'supportRating.sum': { $max: [0, { $add: [{ $ifNull: ['$supportRating.sum', 0] }, sumDelta] }] },
+                    'supportRating.count': { $max: [0, { $add: [{ $ifNull: ['$supportRating.count', 0] }, countDelta] }] },
+                },
+            },
+            {
+                $set: {
+                    'supportRating.average': {
+                        $cond: [
+                            { $gt: ['$supportRating.count', 0] },
+                            { $round: [{ $divide: ['$supportRating.sum', '$supportRating.count'] }, 1] },
+                            0,
+                        ],
+                    },
+                },
+            },
+        ]).catch((e) => console.error('[rateTicket] rating accrual failed:', e.message));
+    };
+
+    if (prevScore && prevAgentId === newAgentId) {
+        // Same agent, customer changed their score: adjust the sum only.
+        await applyRatingDelta(newAgentId, score - prevScore, 0);
+    } else {
+        // First rating, or the ticket was reassigned since the last rating.
+        if (prevScore && prevAgentId) await applyRatingDelta(prevAgentId, -prevScore, -1);
+        await applyRatingDelta(newAgentId, score, 1);
+    }
 
     // Notify the handling agent about their new rating (best-effort).
     if (ticket.rating.agentId) {

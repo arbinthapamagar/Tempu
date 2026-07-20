@@ -131,6 +131,18 @@ const adminSchema = new mongoose.Schema(
             default: null,
         },
 
+        // Persistent support rating. Accumulated as customers rate the tickets
+        // this admin handled. Kept independent of the tickets themselves so the
+        // score survives even after those tickets are deleted.
+        //   sum     - running total of all star scores received (1-5 each)
+        //   count   - number of ratings received
+        //   average - sum / count, cached for quick display
+        supportRating: {
+            sum: { type: Number, default: 0 },
+            count: { type: Number, default: 0 },
+            average: { type: Number, default: 0 },
+        },
+
         // Last time this admin viewed each badged nav section. Sidebar badges
         // count only items created after these timestamps ("new since seen").
         navSeen: {

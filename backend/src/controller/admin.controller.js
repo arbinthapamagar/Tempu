@@ -246,20 +246,13 @@ const listAdmins = asyncHandler(async (req, res) => {
 
     const admins = await Admin.find().select('-password -refreshToken').sort({ createdAt: -1 }).lean();
 
-    // Single support rating per admin: the average of every 1-5 star rating a
-    // customer left on tickets that admin handled. Computed in one aggregation
-    // so the list (and its settings popup) always shows a fresh, single number.
-    const ratingAgg = await SupportTicket.aggregate([
-        { $match: { 'rating.score': { $gte: 1 }, 'rating.agentId': { $ne: null } } },
-        { $group: { _id: '$rating.agentId', avg: { $avg: '$rating.score' }, count: { $sum: 1 } } },
-    ]);
-    const ratingByAgent = new Map(
-        ratingAgg.map((r) => [String(r._id), { avg: Math.round(r.avg * 10) / 10, count: r.count }])
-    );
-    const withRatings = admins.map((a) => ({
-        ...a,
-        supportRating: ratingByAgent.get(String(a._id)) || { avg: 0, count: 0 },
-    }));
+    // The single support rating is stored permanently on each admin (accrued as
+    // customers rate their tickets), so it is independent of the tickets and
+    // survives their deletion. Expose it as { avg, count } for the UI.
+    const withRatings = admins.map((a) => {
+        const r = a.supportRating || {};
+        return { ...a, supportRating: { avg: r.average || 0, count: r.count || 0 } };
+    });
 
     return res.status(200).json(new apiResponse(200, withRatings, 'Admins fetched'));
 });
