@@ -222,10 +222,12 @@ const updateTripStatusByDriver = asyncHandler(async (req, res) => {
             driver.totalRides += 1;
 
             const finalPrice = trip.finalPrice || trip.offeredPrice;
-            // Flat per-ride platform fee (Rs 5/10, or Rs 3/6 after the driver's
-            // first 10 rides) based on the AGREED price. driver.totalRides was
-            // already incremented above, so it is this ride's 1-based number.
-            const platformFee = computeRideFee(finalPrice, driver.totalRides);
+            // Flat per-ride platform fee based on the AGREED price and the
+            // driver's ride number (already incremented above). The tiers/amounts
+            // come from the admin-editable Pricing config (driverFee), falling
+            // back to sensible defaults.
+            const pricingDoc = await Pricing.findOne({ key: 'global' }).select('driverFee').lean();
+            const platformFee = computeRideFee(finalPrice, driver.totalRides, pricingDoc?.driverFee);
             // The commission is collected from the driver's prepaid top-up
             // balance (inDrive-style), NOT netted from the fare — so the driver
             // keeps the full agreed price they earned this ride.

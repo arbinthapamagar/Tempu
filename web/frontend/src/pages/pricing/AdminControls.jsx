@@ -1,4 +1,4 @@
-import { Zap, CloudRain, Clock, Ruler, BatteryCharging } from '@/components/ui/icons'
+import { Zap, CloudRain, Clock, Ruler, BatteryCharging, Coins } from '@/components/ui/icons'
 import { Card, Slider, Toggle, Field } from './Slider'
 import { VEHICLE_KEYS, VEHICLE_META, getActiveSlot, currentHour } from '../../utils/fareCalc'
 
@@ -8,6 +8,7 @@ export function AdminControls({ config, setConfig, activeSlotIndex, setActiveSlo
   const patch = (p) => setConfig((c) => ({ ...c, ...p }))
   const patchPremium = (p) => setConfig((c) => ({ ...c, premium: { ...c.premium, ...p } }))
   const patchLD = (p) => setConfig((c) => ({ ...c, longDistanceDiscount: { ...c.longDistanceDiscount, ...p } }))
+  const patchDriverFee = (p) => setConfig((c) => ({ ...c, driverFee: { ...c.driverFee, ...p } }))
   const patchSlot = (i, p) => setConfig((c) => ({ ...c, timeSlots: c.timeSlots.map((s, idx) => (idx === i ? { ...s, ...p } : s)) }))
   const patchVehicle = (k, p) => setConfig((c) => ({ ...c, vehicles: { ...c.vehicles, [k]: { ...c.vehicles[k], ...p } } }))
 
@@ -16,6 +17,8 @@ export function AdminControls({ config, setConfig, activeSlotIndex, setActiveSlo
     const idx = config.timeSlots.findIndex((s) => s === slot)
     if (idx >= 0) setActiveSlotIndex(idx)
   }
+
+  const df = config.driverFee || {}
 
   return (
     <div className="space-y-3">
@@ -30,6 +33,31 @@ export function AdminControls({ config, setConfig, activeSlotIndex, setActiveSlo
             onChange={(v) => patch({ commissionPercent: v })} suffix="%" />
           <Slider label="Driver profit margin" value={config.profitMarginPercent} min={0} max={50} step={1}
             onChange={(v) => patch({ profitMarginPercent: v })} suffix="%" />
+        </div>
+      </Card>
+
+      {/* Driver per-ride fee (flat, deducted from the driver's top-up balance) */}
+      <Card title="Driver Per-Ride Fee" icon={Coins}>
+        <p className="text-xs text-gray-500 mb-3">
+          Flat fee (not a %) deducted from the driver's top-up balance on each completed ride, based on the agreed fare.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Fare threshold (Rs)" value={df.threshold} onChange={(v) => patchDriverFee({ threshold: v })} min={0} />
+          <Field label="Intro rides (first N)" value={df.introRides} onChange={(v) => patchDriverFee({ introRides: v })} min={0} />
+        </div>
+        <div className="mt-3">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">First {df.introRides ?? 10} rides</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={`Fare < ${df.threshold ?? 80}`} value={df.introBelow} onChange={(v) => patchDriverFee({ introBelow: v })} min={0} />
+            <Field label={`Fare ≥ ${df.threshold ?? 80}`} value={df.introAbove} onChange={(v) => patchDriverFee({ introAbove: v })} min={0} />
+          </div>
+        </div>
+        <div className="mt-3">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">After {df.introRides ?? 10} rides</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={`Fare < ${df.threshold ?? 80}`} value={df.laterBelow} onChange={(v) => patchDriverFee({ laterBelow: v })} min={0} />
+            <Field label={`Fare ≥ ${df.threshold ?? 80}`} value={df.laterAbove} onChange={(v) => patchDriverFee({ laterAbove: v })} min={0} />
+          </div>
         </div>
       </Card>
 

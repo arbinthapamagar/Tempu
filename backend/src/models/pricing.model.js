@@ -100,6 +100,18 @@ const pricingSchema = new mongoose.Schema(
       thresholdKm: { type: Number, default: 10 },
     },
 
+    // Flat per-ride platform fee charged to the driver (deducted from their
+    // prepaid top-up balance). NOT a percentage. Two amounts by fare band, with
+    // a cheaper tier once the driver passes `introRides` completed rides.
+    driverFee: {
+      threshold: { type: Number, default: 80 },   // fare band boundary (Rs)
+      introRides: { type: Number, default: 10 },  // first N rides use the intro amounts
+      introBelow: { type: Number, default: 5 },   // rides 1..introRides, fare < threshold
+      introAbove: { type: Number, default: 10 },  // rides 1..introRides, fare >= threshold
+      laterBelow: { type: Number, default: 3 },   // after introRides, fare < threshold
+      laterAbove: { type: Number, default: 6 },   // after introRides, fare >= threshold
+    },
+
     // Per-vehicle global defaults
     vehicles: Object.fromEntries(VEHICLE_TYPES.map((k) => [k, { type: vehicleSchema, default: () => ({}) }])),
 
@@ -146,6 +158,7 @@ export function defaultPricing() {
       { name: 'Late Night', startHour: 23, endHour: 5, multiplier: 1.5 },
     ],
     longDistanceDiscount: { enabled: false, percent: 10, thresholdKm: 10 },
+    driverFee: { threshold: 80, introRides: 10, introBelow: 5, introAbove: 10, laterBelow: 3, laterAbove: 6 },
     vehicles: {
       tuktuk: { efficiency: 12, maintenancePerKm: 2, baseFare: 30 },
       scooter: { efficiency: 35, maintenancePerKm: 1, baseFare: 20 },

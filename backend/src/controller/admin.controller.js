@@ -1218,7 +1218,7 @@ const updatePricing = asyncHandler(async (req, res) => {
         }
     }
 
-    const objectFields = ['premium', 'longDistanceDiscount', 'vehicles'];
+    const objectFields = ['premium', 'longDistanceDiscount', 'driverFee', 'vehicles'];
     for (const f of objectFields) {
         if (body[f] && typeof body[f] === 'object') {
             pricing[f] = { ...pricing[f]?.toObject?.() ?? pricing[f], ...body[f] };

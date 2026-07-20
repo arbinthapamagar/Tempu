@@ -36,6 +36,7 @@ function Dashboard({ initial }) {
     premium: c.premium,
     timeSlots: c.timeSlots,
     longDistanceDiscount: c.longDistanceDiscount,
+    driverFee: c.driverFee,
     vehicles: c.vehicles,
     cities: c.cities,
   })
