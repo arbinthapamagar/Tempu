@@ -67,6 +67,38 @@ export default function DriverEarnings() {
   const [topupAmount, setTopupAmount] = useState('100');
   const [toppingUp, setToppingUp] = useState(false);
 
+  // Earnings breakdown (today/week/month totals + per-day chart) & date filter
+  const [breakdown, setBreakdown] = useState({ totals: { today: 0, week: 0, month: 0 }, series: [] });
+  const [rangePreset, setRangePreset] = useState('7d'); // '7d' | '30d' | 'month' | 'custom'
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+
+  const loadBreakdown = useCallback(async (preset, cf, ct) => {
+    const ymd = (d) => d.toISOString().slice(0, 10);
+    const today = new Date();
+    let params = {};
+    if (preset === '30d') {
+      const f = new Date(today); f.setDate(f.getDate() - 29);
+      params = { from: ymd(f), to: ymd(today) };
+    } else if (preset === 'month') {
+      params = { from: ymd(new Date(today.getFullYear(), today.getMonth(), 1)), to: ymd(today) };
+    } else if (preset === 'custom') {
+      if (!cf || !ct) return;
+      params = { from: cf, to: ct };
+    } // '7d' → no params (backend defaults to last 7 days)
+    try {
+      const res = await userApi.getEarningsBreakdown(params);
+      if (res.data) setBreakdown(res.data);
+    } catch {
+      // keep previous
+    }
+  }, []);
+
+  const applyRange = (preset) => {
+    setRangePreset(preset);
+    if (preset !== 'custom') loadBreakdown(preset);
+  };
+
   const load = useCallback(async () => {
     try {
       const [earnRes, bidRes, wRes] = await Promise.all([
@@ -86,6 +118,7 @@ export default function DriverEarnings() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadBreakdown('7d'); }, [loadBreakdown]);
 
   const balance = Number(stats?.walletBalance || 0);
   const feeBalance = Number(stats?.topupBalance || 0);
@@ -167,7 +200,7 @@ export default function DriverEarnings() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => { setRefreshing(true); load(); }}
+            onRefresh={() => { setRefreshing(true); load(); loadBreakdown(rangePreset, customFrom, customTo); }}
             tintColor={colors.primary}
           />
         }
@@ -178,6 +211,53 @@ export default function DriverEarnings() {
           <Text style={styles.heroLabel}>Total earnings</Text>
           <Text style={styles.heroValue}>{money(stats?.earnings)}</Text>
         </View>
+
+        {/* Today / week / month totals */}
+        <View style={styles.statRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{money(breakdown.totals?.today)}</Text>
+            <Text style={styles.statLabel}>Today</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{money(breakdown.totals?.week)}</Text>
+            <Text style={styles.statLabel}>This week</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{money(breakdown.totals?.month)}</Text>
+            <Text style={styles.statLabel}>This month</Text>
+          </View>
+        </View>
+
+        {/* Earnings chart + date filter */}
+        <Text style={styles.sectionTitle}>Daily earnings</Text>
+        <View style={styles.rangeRow}>
+          {[
+            { key: '7d', label: '7 days' },
+            { key: '30d', label: '30 days' },
+            { key: 'month', label: 'This month' },
+            { key: 'custom', label: 'Custom' },
+          ].map((r) => (
+            <Chip key={r.key} label={r.label} active={rangePreset === r.key} onPress={() => applyRange(r.key)} />
+          ))}
+        </View>
+
+        {rangePreset === 'custom' && (
+          <View style={styles.customRange}>
+            <View style={styles.customFields}>
+              <View style={{ flex: 1 }}>
+                <FormField label="From" value={customFrom} onChangeText={setCustomFrom} placeholder="YYYY-MM-DD" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <FormField label="To" value={customTo} onChangeText={setCustomTo} placeholder="YYYY-MM-DD" />
+              </View>
+            </View>
+            <Button label="Apply" size="sm" onPress={() => loadBreakdown('custom', customFrom, customTo)} />
+          </View>
+        )}
+
+        <EarningsChart series={breakdown.series || []} />
+
+        {/* Withdrawable balance + cash out */}
 
         {/* Available balance + cash out */}
         <View style={styles.balanceCard}>

@@ -129,6 +129,11 @@ export const userApi = {
     const qs = new URLSearchParams(params).toString();
     return api.get(`/users/driver/earnings${qs ? `?${qs}` : ''}`);
   },
+  // Today/week/month totals + a per-day series for the earnings chart.
+  getEarningsBreakdown: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return api.get(`/users/driver/earnings/breakdown${qs ? `?${qs}` : ''}`);
+  },
   requestWithdrawal: (data) => api.post('/users/driver/withdrawals', data),
   getMyWithdrawals: () => api.get('/users/driver/withdrawals'),
   // Top up the prepaid fee balance (standby payment — no real gateway yet).

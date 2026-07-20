@@ -189,6 +189,91 @@ const getMyEarnings = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, driver, 'Earnings fetched'));
 });
 
+// Earnings breakdown for the driver app: today / this-week / this-month totals
+// plus a per-day series for a chart. Supports ?from=YYYY-MM-DD&to=YYYY-MM-DD to
+// filter the chart range (defaults to the last 7 days). All day bucketing is in
+// Nepal time (UTC+5:45).
+const NEPAL_TZ = 'Asia/Kathmandu';
+const NEPAL_OFFSET_MS = (5 * 60 + 45) * 60 * 1000;
+
+// UTC instant of Nepal-local midnight for the day containing `d`.
+function nepalStartOfDay(d) {
+    const wall = new Date(d.getTime() + NEPAL_OFFSET_MS);
+    wall.setUTCHours(0, 0, 0, 0);
+    return new Date(wall.getTime() - NEPAL_OFFSET_MS);
+}
+
+const getEarningsBreakdown = asyncHandler(async (req, res) => {
+    const driver = await Driver.findOne({ userId: req.user._id }).select('_id');
+    if (!driver) throw new apiError(404, 'Driver profile not found');
+
+    const now = new Date();
+    const startToday = nepalStartOfDay(now);
+    // Start of the current week (Monday) in Nepal time.
+    const wallNow = new Date(now.getTime() + NEPAL_OFFSET_MS);
+    const daysSinceMon = (wallNow.getUTCDay() + 6) % 7;
+    const startWeek = new Date(startToday.getTime() - daysSinceMon * 86400000);
+    // Start of the current month in Nepal time.
+    const wallMonth = new Date(now.getTime() + NEPAL_OFFSET_MS);
+    wallMonth.setUTCDate(1); wallMonth.setUTCHours(0, 0, 0, 0);
+    const startMonth = new Date(wallMonth.getTime() - NEPAL_OFFSET_MS);
+
+    const base = { driverId: driver._id, type: 'trip_earning', status: 'completed' };
+
+    // Totals (single pass since the earliest of the three boundaries).
+    const earliest = new Date(Math.min(startToday.getTime(), startWeek.getTime(), startMonth.getTime()));
+    const [totalsAgg] = await Transaction.aggregate([
+        { $match: { ...base, createdAt: { $gte: earliest } } },
+        {
+            $group: {
+                _id: null,
+                today: { $sum: { $cond: [{ $gte: ['$createdAt', startToday] }, '$amount', 0] } },
+                week: { $sum: { $cond: [{ $gte: ['$createdAt', startWeek] }, '$amount', 0] } },
+                month: { $sum: { $cond: [{ $gte: ['$createdAt', startMonth] }, '$amount', 0] } },
+            },
+        },
+    ]);
+    const totals = {
+        today: totalsAgg?.today || 0,
+        week: totalsAgg?.week || 0,
+        month: totalsAgg?.month || 0,
+    };
+
+    // Chart range: ?from/?to, else the last 7 days.
+    const from = req.query.from ? nepalStartOfDay(new Date(req.query.from)) : nepalStartOfDay(new Date(now.getTime() - 6 * 86400000));
+    const toDayStart = req.query.to ? nepalStartOfDay(new Date(req.query.to)) : startToday;
+    const to = new Date(toDayStart.getTime() + 86400000 - 1); // end of the 'to' day
+
+    const rows = await Transaction.aggregate([
+        { $match: { ...base, createdAt: { $gte: from, $lte: to } } },
+        {
+            $group: {
+                _id: { $dateToString: { date: '$createdAt', format: '%Y-%m-%d', timezone: NEPAL_TZ } },
+                amount: { $sum: '$amount' },
+                rides: { $sum: 1 },
+            },
+        },
+    ]);
+    const byDay = new Map(rows.map((r) => [r._id, r]));
+
+    // Fill every day in the range so the chart has one bar per day (capped at 92).
+    const series = [];
+    const maxDays = 92;
+    for (let t = from.getTime(), i = 0; t <= to.getTime() && i < maxDays; t += 86400000, i++) {
+        const key = new Date(t + NEPAL_OFFSET_MS).toISOString().slice(0, 10);
+        const hit = byDay.get(key);
+        series.push({ date: key, amount: hit?.amount || 0, rides: hit?.rides || 0 });
+    }
+
+    return res.status(200).json(
+        new apiResponse(200, {
+            totals,
+            series,
+            range: { from: from.toISOString(), to: to.toISOString() },
+        }, 'Earnings breakdown')
+    );
+});
+
 // Top up the prepaid fee balance the per-ride platform fee is deducted from.
 // Standby payment: no real gateway yet — the amount is recorded and credited
 // immediately. Swap for a verified gateway callback when integrating eSewa/
@@ -293,5 +378,5 @@ const getMyWithdrawals = asyncHandler(async (req, res) => {
 export {
     registerAsDriver, getMyDriverProfile, updateDriverProfile, uploadDriverDocument,
     goOnline, goOffline, updateDriverLocation, getNearbyTrips, getMyEarnings,
-    requestWithdrawal, getMyWithdrawals, topUpDriverBalance,
+    requestWithdrawal, getMyWithdrawals, topUpDriverBalance, getEarningsBreakdown,
 };
