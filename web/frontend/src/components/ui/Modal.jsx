@@ -3,6 +3,7 @@ import { X } from '@/components/ui/icons'
 import { cn } from '../../utils/cn'
 
 const sizes = {
+  xs: 'max-w-sm',
   sm: 'max-w-md',
   md: 'max-w-xl',
   lg: 'max-w-2xl',

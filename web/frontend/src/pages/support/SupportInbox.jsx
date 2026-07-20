@@ -134,6 +134,9 @@ function ConversationList() {
   const view = params.get('view') || ''
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState('unanswered') // 'unanswered' | 'all'
+  // Resolved/closed tickets are never "unanswered", so that tab/filter is
+  // meaningless in those folders — hide it there.
+  const hideUnanswered = status === 'resolved' || status === 'closed'
 
   // Ask the server to scope the list: 'me' = my tickets, 'unassigned' = the
   // queue. The backend also enforces role-based visibility (moderators only ever
@@ -152,8 +155,9 @@ function ConversationList() {
   if (view === 'mine') tickets = tickets.filter((t) => t.assignedTo?._id === admin?._id)
   if (view === 'unassigned') tickets = tickets.filter((t) => !t.assignedTo)
   if (view === 'unanswered') tickets = tickets.filter(isUnanswered)
-  // The All/Unanswered tab only applies on the plain folders, not the dedicated views.
-  else if (tab === 'unanswered') tickets = tickets.filter(isUnanswered)
+  // The All/Unanswered tab only applies on the plain folders, not the dedicated
+  // views, and not in resolved/closed (where "unanswered" is meaningless).
+  else if (tab === 'unanswered' && !hideUnanswered) tickets = tickets.filter(isUnanswered)
   if (search.trim()) {
     const q = search.toLowerCase()
     tickets = tickets.filter((t) =>
@@ -189,7 +193,7 @@ function ConversationList() {
         </div>
       </div>
 
-      {!view && (
+      {!view && !hideUnanswered && (
         <div className="flex gap-1.5 px-3 py-2 border-b border-gray-200">
           {['unanswered', 'all'].map((t) => (
             <button

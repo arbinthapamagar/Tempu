@@ -17,7 +17,7 @@ import Map from './Map';
 import { HOME_REFRESH_MS } from './constants';
 
 const SERVICES = [
-  { id: 'rickshaw', label: 'Rickshaw', sub: 'Local', icon: 'rickshaw', lib: 'mci' },
+  { id: 'rickshaw', label: 'Tempu', sub: 'Local', img: require('../../assets/logo-icon.png') },
   { id: 'scooter', label: 'Scooter', sub: 'Eco', icon: 'moped', lib: 'mci' },
   { id: 'delivery', label: 'Delivery', sub: 'Parcels', icon: 'package-variant-closed', lib: 'mci' },
   { id: 'subscribe', label: 'Subscribe', sub: 'Daily', icon: 'calendar-check', lib: 'mci', dark: true },
@@ -33,7 +33,10 @@ function titleCase(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function ServiceIcon({ icon, lib, color }) {
+function ServiceIcon({ icon, lib, color, img }) {
+  if (img) {
+    return <Image source={img} style={{ width: 30, height: 30 }} resizeMode="contain" />;
+  }
   if (lib === 'mci') {
     return <MaterialCommunityIcons name={icon} size={28} color={color} />;
   }
@@ -131,6 +134,7 @@ export default function HomeView({ onTapSearch, onPickSaved }) {
                   <ServiceIcon
                     icon={s.icon}
                     lib={s.lib}
+                    img={s.img}
                     color={dark ? '#ffffff' : colors.primary}
                   />
                 </View>
