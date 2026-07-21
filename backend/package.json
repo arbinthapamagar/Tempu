@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "nodemon src/index.js",
+    "test": "node --test",
     "seed": "node seed.js",
     "seed:test": "node scripts/seedTestData.js"
   },

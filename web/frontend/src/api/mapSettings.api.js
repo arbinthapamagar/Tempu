@@ -5,4 +5,6 @@ import { api } from './client'
 export const mapSettingsApi = {
   get: () => api.get('/admin/map-settings'),
   update: (data) => api.patch('/admin/map-settings', data),
+  // Try a provider/key without saving; returns { ok, provider, query, count, results } or { ok:false, error }.
+  test: (data) => api.post('/admin/map-settings/test', data),
 }

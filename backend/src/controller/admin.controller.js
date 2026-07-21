@@ -14,6 +14,7 @@ import { SupportReview } from '../models/supportReview.model.js';
 import { Supplier } from '../models/supplier.model.js';
 import { getSupportSettings } from '../models/supportSettings.model.js';
 import { getMapSettings } from '../models/mapSettings.model.js';
+import { testAutocomplete } from './geo.controller.js';
 import { AdminNotification } from '../models/adminNotification.model.js';
 import { Notification } from '../models/notification.model.js';
 import { apiError } from '../utils/apiError.js';
@@ -2042,6 +2043,31 @@ const updateMapSettings = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, s, 'Map settings updated'));
 });
 
+// Try the given provider/key WITHOUT saving, so the admin can verify a key from
+// the settings screen. Always responds 200 with { ok, ... } — a provider failure
+// (bad/blocked key, quota, network) comes back as ok:false + a readable error
+// rather than an HTTP error, so the UI can render it inline.
+const testMapSettings = asyncHandler(async (req, res) => {
+    if (req.admin?.role !== 'superadmin') throw new apiError(403, 'Superadmin only');
+    const { provider, googleMapsApiKey, countryCode, query } = req.body || {};
+    try {
+        const result = await testAutocomplete({ provider, googleMapsApiKey, countryCode, query });
+        return res.status(200).json(new apiResponse(200, {
+            ok: true,
+            provider: result.provider,
+            query: result.query,
+            count: result.predictions.length,
+            results: result.predictions.slice(0, 6),
+        }, 'Test completed'));
+    } catch (err) {
+        return res.status(200).json(new apiResponse(200, {
+            ok: false,
+            provider: provider || 'osm',
+            error: err?.message || 'Test failed',
+        }, 'Test failed'));
+    }
+});
+
 // Admins who can be assigned to / mentioned on support tickets. Available to
 // any support-capable admin (unlike the full admin list, which needs manageAdmins).
 const getSupportAgents = asyncHandler(async (req, res) => {
@@ -2408,7 +2434,7 @@ export {
     getTransactions, getTransactionById, getTransactionSummary, exportTransactions,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
     getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, deleteTicket, getSupportAgents, getSupportAgentRatings, getSupportSettingsAdmin, updateSupportSettings,
-    getMapSettingsAdmin, updateMapSettings,
+    getMapSettingsAdmin, updateMapSettings, testMapSettings,
     broadcastNotification, getNotificationHistory, getNotificationRecipients,
     getMyAdminNotifications, markMyNotificationRead, markAllMyNotificationsRead,
 };

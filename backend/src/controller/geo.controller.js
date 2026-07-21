@@ -22,6 +22,17 @@ async function fetchJson(url, headers = {}) {
 }
 
 // ---- Google Places ---------------------------------------------------------
+// Pure: Google autocomplete response → normalised predictions. Exported for tests.
+export function mapGooglePredictions(data) {
+    return (data?.predictions || []).map((p) => ({
+        id: p.place_id,
+        placeId: p.place_id,
+        title: p.structured_formatting?.main_text || p.description,
+        subtitle: p.structured_formatting?.secondary_text || '',
+        coords: null, // resolved on demand via /geo/place
+    }));
+}
+
 async function googleAutocomplete(query, key, country) {
     const url =
         'https://maps.googleapis.com/maps/api/place/autocomplete/json' +
@@ -33,13 +44,7 @@ async function googleAutocomplete(query, key, country) {
     if (data.status && !['OK', 'ZERO_RESULTS'].includes(data.status)) {
         throw new apiError(502, `Google Places: ${data.error_message || data.status}`);
     }
-    return (data.predictions || []).map((p) => ({
-        id: p.place_id,
-        placeId: p.place_id,
-        title: p.structured_formatting?.main_text || p.description,
-        subtitle: p.structured_formatting?.secondary_text || '',
-        coords: null, // resolved on demand via /geo/place
-    }));
+    return mapGooglePredictions(data);
 }
 
 async function googlePlace(placeId, key) {
@@ -63,14 +68,8 @@ async function googlePlace(placeId, key) {
 const NOMINATIM_HEADERS = { 'User-Agent': 'TempuApp/1.0 (ride-sharing Nepal)' };
 const KTM_VIEWBOX = '85.2200,27.6200,85.5000,27.8000';
 
-async function osmAutocomplete(query, country) {
-    const url =
-        'https://nominatim.openstreetmap.org/search' +
-        `?q=${encodeURIComponent(query)}` +
-        '&format=json&addressdetails=1&limit=8' +
-        `&countrycodes=${encodeURIComponent(country)}` +
-        `&viewbox=${KTM_VIEWBOX}&bounded=0&accept-language=en`;
-    const data = await fetchJson(url, NOMINATIM_HEADERS);
+// Pure: Nominatim response → normalised predictions. Exported for tests.
+export function mapOsmResults(data) {
     return (data || []).map((r) => {
         const parts = (r.display_name || '').split(',').map((s) => s.trim());
         return {
@@ -81,6 +80,33 @@ async function osmAutocomplete(query, country) {
             coords: { lat: parseFloat(r.lat), lng: parseFloat(r.lon) },
         };
     });
+}
+
+async function osmAutocomplete(query, country) {
+    const url =
+        'https://nominatim.openstreetmap.org/search' +
+        `?q=${encodeURIComponent(query)}` +
+        '&format=json&addressdetails=1&limit=8' +
+        `&countrycodes=${encodeURIComponent(country)}` +
+        `&viewbox=${KTM_VIEWBOX}&bounded=0&accept-language=en`;
+    const data = await fetchJson(url, NOMINATIM_HEADERS);
+    return mapOsmResults(data);
+}
+
+// Run a one-off autocomplete against AD-HOC settings (not the saved doc) so the
+// admin "Test" button can verify a key before saving. Unlike the live endpoint,
+// this does NOT silently fall back — a bad Google key throws so the error shows.
+export async function testAutocomplete({ provider, googleMapsApiKey, countryCode, query }) {
+    const q = (query || 'Thamel').trim() || 'Thamel';
+    const country = (countryCode || 'np').trim().toLowerCase();
+    if (provider === 'google') {
+        const key = (googleMapsApiKey || '').trim();
+        if (!key) throw new apiError(400, 'Enter a Google API key to test.');
+        const predictions = await googleAutocomplete(q, key, country); // throws on bad key
+        return { provider: 'google', query: q, predictions };
+    }
+    const predictions = await osmAutocomplete(q, country);
+    return { provider: 'osm', query: q, predictions };
 }
 
 // GET /users/geo/autocomplete?q=...

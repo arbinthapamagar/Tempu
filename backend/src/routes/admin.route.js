@@ -22,7 +22,7 @@ import {
     getTransactions, getTransactionById, getTransactionSummary, exportTransactions,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
     getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, deleteTicket, getSupportAgents, getSupportAgentRatings, getSupportSettingsAdmin, updateSupportSettings,
-    getMapSettingsAdmin, updateMapSettings,
+    getMapSettingsAdmin, updateMapSettings, testMapSettings,
     broadcastNotification, getNotificationHistory, getNotificationRecipients,
     getMyAdminNotifications, markMyNotificationRead, markAllMyNotificationsRead,
 } from '../controller/admin.controller.js';
@@ -201,6 +201,7 @@ const requireSuperadmin = (req, res, next) => {
 // so it's superadmin-only like the API logs.
 adminRouter.get('/map-settings', requireSuperadmin, getMapSettingsAdmin);
 adminRouter.patch('/map-settings', requireSuperadmin, updateMapSettings);
+adminRouter.post('/map-settings/test', requireSuperadmin, testMapSettings);
 
 adminRouter.get('/api-logs', requireSuperadmin, listApiLogs);
 adminRouter.get('/api-logs/stats', requireSuperadmin, apiLogStats);
