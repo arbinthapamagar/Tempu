@@ -22,6 +22,7 @@ import {
     getTransactions, getTransactionById, getTransactionSummary, exportTransactions,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
     getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, deleteTicket, getSupportAgents, getSupportAgentRatings, getSupportSettingsAdmin, updateSupportSettings,
+    getMapSettingsAdmin, updateMapSettings,
     broadcastNotification, getNotificationHistory, getNotificationRecipients,
     getMyAdminNotifications, markMyNotificationRead, markAllMyNotificationsRead,
 } from '../controller/admin.controller.js';
@@ -196,6 +197,11 @@ const requireSuperadmin = (req, res, next) => {
     if (req.admin?.role === 'superadmin') return next();
     throw new apiError(403, 'Superadmin only');
 };
+// Map/geo provider settings — the Google Maps API key is a platform-wide secret,
+// so it's superadmin-only like the API logs.
+adminRouter.get('/map-settings', requireSuperadmin, getMapSettingsAdmin);
+adminRouter.patch('/map-settings', requireSuperadmin, updateMapSettings);
+
 adminRouter.get('/api-logs', requireSuperadmin, listApiLogs);
 adminRouter.get('/api-logs/stats', requireSuperadmin, apiLogStats);
 adminRouter.get('/api-logs/:id', requireSuperadmin, getApiLog);

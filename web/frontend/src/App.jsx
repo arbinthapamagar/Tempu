@@ -26,6 +26,7 @@ import Notifications from './pages/notifications/Notifications'
 import KnowledgeBase from './pages/knowledge/KnowledgeBase'
 import Ai from './pages/ai/Ai'
 import ApiLogs from './pages/apiLogs/ApiLogs'
+import MapSettings from './pages/settings/MapSettings'
 
 function PrivateRoute({ children }) {
   const { isAuthenticated } = useAuthStore()
@@ -100,6 +101,7 @@ export default function App() {
         <Route path="rag" element={<KnowledgeBase />} />
         <Route path="agentic" element={<Ai />} />
         <Route path="api-logs" element={<ApiLogs />} />
+        <Route path="map-settings" element={<MapSettings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

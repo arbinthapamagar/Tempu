@@ -15,39 +15,17 @@ import {
 import { FlagIcon, PinIcon } from '../../components/Icons';
 import { confirm as hapticConfirm, pick as hapticPick } from '../../components/haptics';
 import { useAuth } from '../../context/AuthContext';
+import { userApi } from '../../api/user.api';
 import { colors, radius, spacing, type } from '../../theme';
 
 const SAVED_ICON = { home: 'home', work: 'briefcase' };
 
-// Kathmandu valley bounding box
-const KTM_VIEWBOX = '85.2200,27.6200,85.5000,27.8000';
-
+// Place search goes through our backend proxy, which uses Google when the admin
+// has set a Maps API key and otherwise falls back to free OpenStreetMap. Results
+// come back already normalised as { id, placeId, title, subtitle, coords }.
 async function searchPlaces(query) {
-  const url =
-    `https://nominatim.openstreetmap.org/search` +
-    `?q=${encodeURIComponent(query)}` +
-    `&format=json&addressdetails=1&limit=8` +
-    `&countrycodes=np` +
-    `&viewbox=${KTM_VIEWBOX}&bounded=0` +
-    `&accept-language=en`;
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'TempuApp/1.0 (ride-sharing Nepal)' },
-  });
-  const data = await res.json();
-  return data.sort((a, b) => {
-    const inKtm = (r) => {
-      const lat = parseFloat(r.lat), lon = parseFloat(r.lon);
-      return lat > 27.62 && lat < 27.80 && lon > 85.22 && lon < 85.50;
-    };
-    return (inKtm(b) ? 1 : 0) - (inKtm(a) ? 1 : 0);
-  });
-}
-
-function placeTitle(r) {
-  return r.name || r.display_name.split(',')[0];
-}
-function placeSubtitle(r) {
-  return r.display_name.split(',').map(s => s.trim()).slice(1, 3).join(', ');
+  const res = await userApi.geoAutocomplete(query);
+  return res?.data?.predictions || [];
 }
 
 export default function SearchSheet({
@@ -88,16 +66,25 @@ export default function SearchSheet({
     [query, savedAddresses],
   );
 
-  const pickPlace = (result) => {
+  const pickPlace = async (result) => {
     hapticPick();
-    const address = placeTitle(result) + ', ' + placeSubtitle(result);
-    const coords = { lat: parseFloat(result.lat), lng: parseFloat(result.lon) };
+    const address = result.subtitle ? `${result.title}, ${result.subtitle}` : result.title;
+    // OSM predictions carry coords already; Google ones need a details lookup.
+    let coords = result.coords;
+    if (!coords && result.placeId) {
+      try {
+        const res = await userApi.geoPlace(result.placeId);
+        coords = res?.data?.coords || null;
+      } catch {
+        coords = null;
+      }
+    }
     if (activeField === 'pickup') {
-      setPickup(address); setPickupCoords?.(coords);
+      setPickup(address); if (coords) setPickupCoords?.(coords);
       setPlaces([]); setActiveField('dest');
       setTimeout(() => destRef.current?.focus(), 50);
     } else {
-      onPick(address, coords);
+      onPick(address, coords || undefined);
     }
   };
 
@@ -228,13 +215,13 @@ export default function SearchSheet({
                 {query ? `Results for "${query}"` : 'Nearby places'}
               </Text>
               {places.map((r) => (
-                <Pressable key={r.place_id} style={styles.row} onPress={() => pickPlace(r)}>
+                <Pressable key={r.id} style={styles.row} onPress={() => pickPlace(r)}>
                   <View style={styles.rowIcon}>
                     <Ionicons name="location-outline" size={16} color={colors.textMuted} />
                   </View>
                   <View style={styles.rowText}>
-                    <Text style={styles.rowTitle} numberOfLines={1}>{placeTitle(r)}</Text>
-                    <Text style={styles.rowSub} numberOfLines={1}>{placeSubtitle(r)}</Text>
+                    <Text style={styles.rowTitle} numberOfLines={1}>{r.title}</Text>
+                    {!!r.subtitle && <Text style={styles.rowSub} numberOfLines={1}>{r.subtitle}</Text>}
                   </View>
                 </Pressable>
               ))}

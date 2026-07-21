@@ -87,6 +87,12 @@ export const userApi = {
     return json;
   },
 
+  // Place search / geocoding (backend proxy → Google when admin key is set,
+  // else free OpenStreetMap). Returns { provider, predictions:[{id, placeId,
+  // title, subtitle, coords}] }. coords is null for Google → resolve via geoPlace.
+  geoAutocomplete: (q) => api.get(`/users/geo/autocomplete?q=${encodeURIComponent(q)}`),
+  geoPlace: (placeId) => api.get(`/users/geo/place?placeId=${encodeURIComponent(placeId)}`),
+
   // Fare quote (standard fare from Pricing Control - used as the bid floor)
   getFareQuote: (params) => {
     const qs = new URLSearchParams(params).toString();

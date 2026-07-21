@@ -18,6 +18,7 @@ import {
     requestWithdrawal, getMyWithdrawals, topUpDriverBalance, getEarningsBreakdown,
 } from '../controller/users/user.driver.controller.js';
 import { triggerEmergency, getMyEmergencies } from '../controller/users/user.emergency.controller.js';
+import { autocomplete as geoAutocomplete, placeDetails as geoPlaceDetails } from '../controller/geo.controller.js';
 import { verifyDriverProfile } from '../middlewares/driver.middleware.js';
 
 const userRouter = Router();
@@ -51,6 +52,11 @@ userRouter.delete('/notifications/:id', deleteNotification);
 
 // Trips
 userRouter.get('/fare-quote', getFareQuote);
+
+// Place search / geocoding proxy (Google when the admin has set a key, else free
+// OSM/Nominatim). Keeps the Google Maps key server-side.
+userRouter.get('/geo/autocomplete', geoAutocomplete);
+userRouter.get('/geo/place', geoPlaceDetails);
 userRouter.get('/trips', getTripHistory);
 userRouter.get('/trips/:id', getTripById);
 

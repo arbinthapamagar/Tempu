@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   LayoutGrid, Users, Car, Navigation, Repeat, CreditCard, FileText,
   MessageSquare, Building2, BarChart2, Shield, Bell, X, Banknote, Coins, Siren,
-  ChevronDown, Settings, ChevronsLeft, LogOut, BookOpen, Sparkles, History,
+  ChevronDown, Settings, ChevronsLeft, LogOut, BookOpen, Sparkles, History, MapPin,
 } from '@/components/ui/icons'
 import logoIcon from '@/assets/logo-icon.png'
 import logoWordmark from '@/assets/logo-wordmark.png'
@@ -93,6 +93,7 @@ const navSections = [
     icon: Settings,
     items: [
       { to: '/notifications', label: 'Notifications', icon: Bell, permission: null },
+      { to: '/map-settings', label: 'Map & Location', icon: MapPin, superadmin: true },
       { to: '/api-logs', label: 'API Log', icon: History, superadmin: true },
     ],
   },

@@ -13,6 +13,7 @@ import { SupportTicket } from '../models/supportTicket.model.js';
 import { SupportReview } from '../models/supportReview.model.js';
 import { Supplier } from '../models/supplier.model.js';
 import { getSupportSettings } from '../models/supportSettings.model.js';
+import { getMapSettings } from '../models/mapSettings.model.js';
 import { AdminNotification } from '../models/adminNotification.model.js';
 import { Notification } from '../models/notification.model.js';
 import { apiError } from '../utils/apiError.js';
@@ -2013,6 +2014,34 @@ const updateSupportSettings = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, s, 'Support settings updated'));
 });
 
+// Global map/geo provider settings (Google Maps key + provider choice). The
+// Google Maps API key is a sensitive platform-wide secret, so — like the API-log
+// routes — these are superadmin-only (enforced again in the router).
+const getMapSettingsAdmin = asyncHandler(async (req, res) => {
+    if (req.admin?.role !== 'superadmin') throw new apiError(403, 'Superadmin only');
+    const s = await getMapSettings();
+    return res.status(200).json(new apiResponse(200, s, 'Map settings fetched'));
+});
+
+const updateMapSettings = asyncHandler(async (req, res) => {
+    if (req.admin?.role !== 'superadmin') throw new apiError(403, 'Superadmin only');
+    const s = await getMapSettings();
+    if (req.body.provider === 'google' || req.body.provider === 'osm') {
+        s.provider = req.body.provider;
+    }
+    // Only overwrite the key when a value is sent, so saving other fields (or
+    // switching provider) never wipes an already-stored key by accident.
+    if (typeof req.body.googleMapsApiKey === 'string') {
+        s.googleMapsApiKey = req.body.googleMapsApiKey.trim();
+    }
+    if (typeof req.body.countryCode === 'string' && req.body.countryCode.trim()) {
+        s.countryCode = req.body.countryCode.trim().toLowerCase();
+    }
+    s.updatedBy = req.admin._id;
+    await s.save();
+    return res.status(200).json(new apiResponse(200, s, 'Map settings updated'));
+});
+
 // Admins who can be assigned to / mentioned on support tickets. Available to
 // any support-capable admin (unlike the full admin list, which needs manageAdmins).
 const getSupportAgents = asyncHandler(async (req, res) => {
@@ -2379,6 +2408,7 @@ export {
     getTransactions, getTransactionById, getTransactionSummary, exportTransactions,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
     getSupportTickets, getSupportTicketById, updateTicketStatus, replyToTicket, assignTicket, addTicketComment, editTicketComment, deleteTicketComment, deleteTicket, getSupportAgents, getSupportAgentRatings, getSupportSettingsAdmin, updateSupportSettings,
+    getMapSettingsAdmin, updateMapSettings,
     broadcastNotification, getNotificationHistory, getNotificationRecipients,
     getMyAdminNotifications, markMyNotificationRead, markAllMyNotificationsRead,
 };
