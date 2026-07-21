@@ -92,6 +92,10 @@ export const userApi = {
   // title, subtitle, coords}] }. coords is null for Google → resolve via geoPlace.
   geoAutocomplete: (q) => api.get(`/users/geo/autocomplete?q=${encodeURIComponent(q)}`),
   geoPlace: (placeId) => api.get(`/users/geo/place?placeId=${encodeURIComponent(placeId)}`),
+  // Driving route between two {lat,lng}. Returns { provider, polyline:[{latitude,
+  // longitude}], distanceText, distanceMeters, durationText, durationSeconds }.
+  geoDirections: (from, to) =>
+    api.get(`/users/geo/directions?from=${from.lat},${from.lng}&to=${to.lat},${to.lng}`),
 
   // Fare quote (standard fare from Pricing Control - used as the bid floor)
   getFareQuote: (params) => {

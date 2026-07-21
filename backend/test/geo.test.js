@@ -8,7 +8,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { isGoogleActive } from '../src/models/mapSettings.model.js';
-import { mapGooglePredictions, mapOsmResults, autocomplete, testAutocomplete } from '../src/controller/geo.controller.js';
+import { mapGooglePredictions, mapOsmResults, autocomplete, testAutocomplete, decodePolyline } from '../src/controller/geo.controller.js';
 
 test('isGoogleActive — google + real key is active', () => {
     assert.equal(isGoogleActive({ provider: 'google', googleMapsApiKey: 'AIzaSyExample' }), true);
@@ -60,6 +60,20 @@ test('testAutocomplete — Google selected with no key throws a clear error (no 
         () => testAutocomplete({ provider: 'google', googleMapsApiKey: '  ', query: 'Thamel' }),
         /Enter a Google API key/,
     );
+});
+
+test('decodePolyline — decodes Google\'s canonical example to the documented points', () => {
+    // From Google's Encoded Polyline Algorithm Format docs.
+    const pts = decodePolyline('_p~iF~ps|U_ulLnnqC_mqNvxq`@');
+    assert.equal(pts.length, 3);
+    assert.deepEqual(pts[0], { latitude: 38.5, longitude: -120.2 });
+    assert.deepEqual(pts[1], { latitude: 40.7, longitude: -120.95 });
+    assert.deepEqual(pts[2], { latitude: 43.252, longitude: -126.453 });
+});
+
+test('decodePolyline — empty/undefined input is a no-op', () => {
+    assert.deepEqual(decodePolyline(''), []);
+    assert.deepEqual(decodePolyline(undefined), []);
 });
 
 test('GET /users/geo/autocomplete — short query returns empty without a provider call', async () => {

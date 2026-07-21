@@ -25,9 +25,11 @@ export default function HomeScreen({ onOpenSubscription }) {
     step,
     pickup,
     setPickup,
+    pickupCoords,
     setPickupCoords,
     destination,
     setDestination,
+    destCoords,
     setDestCoords,
     vehicleId,
     setVehicleId,
@@ -92,9 +94,18 @@ export default function HomeScreen({ onOpenSubscription }) {
       }
     : null;
 
+  // Driver's live position from the accepted bid (GeoJSON [lng, lat]), if the
+  // populated driver carries one — shown as a moving car pin during the trip.
+  const driverLoc =
+    acceptedBid?.driverId?.currentLocation?.coordinates ||
+    acceptedBid?.driverId?.location?.coordinates;
+  const driverCoords = Array.isArray(driverLoc) && driverLoc.length === 2
+    ? { lat: driverLoc[1], lng: driverLoc[0] }
+    : null;
+
   return (
     <View style={styles.root}>
-      <Map step={step} />
+      <Map step={step} pickupCoords={pickupCoords} destCoords={destCoords} driverCoords={driverCoords} />
 
       {step !== 'active' && (
         <View style={styles.topBar}>

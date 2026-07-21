@@ -19,7 +19,6 @@ function Form({ initial }) {
   const qc = useQueryClient()
   const [provider, setProvider] = useState(initial.provider || 'osm')
   const [apiKey, setApiKey] = useState(initial.googleMapsApiKey || '')
-  const [countryCode, setCountryCode] = useState(initial.countryCode || 'np')
 
   // Test panel state
   const [testResult, setTestResult] = useState(null)
@@ -28,7 +27,6 @@ function Form({ initial }) {
     mutationFn: () => mapSettingsApi.update({
       provider,
       googleMapsApiKey: apiKey.trim(),
-      countryCode: countryCode.trim().toLowerCase(),
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['map-settings'] }); toast.success('Map settings saved') },
     onError: (err) => toast.error(err?.message || 'Failed to save map settings'),
@@ -41,7 +39,6 @@ function Form({ initial }) {
     mutationFn: () => mapSettingsApi.test({
       provider,
       googleMapsApiKey: apiKey.trim(),
-      countryCode: countryCode.trim().toLowerCase(),
     }),
     onSuccess: (res) => setTestResult(res?.data || null),
     onError: (err) => setTestResult({ ok: false, error: err?.message || 'Test request failed' }),
@@ -84,15 +81,6 @@ function Form({ initial }) {
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           disabled={!googleSelected}
-        />
-
-        <Input
-          label="Country code (ISO 3166-1 alpha-2)"
-          type="text"
-          maxLength={2}
-          placeholder="np"
-          value={countryCode}
-          onChange={(e) => setCountryCode(e.target.value)}
         />
 
         <div className={

@@ -2052,12 +2052,12 @@ const testMapSettings = asyncHandler(async (req, res) => {
     const { provider, googleMapsApiKey, countryCode, query } = req.body || {};
     try {
         const result = await testAutocomplete({ provider, googleMapsApiKey, countryCode, query });
+        // Only report validity — the probe search results themselves aren't useful
+        // here, so we don't leak the place list into the key-check response.
         return res.status(200).json(new apiResponse(200, {
             ok: true,
             provider: result.provider,
-            query: result.query,
-            count: result.predictions.length,
-            results: result.predictions.slice(0, 6),
+            message: `${result.provider === 'google' ? 'Google Places' : 'OpenStreetMap'} responded — key is valid.`,
         }, 'Test completed'));
     } catch (err) {
         return res.status(200).json(new apiResponse(200, {

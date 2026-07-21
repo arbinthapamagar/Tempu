@@ -18,7 +18,7 @@ import {
     requestWithdrawal, getMyWithdrawals, topUpDriverBalance, getEarningsBreakdown,
 } from '../controller/users/user.driver.controller.js';
 import { triggerEmergency, getMyEmergencies } from '../controller/users/user.emergency.controller.js';
-import { autocomplete as geoAutocomplete, placeDetails as geoPlaceDetails } from '../controller/geo.controller.js';
+import { autocomplete as geoAutocomplete, placeDetails as geoPlaceDetails, directions as geoDirections } from '../controller/geo.controller.js';
 import { verifyDriverProfile } from '../middlewares/driver.middleware.js';
 
 const userRouter = Router();
@@ -57,6 +57,7 @@ userRouter.get('/fare-quote', getFareQuote);
 // OSM/Nominatim). Keeps the Google Maps key server-side.
 userRouter.get('/geo/autocomplete', geoAutocomplete);
 userRouter.get('/geo/place', geoPlaceDetails);
+userRouter.get('/geo/directions', geoDirections);
 userRouter.get('/trips', getTripHistory);
 userRouter.get('/trips/:id', getTripById);
 

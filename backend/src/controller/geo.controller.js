@@ -148,4 +148,99 @@ const placeDetails = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, { provider: 'google', ...details }, 'Place resolved'));
 });
 
-export { autocomplete, placeDetails };
+// ---- Directions ------------------------------------------------------------
+// Decode a Google/OSRM encoded polyline (precision 5) → [{latitude, longitude}].
+// Exported for tests. Both providers use the same algorithm.
+export function decodePolyline(encoded) {
+    if (!encoded) return [];
+    const points = [];
+    let index = 0, lat = 0, lng = 0;
+    while (index < encoded.length) {
+        let b, shift = 0, result = 0;
+        do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+        lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+        shift = 0; result = 0;
+        do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+        lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+        points.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
+    }
+    return points;
+}
+
+function fmtDistance(m) {
+    return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
+}
+function fmtDuration(s) {
+    const min = Math.round(s / 60);
+    return min < 1 ? '1 min' : `${min} min`;
+}
+function parseLatLng(s) {
+    if (!s) return null;
+    const [lat, lng] = String(s).split(',').map(Number);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { lat, lng };
+}
+
+async function googleDirections(from, to, key) {
+    const url =
+        'https://maps.googleapis.com/maps/api/directions/json' +
+        `?origin=${from.lat},${from.lng}&destination=${to.lat},${to.lng}` +
+        `&mode=driving&key=${encodeURIComponent(key)}`;
+    const data = await fetchJson(url);
+    if (data.status !== 'OK') {
+        throw new apiError(502, `Google Directions: ${data.error_message || data.status}`);
+    }
+    const route = data.routes?.[0];
+    const leg = route?.legs?.[0];
+    return {
+        polyline: decodePolyline(route?.overview_polyline?.points),
+        distanceMeters: leg?.distance?.value ?? 0,
+        durationSeconds: leg?.duration?.value ?? 0,
+    };
+}
+
+async function osrmDirections(from, to) {
+    const url =
+        `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}` +
+        '?overview=full&geometries=polyline';
+    const data = await fetchJson(url);
+    if (data.code !== 'Ok') throw new apiError(502, `OSRM: ${data.code || 'routing error'}`);
+    const route = data.routes?.[0];
+    return {
+        polyline: decodePolyline(route?.geometry),
+        distanceMeters: route?.distance ?? 0,
+        durationSeconds: route?.duration ?? 0,
+    };
+}
+
+// GET /users/geo/directions?from=lat,lng&to=lat,lng
+const directions = asyncHandler(async (req, res) => {
+    const from = parseLatLng(req.query.from);
+    const to = parseLatLng(req.query.to);
+    if (!from || !to) throw new apiError(400, 'from and to are required as "lat,lng"');
+
+    const settings = await getMapSettings();
+    let provider, r;
+    if (isGoogleActive(settings)) {
+        provider = 'google';
+        try {
+            r = await googleDirections(from, to, settings.googleMapsApiKey.trim());
+        } catch {
+            provider = 'osm';
+            r = await osrmDirections(from, to);
+        }
+    } else {
+        provider = 'osm';
+        r = await osrmDirections(from, to);
+    }
+    return res.status(200).json(new apiResponse(200, {
+        provider,
+        polyline: r.polyline,
+        distanceMeters: r.distanceMeters,
+        distanceText: fmtDistance(r.distanceMeters),
+        durationSeconds: r.durationSeconds,
+        durationText: fmtDuration(r.durationSeconds),
+    }, 'Directions fetched'));
+});
+
+export { autocomplete, placeDetails, directions };
