@@ -13,7 +13,7 @@ export default {
         ink: '#0b0d11',
         paper: '#f3f4f6',
         surface: '#ffffff',
-        accent: '#2f343c',
+        accent: '#2dbc64',
         // The app was built with `orange-*` as its accent. We remap that scale to
         // a calm neutral ink ramp so the whole admin reads simple & restrained
         // (matching Support) without touching every file. Revert this block to

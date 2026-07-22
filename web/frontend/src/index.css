@@ -14,9 +14,9 @@
   --line: #e9edf2;          /* hairline borders / card edges */
   --line-strong: #dee2e6;
   --divide-soft: #f2f4f9;
-  --accent: #2f343c;        /* calm neutral ink accent (was golden orange) */
-  --accent-soft: #f6f6f7;
-  --accent-ink: #111317;
+  --accent: #2dbc64;        /* Tempu brand green (from the logo) */
+  --accent-soft: #e9f9f0;
+  --accent-ink: #15803d;
   /* dark, crisp text ramp - top end is true near-black */
   --t-900: #0b0d11;
   --t-800: #1a1d22;
@@ -38,9 +38,9 @@ html.dark {
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.16);
   --divide-soft: rgba(255, 255, 255, 0.06);
-  --accent: #fb923c;
-  --accent-soft: #2a1a10;
-  --accent-ink: #fdba74;
+  --accent: #34d17a;
+  --accent-soft: #0f2a1b;
+  --accent-ink: #7ee0a6;
   --t-900: #ffffff;
   --t-800: #f4f7fb;
   --t-700: #e9eef5;
@@ -122,14 +122,14 @@ html.dark {
 .text-gray-500 { color: var(--t-500); }
 .text-gray-400 { color: var(--t-400); }
 
-/* Accent = NobleUI golden orange (#f19e00). Remaps the orange utility classes
+/* Accent = NobleUI golden orange (#2dbc64). Remaps the orange utility classes
    the app uses so the accent matches the ShipOS theme from one place. */
 /* Soft colour tints are flat (no fill) everywhere - icon blobs and badges show
    just the coloured icon/text. Solid -500/-600 (buttons, status dots) stay. */
 .bg-orange-50 { background-color: transparent; }
 .bg-orange-100 { background-color: transparent; }
-.bg-orange-500 { background-color: #f19e00; }
-.bg-orange-600 { background-color: #f19e00; }
+.bg-orange-500 { background-color: #2dbc64; }
+.bg-orange-600 { background-color: #2dbc64; }
 .bg-orange-50\/40, .bg-orange-50\/50, .bg-orange-50\/60 { background-color: transparent; }
 /* other coloured soft tints used for icon blobs / status chips → flat */
 .bg-emerald-50, .bg-amber-50, .bg-red-50, .bg-rose-50,
@@ -137,23 +137,23 @@ html.dark {
 .bg-emerald-100, .bg-amber-100, .bg-red-100, .bg-rose-100,
 .bg-blue-100, .bg-violet-100, .bg-teal-100 { background-color: transparent; }
 
-.text-orange-50 { color: #fef6e6; }
-.text-orange-100 { color: #fce8bf; }
-.text-orange-400 { color: #f6b32d; }
-.text-orange-500 { color: #f19e00; }
-.text-orange-600 { color: #f19e00; }
-.text-orange-700 { color: #cc8500; }
-.text-orange-800 { color: #a36a00; }
+.text-orange-50 { color: #e9f9f0; }
+.text-orange-100 { color: #d4f2df; }
+.text-orange-400 { color: #57cd85; }
+.text-orange-500 { color: #2dbc64; }
+.text-orange-600 { color: #2dbc64; }
+.text-orange-700 { color: #23a355; }
+.text-orange-800 { color: #1a7d40; }
 
-.border-orange-100 { border-color: #fce8bf; }
-.border-orange-200 { border-color: #f9d98a; }
-.border-orange-300 { border-color: #f6b32d; }
-.border-orange-400 { border-color: #f6b32d; }
-.border-orange-500 { border-color: #f19e00; }
-.border-orange-600 { border-color: #f19e00; }
+.border-orange-100 { border-color: #d4f2df; }
+.border-orange-200 { border-color: #b3e7c8; }
+.border-orange-300 { border-color: #57cd85; }
+.border-orange-400 { border-color: #57cd85; }
+.border-orange-500 { border-color: #2dbc64; }
+.border-orange-600 { border-color: #2dbc64; }
 
-.from-orange-50 { --tw-gradient-from: #fef6e6 var(--tw-gradient-from-position); --tw-gradient-to: rgb(254 246 230 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
-.to-orange-100 { --tw-gradient-to: #fce8bf var(--tw-gradient-to-position); }
+.from-orange-50 { --tw-gradient-from: #e9f9f0 var(--tw-gradient-from-position); --tw-gradient-to: rgb(254 246 230 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.to-orange-100 { --tw-gradient-to: #d4f2df var(--tw-gradient-to-position); }
 
 /* Soft hover fills do nothing - hovering nav/rows/icons shows only the pointer.
    `html` prefix raises specificity so these beat Tailwind's later-emitted
@@ -171,19 +171,19 @@ html .hover\:bg-gray-100:hover,
 html .hover\:bg-gray-200:hover,
 html .hover\:bg-white\/30:hover { background-color: transparent; }
 /* solid button hovers (darken) stay */
-.hover\:bg-orange-600:hover { background-color: #cc8500; }
-.hover\:bg-orange-700:hover { background-color: #cc8500; }
-.hover\:text-orange-600:hover { color: #cc8500; }
-.hover\:text-orange-700:hover { color: #a36a00; }
-.hover\:border-orange-200:hover { border-color: #f9d98a; }
-.hover\:border-orange-300:hover { border-color: #f6b32d; }
-.hover\:border-orange-400:hover { border-color: #f6b32d; }
-.group:hover .group-hover\:text-orange-700 { color: #cc8500; }
+.hover\:bg-orange-600:hover { background-color: #23a355; }
+.hover\:bg-orange-700:hover { background-color: #23a355; }
+.hover\:text-orange-600:hover { color: #23a355; }
+.hover\:text-orange-700:hover { color: #1a7d40; }
+.hover\:border-orange-200:hover { border-color: #b3e7c8; }
+.hover\:border-orange-300:hover { border-color: #57cd85; }
+.hover\:border-orange-400:hover { border-color: #57cd85; }
+.group:hover .group-hover\:text-orange-700 { color: #23a355; }
 
-.focus\:ring-orange-400:focus { --tw-ring-color: #f6b32d; }
-.focus\:ring-orange-500:focus { --tw-ring-color: #f19e00; }
-.focus\:border-orange-400:focus { border-color: #f6b32d; }
-.focus\:border-orange-500:focus { border-color: #f19e00; }
+.focus\:ring-orange-400:focus { --tw-ring-color: #57cd85; }
+.focus\:ring-orange-500:focus { --tw-ring-color: #2dbc64; }
+.focus\:border-orange-400:focus { border-color: #57cd85; }
+.focus\:border-orange-500:focus { border-color: #2dbc64; }
 
 /* Icon-blob / chip tints are flat (transparent) in dark too - just the coloured icon. */
 html.dark .bg-orange-50,
