@@ -1,61 +1,63 @@
 import { resolveScheme } from './themeStore';
 
-// BRAND-GREEN LIGHT theme. Single active app theme (dark mode toggle disabled -
-// see themeStore.resolveScheme). White backgrounds, near-black text, GREEN
-// buttons/CTAs (white text on them) matching the Tempu logo (#2dbc64), light
-// green-tinted fills. Semantic colours (danger/warn/success) are kept.
+// Simple, flat, "human-made" - neutral white/paper with near-black ink text and
+// a calm ink accent (matches the redesigned admin: no bright brand orange, no
+// navy-tinted greys). Semantic colours (danger/warn/success) are kept.
+// UBER-STYLE LIGHT theme. Single active app theme (dark mode toggle disabled -
+// see themeStore.resolveScheme). White backgrounds, near-black text, BLACK
+// buttons/CTAs (white text on them), light-grey fills. Monochrome - NO orange.
 const lightColors = {
-  primary: '#2dbc64',       // Tempu logo green - buttons / CTAs / active accents
-  primaryDark: '#23a355',   // pressed states
-  primarySoft: '#e3f6ea',   // surface-container - chips, active rows, icon bubbles
+  primary: '#000000',       // pure black - buttons / CTAs / active accents
+  primaryDark: '#1c1b1b',   // pressed states
+  primarySoft: '#eeeeee',   // surface-container - chips, active rows, icon bubbles
 
-  bg: '#f9faf9',            // page background (surface), faint green-neutral
-  background: '#f9faf9',
+  bg: '#f9f9f9',            // page background (surface)
+  background: '#f9f9f9',
   surface: '#ffffff',       // cards (surface-container-lowest)
-  surfaceMuted: '#f1f5f2',  // inputs / muted fills (surface-container-low)
-  surfaceDark: '#0e1a12',
+  surfaceMuted: '#f3f3f4',  // inputs / muted fills (surface-container-low)
+  surfaceDark: '#000000',
 
-  text: '#141c17',          // on-background near-black
-  textMuted: '#5b625d',     // secondary
-  textFaint: '#79817b',     // outline
+  text: '#1a1c1c',          // on-background near-black
+  textMuted: '#5d5e60',     // secondary
+  textFaint: '#747878',     // outline
 
-  border: '#e2e7e3',        // surface-container-highest - hairline borders
-  divider: '#eef1ef',
+  border: '#e2e2e2',        // surface-container-highest - hairline borders
+  divider: '#eeeeee',
 
   danger: '#ba1a1a',
   dangerSoft: '#ffdad6',
   warn: '#b45309',
   warnSoft: '#fdf0e3',
   success: '#15803d',
-  accent: '#2dbc64',
-  orange: '#2dbc64',        // brand green (kept token name for compatibility)
+  accent: '#000000',
+  orange: '#000000',        // monochrome → black (kept token name for compatibility)
 };
 
 const darkColors = {
-  primary: '#34d17a',
-  primaryDark: '#26b567',
-  primarySoft: '#123320',
+  primary: '#fb7a3c',
+  primaryDark: '#ea580c',
+  primarySoft: '#3a2618',
 
-  bg: '#0f1512',
-  background: '#0f1512',
-  surface: '#161d19',
-  surfaceMuted: '#1e2722',
-  surfaceDark: '#080b09',
+  bg: '#1a1714',
+  background: '#1a1714',
+  surface: '#241f1a',
+  surfaceMuted: '#2e2823',
+  surfaceDark: '#0f0d0b',
 
-  text: '#e9f1ec',
-  textMuted: '#a3b0a8',
-  textFaint: '#7c877f',
+  text: '#f3ece1',
+  textMuted: '#b3a899',
+  textFaint: '#8a8073',
 
-  border: '#2a332d',
-  divider: '#1e2722',
+  border: '#3a342d',
+  divider: '#2e2823',
 
   danger: '#f87171',
   dangerSoft: '#3a1f1f',
   warn: '#fbbf24',
   warnSoft: '#39290f',
   success: '#4ade80',
-  accent: '#34d17a',
-  orange: '#34d17a',        // brand green - used for the user's own reply bubble
+  accent: '#fb7a3c',
+  orange: '#fb7a3c',        // brand orange - used for the user's own reply bubble
 };
 
 export const themeScheme = resolveScheme(); // 'light' | 'dark', resolved at load
