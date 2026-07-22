@@ -69,8 +69,13 @@ export function compatibleTypes(vehicleType) {
 }
 
 // Great-circle distance in metres between two [lng, lat] points.
+// Uses the SAME Earth radius MongoDB's 2dsphere $geoNear uses (6 378 100 m,
+// equatorial) — not the mean 6 371 000 m — so this write-side ring check agrees
+// to the metre with the read-side distances returned by getNearbyTrips. Without
+// this, a driver on a ring boundary could be shown a request yet blocked from
+// bidding on it (a ~0.11% / ~1.6 m-at-1.5 km disagreement).
 export function metresBetween([lng1, lat1], [lng2, lat2]) {
-    const R = 6371000;
+    const R = 6378100;
     const toRad = (d) => (d * Math.PI) / 180;
     const dLat = toRad(lat2 - lat1);
     const dLng = toRad(lng2 - lng1);
