@@ -154,7 +154,7 @@ export default function HomeView({ onTapSearch, onPickSaved, onSubscribe }) {
         </ScrollView>
 
         {/* Saved places */}
-        <Text style={[styles.sectionTitle, { marginTop: 24, marginBottom: 8 }]}>
+        <Text style={[styles.sectionTitle, { marginTop: 14, marginBottom: 8 }]}>
           Saved Places
         </Text>
         <View style={styles.savedList}>
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   bodyContent: { paddingBottom: 40 },
 
   mapHero: {
-    height: 300,
+    height: 270,
     width: '100%',
     backgroundColor: colors.surfaceMuted,
     overflow: 'hidden',
@@ -263,14 +263,14 @@ const styles = StyleSheet.create({
 
   searchWrap: {
     paddingHorizontal: 20,
-    marginTop: -32,
+    marginTop: 10, // sits just below the map so the Google logo/controls are clear
     zIndex: 20,
   },
   searchPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    height: 64,
+    height: 54,
     backgroundColor: colors.surface,
     borderRadius: 999,
     paddingLeft: 20,
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    marginTop: 24,
+    marginTop: 12,
     marginBottom: 8,
   },
   sectionTitle: {
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
 
   serviceRow: { gap: 16, paddingHorizontal: 20, paddingVertical: 8 },
   serviceCard: {
-    width: 152,
+    width: 134,
     backgroundColor: colors.surface,
     borderRadius: 24,
     padding: 10,
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
   },
   serviceIconDark: { backgroundColor: 'rgba(255,255,255,0.1)' },
   // Vehicle photo icons: large and no background bubble.
-  serviceIconImage: { width: 128, height: 128, borderRadius: 0, backgroundColor: 'transparent' },
+  serviceIconImage: { width: 106, height: 106, borderRadius: 0, backgroundColor: 'transparent' },
   serviceLabel: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },
   serviceLabelBig: { fontSize: 19 },
   serviceSub: { fontFamily: fonts.body, fontSize: 11, color: colors.textMuted },
@@ -379,16 +379,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    padding: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 16,
     borderWidth: 2,
     borderStyle: 'dashed',
     borderColor: colors.border,
   },
   addIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
