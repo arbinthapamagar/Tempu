@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { useFonts, BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque';
 import {
@@ -91,17 +91,10 @@ function AppShell() {
     user?.driverProfile?.status === 'approved' || driverApproved;
   const effectiveMode = mode === 'driver' && approvedDriver ? 'driver' : 'passenger';
 
-  // Approved drivers land straight in driving mode on login — no passenger map,
-  // no manual "switch to driver" step. Runs once per login; they can still
-  // switch to passenger mode manually afterwards (won't be bounced back mid-session).
-  const autoDroveRef = useRef(false);
-  useEffect(() => { if (!user) autoDroveRef.current = false; }, [user]);
-  useEffect(() => {
-    if (user && approvedDriver && !autoDroveRef.current) {
-      autoDroveRef.current = true;
-      setMode('driver');
-    }
-  }, [user, approvedDriver]);
+  // Do NOT force approved drivers into driver mode on login. The last-used mode
+  // is persisted (AsyncStorage via setMode) and restored on mount above, so a
+  // driver who switched to passenger mode and logged out reopens in passenger
+  // mode. Drivers switch to driver mode manually from the Account screen.
 
   // After OTP verification the user becomes set in context.
   // If they chose the driver role, transition to vehicle details form.
@@ -201,7 +194,7 @@ function AppShell() {
     setTab('home');
     setAuthScreen('role-select');
     setRole('passenger');
-    setMode('passenger');
+    // Keep the last-used mode (driver/passenger) so re-login reopens in it.
   };
 
   // Driver mode
