@@ -14,9 +14,9 @@ import {
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import { colors, radius, shadow, spacing, STATUS_TOP_PAD, type } from '../theme';
 import {
+  confirm as hapticDrop,
   pick as hapticPick,
   success as hapticSuccess,
-  tap as hapticTap,
 } from './haptics';
 import Button from './ui/Button';
 
@@ -43,9 +43,37 @@ export default function MapPicker({ visible, title = 'Drop-off', onCancel, onCon
   });
   const [address, setAddress] = useState('Loading address…');
   const [resolving, setResolving] = useState(false);
-  // Pin animation: lifts to -22 while the user is dragging / resolving,
-  // drops back to 0 with a tiny bounce when the address settles.
+  // Pin animation: lifts while the user drags, drops the instant they lift
+  // their finger — independent of the address lookup (which runs in the
+  // background) so the interaction always feels immediate, never "stuck".
   const pinLift = useRef(new Animated.Value(0)).current;
+  const draggingRef = useRef(false);
+  const programmaticRef = useRef(false); // true while a coded animateToRegion runs
+  const geocodeTimer = useRef(null);
+
+  const liftPin = () => {
+    Animated.timing(pinLift, {
+      toValue: -22,
+      duration: 140,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  };
+  const dropPin = () => {
+    hapticDrop(); // a clear buzz the moment the pin lands
+    Animated.spring(pinLift, {
+      toValue: 0,
+      damping: 9,
+      stiffness: 220,
+      mass: 0.6,
+      useNativeDriver: true,
+    }).start();
+  };
+  // Animate the map to a point without triggering the user-drag pin/haptic.
+  const moveTo = (c) => {
+    programmaticRef.current = true;
+    mapRef.current?.animateToRegion({ ...c, ...ZOOMED }, 500);
+  };
 
   useEffect(() => {
     if (!visible) return;
@@ -57,15 +85,18 @@ export default function MapPicker({ visible, title = 'Drop-off', onCancel, onCon
       });
       const c = { latitude: me.coords.latitude, longitude: me.coords.longitude };
       setCenter(c);
-      mapRef.current?.animateToRegion({ ...c, ...ZOOMED }, 600);
+      moveTo(c);
     })();
   }, [visible]);
 
+  // Reverse-geocode the centre, debounced so rapid pans don't stack slow
+  // lookups. Only updates the address label — never blocks the pin/UI.
   useEffect(() => {
     if (!visible) return;
     let cancelled = false;
     setResolving(true);
-    (async () => {
+    clearTimeout(geocodeTimer.current);
+    geocodeTimer.current = setTimeout(async () => {
       try {
         const res = await Location.reverseGeocodeAsync(center);
         if (cancelled) return;
@@ -83,33 +114,12 @@ export default function MapPicker({ visible, title = 'Drop-off', onCancel, onCon
       } finally {
         if (!cancelled) setResolving(false);
       }
-    })();
+    }, 250);
     return () => {
       cancelled = true;
+      clearTimeout(geocodeTimer.current);
     };
   }, [center.latitude, center.longitude, visible]);
-
-  // Drive the pin animation off `resolving`. Drop-down also fires a haptic
-  // tick so the user feels the pin land.
-  useEffect(() => {
-    if (resolving) {
-      Animated.timing(pinLift, {
-        toValue: -22,
-        duration: 160,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }).start();
-    } else {
-      hapticTap();
-      Animated.spring(pinLift, {
-        toValue: 0,
-        damping: 9,
-        stiffness: 200,
-        mass: 0.6,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [resolving, pinLift]);
 
   const shadowScale = pinLift.interpolate({
     inputRange: [-22, 0],
@@ -130,7 +140,7 @@ export default function MapPicker({ visible, title = 'Drop-off', onCancel, onCon
       });
       const c = { latitude: me.coords.latitude, longitude: me.coords.longitude };
       setCenter(c);
-      mapRef.current?.animateToRegion({ ...c, ...ZOOMED }, 500);
+      moveTo(c);
     } catch {
       // Permission denied or hardware unavailable - silently no-op.
     }
@@ -149,12 +159,21 @@ export default function MapPicker({ visible, title = 'Drop-off', onCancel, onCon
           showsCompass={false}
           toolbarEnabled={false}
           onRegionChange={() => {
-            // Lift the pin the moment the user starts dragging.
-            if (!resolving) setResolving(true);
+            // Lift the pin the moment the user starts dragging (ignore the
+            // programmatic recenters, and lift only once per drag).
+            if (programmaticRef.current || draggingRef.current) return;
+            draggingRef.current = true;
+            liftPin();
           }}
           onRegionChangeComplete={(r) => {
-            hapticPick();
             setCenter({ latitude: r.latitude, longitude: r.longitude });
+            if (programmaticRef.current) {
+              programmaticRef.current = false;
+              return;
+            }
+            // Drop + buzz the instant the finger lifts — don't wait on geocode.
+            draggingRef.current = false;
+            dropPin();
           }}
         />
 
