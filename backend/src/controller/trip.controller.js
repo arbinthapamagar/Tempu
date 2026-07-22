@@ -6,6 +6,7 @@ import { User } from '../models/user.model.js';
 import { Transaction } from '../models/transaction.model.js';
 import { Notification } from '../models/notification.model.js';
 import { Pricing } from '../models/pricing.model.js';
+import { tiersFor } from '../config/dispatch.js';
 import { computeStandardFare } from '../utils/fareCalc.js';
 import { computeRideFee } from '../utils/rideFee.js';
 import { apiError } from '../utils/apiError.js';
@@ -87,6 +88,11 @@ const createTrip = asyncHandler(async (req, res) => {
 
     const compatibleDriverTypes = DRIVER_VEHICLE_MAP[vehicleType] || [vehicleType];
 
+    // Tier-1 (closest ring) drivers get the first notification. As the trip
+    // ages, getNearbyTrips widens the visible ring automatically (poll-based),
+    // so we only need to push the immediate notification to the nearest ring.
+    const tier1Radius = tiersFor(vehicleType)[0];
+
     const nearbyDrivers = await Driver.find({
         isOnline: true,
         isOnRide: false,
@@ -95,7 +101,7 @@ const createTrip = asyncHandler(async (req, res) => {
         currentLocation: {
             $near: {
                 $geometry: { type: 'Point', coordinates: pickup.location.coordinates },
-                $maxDistance: 5000,
+                $maxDistance: tier1Radius,
             },
         },
     }).select('_id').limit(20);

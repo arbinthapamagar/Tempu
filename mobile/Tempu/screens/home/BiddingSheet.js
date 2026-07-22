@@ -37,7 +37,7 @@ function getInitials(name = '') {
     .toUpperCase();
 }
 
-export default function BiddingSheet({ vehicle, offeredPrice, bids = [], onAccept, onCancel, timeoutSeconds = 300 }) {
+export default function BiddingSheet({ vehicle, offeredPrice, bids = [], onAccept, onCancel, timeoutSeconds = 180 }) {
   const pulse = useRef(new Animated.Value(0)).current;
   const [remaining, setRemaining] = useState(timeoutSeconds);
 

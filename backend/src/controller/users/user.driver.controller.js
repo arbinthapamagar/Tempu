@@ -10,6 +10,7 @@ import { apiResponse } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { uploadOnCloudinary } from '../../utils/cloudinary.js';
 import { sendEmail } from '../../config/sendEmail.js';
+import { currentDispatchRadius, maxDispatchRadius } from '../../config/dispatch.js';
 import { welcomeDriverTemplate } from '../../utils/welcomeEmailTemplate.js';
 
 const COMPATIBLE_VEHICLE_TYPES = {
@@ -163,7 +164,7 @@ const updateDriverLocation = asyncHandler(async (req, res) => {
 });
 
 const getNearbyTrips = asyncHandler(async (req, res) => {
-    const { longitude, latitude, maxDistance = 5000 } = req.query;
+    const { longitude, latitude } = req.query;
     if (!longitude || !latitude) throw new apiError(400, 'Longitude and latitude are required');
 
     const driver = await Driver.findOne({ userId: req.user._id });
@@ -172,20 +173,44 @@ const getNearbyTrips = asyncHandler(async (req, res) => {
     if (!driver.isOnline) throw new apiError(400, 'You must be online to see nearby trips');
 
     const compatibleTypes = COMPATIBLE_VEHICLE_TYPES[driver.vehicleType] || [driver.vehicleType];
-    const dist = Math.min(parseInt(maxDistance) || 5000, 50000);
 
-    const trips = await Trip.find({
-        status: 'pending',
-        vehicleType: { $in: compatibleTypes },
-        'pickup.location': {
-            $near: {
-                $geometry: { type: 'Point', coordinates: [parseFloat(longitude), parseFloat(latitude)] },
-                $maxDistance: dist,
+    // Upper bound for the candidate search = the widest final ring across the
+    // request types this driver can serve. Per-trip, time-tiered filtering
+    // below narrows it to whichever ring each trip has reached for its age.
+    const searchRadius = Math.max(...compatibleTypes.map(maxDispatchRadius));
+    const driverCoords = [parseFloat(longitude), parseFloat(latitude)];
+
+    // $geoNear must name the index because the trips collection has two 2dsphere
+    // indexes (pickup.location + dropoff.location); distanceField gives us the
+    // metres to each pickup so we can apply the per-trip ring below.
+    const candidates = await Trip.aggregate([
+        {
+            $geoNear: {
+                near: { type: 'Point', coordinates: driverCoords },
+                key: 'pickup.location',
+                distanceField: 'distanceMeters',
+                maxDistance: searchRadius,
+                spherical: true,
+                query: { status: 'pending', vehicleType: { $in: compatibleTypes } },
             },
         },
-    })
-    .limit(20)
-    .populate('userId', 'name rating avatarUrl');
+        { $limit: 40 },
+    ]);
+
+    // A trip is only offered to this driver if they're inside the ring the trip
+    // has widened to for its current age (100 m → 500 m → 1 km for scooter,
+    // etc.). currentDispatchRadius returns null once past the last tier, so an
+    // expired ("no driver found") trip is dropped here too.
+    const now = Date.now();
+    const visible = candidates
+        .filter((t) => {
+            const radius = currentDispatchRadius(t.vehicleType, t.createdAt, now);
+            return radius !== null && t.distanceMeters <= radius;
+        })
+        .slice(0, 20);
+
+    // Aggregation returns plain docs — populate the rider fields the app needs.
+    const trips = await Trip.populate(visible, { path: 'userId', select: 'name rating avatarUrl' });
 
     return res.status(200).json(new apiResponse(200, trips, 'Nearby trips fetched'));
 });

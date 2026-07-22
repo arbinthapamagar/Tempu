@@ -118,15 +118,18 @@ export default function useRideFlow() {
     poll(); // immediate first fetch
     pollRef.current = setInterval(poll, 3000);
 
-    // Auto-cancel after 5 minutes
+    // The backend widens the driver search ring once per minute over 3 tiers
+    // (see config/dispatch.js). After the final tier (~3 min) with no bid, the
+    // request is exhausted: stop polling, cancel the trip server-side, and stay
+    // on the bidding step so BiddingSheet shows "No drivers found" (its own
+    // countdown hits 0 at the same time). The rider taps back to try again.
     timeoutRef.current = setTimeout(() => {
       clearInterval(pollRef.current);
       setBiddingTimedOut(true);
       if (tripId) tripApi.cancel(tripId).catch(() => {});
       setTripId(null);
       setBids([]);
-      setStep('options');
-    }, 5 * 60 * 1000);
+    }, 3 * 60 * 1000);
 
     return () => {
       clearInterval(pollRef.current);
