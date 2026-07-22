@@ -6,33 +6,14 @@ import { User } from '../models/user.model.js';
 import { Transaction } from '../models/transaction.model.js';
 import { Notification } from '../models/notification.model.js';
 import { Pricing } from '../models/pricing.model.js';
-import { tiersFor } from '../config/dispatch.js';
+import { tiersFor, compatibleTypes, metresBetween } from '../config/dispatch.js';
 import { computeStandardFare } from '../utils/fareCalc.js';
 import { computeRideFee } from '../utils/rideFee.js';
 import { apiError } from '../utils/apiError.js';
 import { apiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
-// Straight-line distance between two [lng, lat] points, in metres.
-function metresBetween([lng1, lat1], [lng2, lat2]) {
-    const R = 6371000;
-    const toRad = (d) => (d * Math.PI) / 180;
-    const dLat = toRad(lat2 - lat1);
-    const dLng = toRad(lng2 - lng1);
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-    return 2 * R * Math.asin(Math.sqrt(a));
-}
-
 const MIN_TRIP_METRES = 300;
-
-const DRIVER_VEHICLE_MAP = {
-    tuktuk: ['tuktuk', 'tuktuk_delivery'],
-    tuktuk_delivery: ['tuktuk_delivery', 'tuktuk'],
-    scooter: ['scooter', 'bike'],
-    bike: ['bike', 'scooter'],
-    taxi: ['taxi'],
-    comfort: ['comfort'],
-};
 
 const createTrip = asyncHandler(async (req, res) => {
     const { vehicleType, offeredPrice, paymentMethod, pickup, dropoff, distance, duration } = req.body;
@@ -86,7 +67,7 @@ const createTrip = asyncHandler(async (req, res) => {
         duration: duration || null,
     });
 
-    const compatibleDriverTypes = DRIVER_VEHICLE_MAP[vehicleType] || [vehicleType];
+    const compatibleDriverTypes = compatibleTypes(vehicleType);
 
     // Tier-1 (closest ring) drivers get the first notification. As the trip
     // ages, getNearbyTrips widens the visible ring automatically (poll-based),

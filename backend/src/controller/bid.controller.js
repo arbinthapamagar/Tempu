@@ -5,14 +5,7 @@ import { Notification } from '../models/notification.model.js';
 import { apiError } from '../utils/apiError.js';
 import { apiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-
-const COMPATIBLE_VEHICLE_TYPES = {
-    bike: ['bike', 'scooter'],
-    scooter: ['scooter', 'bike'],
-    tuktuk: ['tuktuk', 'tuktuk_delivery'],
-    taxi: ['taxi'],
-    comfort: ['comfort'],
-};
+import { compatibleTypes, isDispatchExpired, isWithinCurrentRing } from '../config/dispatch.js';
 
 const createBid = asyncHandler(async (req, res) => {
     const { tripId, amount, message } = req.body;
@@ -33,9 +26,21 @@ const createBid = asyncHandler(async (req, res) => {
     }
 
     // Check vehicle type compatibility
-    const compatibleTrips = COMPATIBLE_VEHICLE_TYPES[driver.vehicleType] || [driver.vehicleType];
+    const compatibleTrips = compatibleTypes(driver.vehicleType);
     if (!compatibleTrips.includes(trip.vehicleType)) {
         throw new apiError(400, 'Your vehicle type is not compatible with this trip');
+    }
+
+    // Enforce the time-tiered dispatch ring server-side: a driver may bid only
+    // while the trip's current ring (100 m → 500 m → 1 km, etc., widening once
+    // per minute) actually reaches them. This makes the tiers authoritative,
+    // not just a filter on what the app happens to show.
+    if (isDispatchExpired(trip.vehicleType, trip.createdAt)) {
+        throw new apiError(400, 'This request has expired — no driver was found in time');
+    }
+    const driverCoords = driver.currentLocation?.coordinates;
+    if (!isWithinCurrentRing(trip.vehicleType, trip.createdAt, driverCoords, trip.pickup.location.coordinates)) {
+        throw new apiError(400, 'This request has not reached your area yet — please wait');
     }
 
     const existingBid = await Bid.findOne({ tripId, driverId: driver._id, status: 'pending' });
@@ -62,8 +67,20 @@ const createBid = asyncHandler(async (req, res) => {
 });
 
 const getBidsForTrip = asyncHandler(async (req, res) => {
-    const trip = await Trip.findOne({ _id: req.params.tripId, userId: req.user._id, status: 'pending' });
-    if (!trip) throw new apiError(404, 'Trip not found or no longer accepting bids');
+    const trip = await Trip.findOne({ _id: req.params.tripId, userId: req.user._id });
+    if (!trip) throw new apiError(404, 'Trip not found');
+
+    // Lazily retire an exhausted request so its state is authoritative even if
+    // the rider's app closed before the client-side timeout: once past the last
+    // dispatch tier with no acceptance, the trip is cancelled by the system.
+    if (trip.status === 'pending' && isDispatchExpired(trip.vehicleType, trip.createdAt)) {
+        trip.status = 'cancelled';
+        trip.cancelledBy = 'system';
+        trip.cancelReason = 'no_driver_found';
+        trip.cancelledAt = new Date();
+        await trip.save();
+    }
+    if (trip.status !== 'pending') throw new apiError(404, 'Trip not found or no longer accepting bids');
 
     const bids = await Bid.find({
         tripId: req.params.tripId,

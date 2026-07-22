@@ -50,3 +50,41 @@ export function currentDispatchRadius(vehicleType, createdAt, now = Date.now()) 
 export function isDispatchExpired(vehicleType, createdAt, now = Date.now()) {
     return currentDispatchRadius(vehicleType, createdAt, now) === null;
 }
+
+// ---------------------------------------------------------------------------
+// Vehicle compatibility — the single source of truth (was duplicated across
+// trip / driver / bid controllers). Symmetric: used both to pick which driver
+// types a trip is offered to, and which trip types a driver may serve.
+export const VEHICLE_COMPATIBILITY = {
+    scooter: ['scooter', 'bike'],
+    bike: ['bike', 'scooter'],
+    tuktuk: ['tuktuk', 'tuktuk_delivery'],
+    tuktuk_delivery: ['tuktuk_delivery', 'tuktuk'],
+    taxi: ['taxi'],
+    comfort: ['comfort'],
+};
+
+export function compatibleTypes(vehicleType) {
+    return VEHICLE_COMPATIBILITY[vehicleType] || [vehicleType];
+}
+
+// Great-circle distance in metres between two [lng, lat] points.
+export function metresBetween([lng1, lat1], [lng2, lat2]) {
+    const R = 6371000;
+    const toRad = (d) => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+// Is a driver at `driverCoords` currently allowed to see/bid on a trip, given
+// the trip's age-based ring? False if expired or outside the current ring.
+export function isWithinCurrentRing(vehicleType, createdAt, driverCoords, pickupCoords, now = Date.now()) {
+    if (!Array.isArray(driverCoords) || driverCoords.length !== 2) return false;
+    const radius = currentDispatchRadius(vehicleType, createdAt, now);
+    if (radius === null) return false;
+    return metresBetween(driverCoords, pickupCoords) <= radius;
+}

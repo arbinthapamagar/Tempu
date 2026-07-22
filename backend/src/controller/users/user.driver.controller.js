@@ -10,17 +10,9 @@ import { apiResponse } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { uploadOnCloudinary } from '../../utils/cloudinary.js';
 import { sendEmail } from '../../config/sendEmail.js';
-import { currentDispatchRadius, maxDispatchRadius } from '../../config/dispatch.js';
+import { currentDispatchRadius, maxDispatchRadius, compatibleTypes } from '../../config/dispatch.js';
 import { welcomeDriverTemplate } from '../../utils/welcomeEmailTemplate.js';
 
-const COMPATIBLE_VEHICLE_TYPES = {
-    bike: ['bike', 'scooter'],
-    scooter: ['scooter', 'bike'],
-    tuktuk: ['tuktuk', 'tuktuk_delivery'],
-    tuktuk_delivery: ['tuktuk_delivery', 'tuktuk'],
-    taxi: ['taxi'],
-    comfort: ['comfort'],
-};
 
 const registerAsDriver = asyncHandler(async (req, res) => {
     const existing = await Driver.findOne({ userId: req.user._id });
@@ -171,13 +163,17 @@ const getNearbyTrips = asyncHandler(async (req, res) => {
     if (!driver) throw new apiError(404, 'Driver profile not found');
     if (driver.status !== 'approved') throw new apiError(403, 'Driver account not approved');
     if (!driver.isOnline) throw new apiError(400, 'You must be online to see nearby trips');
+    // A driver already on a ride is not offered new requests.
+    if (driver.isOnRide) {
+        return res.status(200).json(new apiResponse(200, [], 'You are on a ride'));
+    }
 
-    const compatibleTypes = COMPATIBLE_VEHICLE_TYPES[driver.vehicleType] || [driver.vehicleType];
+    const serves = compatibleTypes(driver.vehicleType);
 
     // Upper bound for the candidate search = the widest final ring across the
     // request types this driver can serve. Per-trip, time-tiered filtering
     // below narrows it to whichever ring each trip has reached for its age.
-    const searchRadius = Math.max(...compatibleTypes.map(maxDispatchRadius));
+    const searchRadius = Math.max(...serves.map(maxDispatchRadius));
     const driverCoords = [parseFloat(longitude), parseFloat(latitude)];
 
     // $geoNear must name the index because the trips collection has two 2dsphere
@@ -191,7 +187,7 @@ const getNearbyTrips = asyncHandler(async (req, res) => {
                 distanceField: 'distanceMeters',
                 maxDistance: searchRadius,
                 spherical: true,
-                query: { status: 'pending', vehicleType: { $in: compatibleTypes } },
+                query: { status: 'pending', vehicleType: { $in: serves } },
             },
         },
         { $limit: 40 },
