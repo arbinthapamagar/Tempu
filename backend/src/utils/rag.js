@@ -72,7 +72,14 @@ export async function ingestFiles(files) {
 
 export async function listSources() {
     const data = await call('/sources', { method: 'GET' });
-    return (data.sources || []).map((s) => ({ updatedAt: null, ...s }));
+    return (data.sources || []).map((s) => ({ updatedAt: null, kind: 'file', ...s }));
+}
+
+// Original text of a source (used to edit a pasted source). Returns '' if the
+// service has no stored text for it.
+export async function getSourceContent(source) {
+    const data = await call(`/source/content?name=${encodeURIComponent(source)}`, { method: 'GET' });
+    return data.text || '';
 }
 
 export async function deleteSource(source) {

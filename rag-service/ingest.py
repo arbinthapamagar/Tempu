@@ -108,16 +108,51 @@ def ingest_text(text: str, source: str = "pasted") -> int:
     if not text or not text.strip():
         return 0
     delete_source(source)
-    return _add([Document(page_content=text, metadata={"source": source})], source)
+    doc = Document(page_content=text, metadata={"source": source, "kind": "pasted"})
+    chunks = _splitter.split_documents([doc])
+    if not chunks:
+        return 0
+    # Keep the full original text on the first chunk so a pasted source can be
+    # loaded back and edited later — reconstructing it from the overlapping
+    # chunks would be lossy. `kind=pasted` marks it as editable in list_sources().
+    chunks[0].metadata = {**chunks[0].metadata, "full_text": text}
+    get_vectorstore().add_documents(chunks)
+    return len(chunks)
 
 
 def list_sources():
     got = get_vectorstore().get(include=["metadatas"])
-    counts = {}
+    info = {}
     for m in got.get("metadatas", []) or []:
-        s = (m or {}).get("source", "unknown")
-        counts[s] = counts.get(s, 0) + 1
-    return [{"source": s, "chunks": c} for s, c in sorted(counts.items())]
+        m = m or {}
+        s = m.get("source", "unknown")
+        e = info.setdefault(s, {"chunks": 0, "kind": "file"})
+        e["chunks"] += 1
+        if m.get("kind") == "pasted":
+            e["kind"] = "pasted"
+    return [
+        {"source": s, "chunks": e["chunks"], "kind": e["kind"]}
+        for s, e in sorted(info.items())
+    ]
+
+
+def get_source_text(name: str):
+    """Original text of a source, for editing. Pasted sources store it verbatim
+    on their first chunk (`full_text`); for anything else we fall back to
+    concatenating the chunk documents (lossy, but better than nothing)."""
+    vs = get_vectorstore()
+    try:
+        got = vs.get(where={"source": name}, include=["metadatas", "documents"])
+    except Exception:
+        return None
+    metas = got.get("metadatas", []) or []
+    docs = got.get("documents", []) or []
+    for m in metas:
+        if (m or {}).get("full_text"):
+            return m["full_text"]
+    if not docs:
+        return None
+    return "\n\n".join(d for d in docs if d)
 
 
 def delete_source(name: str) -> int:

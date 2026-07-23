@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { verifyAdminJwt } from '../middlewares/admin.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
 import {
-    ingestDocuments, ingestRawText, getSources, removeSource, searchKnowledge, askKnowledge, chatKnowledge, agenticChat,
+    ingestDocuments, ingestRawText, getSources, getSourceText, updateSource, removeSource, searchKnowledge, askKnowledge, chatKnowledge, agenticChat,
 } from '../controller/rag.controller.js';
 import { listApiLogs, apiLogStats, getApiLog, clearApiLogs } from '../controller/apiLog.controller.js';
 import { apiError } from '../utils/apiError.js';
@@ -174,6 +174,8 @@ adminRouter.get('/knowledge/sources', requireKnowledge, getSources);
 adminRouter.post('/knowledge/ingest', requireKnowledge, upload.array('files', 50), ingestDocuments);
 adminRouter.post('/knowledge/text', requireKnowledge, ingestRawText);
 adminRouter.post('/knowledge/search', requireKnowledge, searchKnowledge);
+adminRouter.get('/knowledge/sources/:source/content', requireKnowledge, getSourceText);
+adminRouter.put('/knowledge/sources/:source', requireKnowledge, updateSource);
 adminRouter.delete('/knowledge/sources/:source', requireKnowledge, removeSource);
 // Asking / chatting against the KB is read-only and available to ANY authenticated
 // admin (support agents included) — this powers the admin "AI" section.

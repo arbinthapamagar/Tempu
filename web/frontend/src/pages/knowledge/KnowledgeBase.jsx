@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { BookOpen, Upload, FileText, Trash2, MessageSquare, Settings, Search } from '@/components/ui/icons'
+import { BookOpen, Upload, FileText, Trash2, MessageSquare, Settings, Search, Edit, Save } from '@/components/ui/icons'
 import { Button } from '../../components/ui/Button'
 import { Input, Textarea } from '../../components/ui/Input'
 import { Modal } from '../../components/ui/Modal'
@@ -30,6 +30,12 @@ export default function KnowledgeBase() {
   const [label, setLabel] = useState('')
   const [text, setText] = useState('')
   const [toDelete, setToDelete] = useState(null)
+
+  // Editing a pasted source: { source } while loading its text, then we fill
+  // editText. editText === null means the editor is closed.
+  const [editing, setEditing] = useState(null)
+  const [editText, setEditText] = useState('')
+  const [loadingEdit, setLoadingEdit] = useState(false)
 
   // Everything below the chat (upload / paste / retrieve / sources) lives in the
   // gear settings modal, so the page itself is just the chat.
@@ -78,6 +84,32 @@ export default function KnowledgeBase() {
       refresh()
     },
     onError: (e) => toast.error(e?.message || 'Delete failed'),
+  })
+
+  // Open the editor for a pasted source: fetch its current text first.
+  const openEditor = async (source) => {
+    setEditing({ source })
+    setLoadingEdit(true)
+    try {
+      const res = await knowledgeApi.sourceContent(source)
+      setEditText(res?.data?.text || '')
+    } catch (e) {
+      toast.error(e?.message || 'Could not load source')
+      setEditing(null)
+    } finally {
+      setLoadingEdit(false)
+    }
+  }
+
+  const updateSource = useMutation({
+    mutationFn: () => knowledgeApi.updateSource(editing.source, editText),
+    onSuccess: (res) => {
+      toast.success(res?.message || 'Source updated')
+      setEditing(null)
+      setEditText('')
+      refresh()
+    },
+    onError: (e) => toast.error(e?.message || 'Update failed'),
   })
 
   const runSearch = useMutation({
@@ -276,13 +308,24 @@ export default function KnowledgeBase() {
                           {s.updatedAt ? new Date(s.updatedAt).toLocaleDateString() : '—'}
                         </td>
                         <td className="px-4 py-1 text-right">
-                          <button
-                            onClick={() => setToDelete(s.source)}
-                            className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                            title="Delete source"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            {s.kind === 'pasted' && (
+                              <button
+                                onClick={() => openEditor(s.source)}
+                                className="p-1.5 rounded-md text-gray-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                                title="Edit text"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setToDelete(s.source)}
+                              className="p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              title="Delete source"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -292,6 +335,45 @@ export default function KnowledgeBase() {
             )}
           </section>
         </div>
+      </Modal>
+
+      {/* Edit a pasted source */}
+      <Modal
+        open={!!editing}
+        onClose={() => { setEditing(null); setEditText('') }}
+        title={editing ? `Edit “${editing.source}”` : 'Edit source'}
+        size="xl"
+        align="right"
+      >
+        {loadingEdit ? (
+          <div className="py-12 flex justify-center"><Spinner /></div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-xs text-gray-400">
+              Saving replaces this source’s content in the knowledge base (its old chunks are removed and the edited text is re-embedded under the same name).
+            </p>
+            <Textarea
+              label="Content"
+              rows={18}
+              placeholder="Edit the text…"
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => { setEditing(null); setEditText('') }}>
+                Cancel
+              </Button>
+              <Button
+                icon={Save}
+                loading={updateSource.isPending}
+                disabled={!editText.trim()}
+                onClick={() => updateSource.mutate()}
+              >
+                Save changes
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       <ConfirmDialog

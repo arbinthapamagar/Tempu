@@ -17,6 +17,10 @@ export const knowledgeApi = {
   // image: optional base64 data URL ("data:image/png;base64,…") for image understanding.
   chat: (message, history, image) =>
     api.post('/admin/knowledge/chat', { message, history, ...(image ? { image } : {}) }),
+  // Original text of a (pasted) source, to load into the editor.
+  sourceContent: (source) => api.get(`/admin/knowledge/sources/${encodeURIComponent(source)}/content`),
+  // Save an edited pasted source — re-ingests the text under the same name.
+  updateSource: (source, text) => api.put(`/admin/knowledge/sources/${encodeURIComponent(source)}`, { text }),
   removeSource: (source) => api.delete(`/admin/knowledge/sources/${encodeURIComponent(source)}`),
   // Agentic AI — tool-calling agent over LIVE app data (users, drivers, trips,
   // payments, etc.), gated by the separate useAgenticAI permission. image: optional

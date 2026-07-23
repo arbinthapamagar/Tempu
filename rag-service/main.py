@@ -58,6 +58,11 @@ def sources_endpoint():
     return {"sources": ingest.list_sources(), "embedModel": ACTIVE_EMBED_MODEL}
 
 
+@app.get("/source/content")
+def source_content_endpoint(name: str):
+    return {"source": name, "text": ingest.get_source_text(name)}
+
+
 @app.delete("/source")
 def delete_source_endpoint(name: str):
     return {"ok": True, "deleted": ingest.delete_source(name), "source": name}

@@ -10,6 +10,7 @@ import {
     chat,
     listSources,
     deleteSource,
+    getSourceContent,
     EMBED_MODEL,
 } from '../utils/rag.js';
 import { runAgenticChat } from '../utils/agenticAgent.js';
@@ -52,6 +53,29 @@ const getSources = asyncHandler(async (req, res) => {
     return res
         .status(200)
         .json(new apiResponse(200, { sources, embedModel: EMBED_MODEL }, 'Knowledge sources'));
+});
+
+// GET /knowledge/sources/:source/content  → original text of a pasted source
+// (used to load it back into the editor).
+const getSourceText = asyncHandler(async (req, res) => {
+    const source = decodeURIComponent(req.params.source || '');
+    if (!source) throw new apiError(400, 'Source is required');
+    const text = await getSourceContent(source);
+    return res.status(200).json(new apiResponse(200, { source, text }, 'Source content'));
+});
+
+// PUT /knowledge/sources/:source  { text }  → edit a pasted source in place.
+// ingestText deletes the source's existing chunks and re-embeds the new text
+// under the same name, so this is an atomic replace. The label (source name) is
+// kept as the identity and not renamed here, to avoid clobbering another source.
+const updateSource = asyncHandler(async (req, res) => {
+    const source = decodeURIComponent(req.params.source || '');
+    const { text } = req.body;
+    if (!source) throw new apiError(400, 'Source is required');
+    if (!text || !text.trim()) throw new apiError(400, 'Text is required');
+    const chunks = await ingestText(text, source);
+    if (!chunks) throw new apiError(400, 'Nothing to ingest from the provided text');
+    return res.status(200).json(new apiResponse(200, { source, chunks }, `Updated ${chunks} chunk(s)`));
 });
 
 // DELETE /knowledge/sources/:source
@@ -118,6 +142,8 @@ export {
     ingestDocuments,
     ingestRawText,
     getSources,
+    getSourceText,
+    updateSource,
     removeSource,
     searchKnowledge,
     askKnowledge,
