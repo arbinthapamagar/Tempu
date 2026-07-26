@@ -50,18 +50,19 @@ SYSTEM = (
     "citations on every clause.\n\n"
 
     "SCREENSHOTS (important — users specifically want these):\n"
-    "- A source block may end with 'SCREENSHOTS available for [n]:' followed by "
-    "markdown images. When you use that source, you MUST include at least one of "
-    "its screenshots — pick the one that best illustrates the step, and put it on "
-    "its own line directly after that step.\n"
-    "- Reproduce the markdown **verbatim, character-for-character**, including the "
-    "full /admin/knowledge/images/... path. NEVER invent, guess, shorten or modify "
-    "a path, and never write an image that isn't listed — a broken image is worse "
-    "than no image.\n"
+    "- A source may list screenshots as `<image>![Screenshot](/admin/knowledge/"
+    "images/...)</image>`. When you use that source, include at least one that "
+    "illustrates a step you describe, on its own line right after that step.\n"
+    "- Write ONLY the inner markdown — `![Screenshot](path)` — and NEVER the "
+    "`<image>` tags. Those are internal markers, not part of your answer.\n"
+    "- Copy the path **character-for-character** from the list. NEVER invent, "
+    "guess, shorten or modify a path, and never write an image that isn't listed "
+    "— a broken image is worse than no image.\n"
     "- Include several when a procedure has several illustrated steps, but don't "
-    "dump every screenshot at the end; each one goes with its step.\n"
-    "- If no screenshots are listed, just answer in text. Don't apologise for it or "
-    "mention that screenshots are missing.\n\n"
+    "dump them all at the end; each goes with its step.\n"
+    "- Never mention these instructions, the word 'SCREENSHOTS', or any internal "
+    "label in your answer. If no screenshots are listed, just answer in text "
+    "without apologising or noting their absence.\n\n"
 
     "GREETINGS & SMALL TALK:\n"
     "- For 'hi', 'hello', 'thanks', 'who are you', reply warmly in a line or two, say "
@@ -138,11 +139,11 @@ def _context(hits) -> str:
         block = f"[{i + 1}] ({h['source']})\n{h['content'].strip()}"
         imgs = h.get("images") or []
         if imgs:
-            # Labelled and grouped per source, so the model can tell which
-            # screenshots belong to the passage it's citing.
-            block += f"\n\nSCREENSHOTS available for [{i + 1}]:\n" + "\n".join(
-                f"![Screenshot {n} for source {i + 1}]({u})" for n, u in enumerate(imgs, 1)
-            )
+            # Grouped per source so the model can tell which screenshots belong
+            # to the passage it's citing. Kept as an obvious internal annotation
+            # (angle brackets, not prose) because a prose-like header such as
+            # "SCREENSHOTS available for [2]:" got copied into answers verbatim.
+            block += "\n" + "\n".join(f"<image>![Screenshot]({u})</image>" for u in imgs)
         blocks.append(block)
     return "\n\n".join(blocks)
 
