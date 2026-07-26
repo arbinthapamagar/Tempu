@@ -1,5 +1,44 @@
+import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { api } from '../../api/client'
+
+// Screenshots pulled out of ingested documents (see rag-service/images.py).
+// They're behind admin auth and the app authenticates with a Bearer token from
+// localStorage, which a plain <img src> can't send — so fetch the bytes through
+// the authed client and render an object URL instead.
+const KB_IMAGE_PREFIX = '/admin/knowledge/images/'
+
+function KbImage({ src, alt }) {
+  const [url, setUrl] = useState(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let objectUrl
+    let cancelled = false
+    api
+      .get(src, { responseType: 'blob' })
+      .then((blob) => {
+        if (cancelled) return
+        objectUrl = URL.createObjectURL(blob)
+        setUrl(objectUrl)
+      })
+      .catch(() => !cancelled && setFailed(true))
+    return () => {
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [src])
+
+  // A model that invented a path shouldn't leave a broken-image icon mid-answer.
+  if (failed) return null
+  if (!url) return <span className="block h-32 mb-3 rounded-lg bg-gray-100 animate-pulse" />
+  return (
+    <a href={url} target="_blank" rel="noreferrer">
+      <img src={url} alt={alt || 'Screenshot'} className="max-w-full h-auto rounded-lg border border-gray-200 mb-3" />
+    </a>
+  )
+}
 
 // Minimal, Claude-style markdown rendering for AI responses — no bubble
 // chrome, just well-spaced readable prose. No Tailwind Typography plugin
@@ -40,6 +79,12 @@ const components = {
   ),
   th: ({ children }) => <th className="border border-gray-200 px-2 py-1 text-left bg-gray-50 font-medium">{children}</th>,
   td: ({ children }) => <td className="border border-gray-200 px-2 py-1">{children}</td>,
+  img: ({ src, alt }) =>
+    src?.startsWith(KB_IMAGE_PREFIX) ? (
+      <KbImage src={src} alt={alt} />
+    ) : (
+      <img src={src} alt={alt || ''} className="max-w-full h-auto rounded-lg border border-gray-200 mb-3" />
+    ),
 }
 
 export function Markdown({ children }) {

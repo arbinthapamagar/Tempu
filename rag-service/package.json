@@ -1,0 +1,10 @@
+{
+  "name": "tempu-rag-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Convenience npm scripts for the Python RAG microservice (Tempu Rag). The service itself is FastAPI/Python - these scripts only wrap the uvicorn invocation so it is as easy to start as the Node services.",
+  "scripts": {
+    "rag": "${RAG_PYTHON:-/home/arbin/Arbeen/Development/BOT/BOT/.venv/bin/python} -m uvicorn main:app --host 0.0.0.0 --port ${RAG_PORT:-8100}",
+    "rag:dev": "${RAG_PYTHON:-/home/arbin/Arbeen/Development/BOT/BOT/.venv/bin/python} -m uvicorn main:app --host 0.0.0.0 --port ${RAG_PORT:-8100} --reload"
+  }
+}

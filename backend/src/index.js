@@ -5,6 +5,7 @@ import http from 'http';
 import dbConnect from './db/index.js';
 import app from './app.js';
 import { initSignaling } from './socket/signaling.js';
+import { ensureRagService } from './utils/ragAutostart.js';
 
 const port = process.env.PORT || 8000;
 
@@ -27,6 +28,11 @@ dbConnect()
 
         server.listen(port, () => {
             console.log(`Tempu backend running on port ${port}`);
+
+            // Bring up the Python RAG service (:8100) once the backend is
+            // serving. Fire-and-forget: it reuses an existing instance, never
+            // blocks startup, and never throws. See utils/ragAutostart.js.
+            ensureRagService();
         });
     })
     .catch((error) => {

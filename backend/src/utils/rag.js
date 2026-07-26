@@ -44,14 +44,17 @@ export async function answerFromHits(message, history = [], _hits) {
     return { reply: data.reply, sources: data.sources || [] };
 }
 
+// `images` are screenshots extracted from ingested documents that were in the
+// grounded context. The reply usually inlines them as markdown already; this
+// list is the fallback for a model that ignored them.
 export async function chat(message, history = [], image = null) {
     const data = await call('/chat', { json: { message, history, ...(image ? { image } : {}) } });
-    return { reply: data.reply, sources: data.sources || [] };
+    return { reply: data.reply, sources: data.sources || [], images: data.images || [] };
 }
 
 export async function ask(question, k) {
     const data = await call('/ask', { json: { question, k } });
-    return { answer: data.answer, sources: data.sources || [] };
+    return { answer: data.answer, sources: data.sources || [], images: data.images || [] };
 }
 
 export async function ingestText(text, source) {
@@ -80,6 +83,25 @@ export async function listSources() {
 export async function getSourceContent(source) {
     const data = await call(`/source/content?name=${encodeURIComponent(source)}`, { method: 'GET' });
     return data.text || '';
+}
+
+// Fetch an image extracted from an ingested document. Unlike every other call
+// here this returns bytes, not JSON — the admin UI can't reach :8100 directly,
+// so the Node backend proxies the file (and gates it behind admin auth).
+export async function fetchImage(sourceDir, filename) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+        const url = `${RAG_URL}/images/${encodeURIComponent(sourceDir)}/${encodeURIComponent(filename)}`;
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) return null;
+        return {
+            buffer: Buffer.from(await res.arrayBuffer()),
+            contentType: res.headers.get('content-type') || 'application/octet-stream',
+        };
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 export async function deleteSource(source) {

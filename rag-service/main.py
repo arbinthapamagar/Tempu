@@ -8,12 +8,14 @@ from typing import Optional
 
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from config import DOCS_DIR, ACTIVE_EMBED_MODEL, LLM_MODEL, RETRIEVE_K
 import ingest
 import retriever
 import answer as answer_mod
+from images import IMAGES_DIR
 
 app = FastAPI(title="Shakti RAG Service", version="1.0.0")
 # Called server-to-server by the Node backend; open CORS is harmless for a
@@ -24,6 +26,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Images extracted from ingested documents. Served here for the Node backend to
+# proxy (the admin UI never talks to :8100 directly) — see images.py.
+app.mount("/images", StaticFiles(directory=str(IMAGES_DIR)), name="images")
 
 
 @app.get("/health")
@@ -92,7 +99,7 @@ class AskIn(BaseModel):
 @app.post("/ask")
 def ask_endpoint(body: AskIn):
     r = answer_mod.answer(body.question, [], body.k or RETRIEVE_K)
-    return {"answer": r["reply"], "sources": r["sources"]}
+    return {"answer": r["reply"], "sources": r["sources"], "images": r.get("images", [])}
 
 
 class ChatIn(BaseModel):
@@ -106,4 +113,4 @@ class ChatIn(BaseModel):
 @app.post("/chat")
 def chat_endpoint(body: ChatIn):
     r = answer_mod.answer(body.message, body.history or [], body.k or RETRIEVE_K, image=body.image)
-    return {"reply": r["reply"], "sources": r["sources"]}
+    return {"reply": r["reply"], "sources": r["sources"], "images": r.get("images", [])}

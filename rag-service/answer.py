@@ -2,6 +2,8 @@
 from Chroma first. Returns the reply, the cited sources, and the raw hits (with
 scores) so callers can apply their own relevance gate.
 """
+import re
+
 import requests
 from langchain_ollama import ChatOllama
 
@@ -20,6 +22,8 @@ from config import (
 from retriever import search
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+# Markdown image refs woven into chunk text by images.py.
+IMAGE_REF_RE = re.compile(r"!\[[^\]]*\]\((/admin/knowledge/images/[^)\s]+)\)")
 # Last key/model that worked, so we don't re-hit an exhausted combo every call.
 _active_key_idx = 0
 _active_gemini_idx = 0
@@ -48,6 +52,16 @@ SYSTEM = (
     "but don't speculate beyond the sources.\n"
     "- Cite sources naturally as [1], [2] right after the fact they back — don't stack "
     "citations on every clause.\n\n"
+
+    "SCREENSHOTS:\n"
+    "- The KNOWLEDGE may contain markdown images like ![Screenshot](/admin/knowledge/"
+    "images/...). When one illustrates a step you're describing, reproduce it "
+    "**verbatim, exactly as written**, on its own line right after that step.\n"
+    "- Copy the path character-for-character. NEVER invent, guess, shorten or "
+    "modify an image path, and never write an image that isn't in the KNOWLEDGE — "
+    "a broken image is worse than no image.\n"
+    "- If the knowledge has no images, just answer in text. Don't apologise for it "
+    "or mention that screenshots are missing.\n\n"
 
     "GREETINGS & SMALL TALK:\n"
     "- For 'hi', 'hello', 'thanks', 'who are you', reply warmly in a line or two, say "
@@ -191,4 +205,10 @@ def answer(message: str, history=None, k: int = RETRIEVE_K, image=None):
         return {"reply": _friendly_error(exc, "generate"), "sources": [], "hits": hits, "error": True}
 
     sources = list(dict.fromkeys(h["source"] for h in hits))
-    return {"reply": reply, "sources": sources, "hits": hits}
+    # Every image available in the grounded context, whether or not the model
+    # chose to inline it — lets the UI offer them rather than losing them to a
+    # model that ignored the instruction.
+    images = list(dict.fromkeys(
+        u for h in hits for u in IMAGE_REF_RE.findall(h.get("content") or "")
+    ))
+    return {"reply": reply, "sources": sources, "hits": hits, "images": images}

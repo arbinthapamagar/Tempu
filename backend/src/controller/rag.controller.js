@@ -11,6 +11,7 @@ import {
     listSources,
     deleteSource,
     getSourceContent,
+    fetchImage,
     EMBED_MODEL,
 } from '../utils/rag.js';
 import { runAgenticChat } from '../utils/agenticAgent.js';
@@ -87,6 +88,31 @@ const removeSource = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, { source, deleted }, `Deleted ${deleted} chunk(s)`));
 });
 
+// GET /knowledge/images/:dir/:file → an image extracted from an ingested doc.
+// Answers embed these as markdown (![](...)); the KB can hold private uploads,
+// so this stays behind admin auth rather than being served statically.
+// Path segments are validated: they address files inside the RAG service's
+// images dir, so a traversal like `..%2F..%2Fetc` must never get through.
+const SAFE_SEGMENT = /^[A-Za-z0-9._-]+$/;
+
+const getKnowledgeImage = asyncHandler(async (req, res) => {
+    const dir = decodeURIComponent(req.params.dir || '');
+    const file = decodeURIComponent(req.params.file || '');
+    if (!SAFE_SEGMENT.test(dir) || !SAFE_SEGMENT.test(file) || dir === '..' || file === '..') {
+        throw new apiError(400, 'Invalid image path');
+    }
+    let img;
+    try {
+        img = await fetchImage(dir, file);
+    } catch {
+        throw new apiError(503, 'Knowledge service unreachable');
+    }
+    if (!img) throw new apiError(404, 'Image not found');
+    res.set('Content-Type', img.contentType);
+    res.set('Cache-Control', 'private, max-age=86400');
+    return res.status(200).send(img.buffer);
+});
+
 // POST /knowledge/search  { query, k }  → raw retrieval (for testing relevance)
 const searchKnowledge = asyncHandler(async (req, res) => {
     const { query, k } = req.body;
@@ -145,6 +171,7 @@ export {
     getSourceText,
     updateSource,
     removeSource,
+    getKnowledgeImage,
     searchKnowledge,
     askKnowledge,
     chatKnowledge,

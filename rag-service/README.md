@@ -43,18 +43,29 @@ Copy `.env.sample` to `.env` and adjust. Key variables:
 | `RAG_CHAT_MODEL` | `llama3.1:8b` | Local chat model (used when `AI_PROVIDER=ollama`). |
 | `RAG_CHUNK_SIZE` / `RAG_CHUNK_OVERLAP` | `500` / `50` | Text splitting. |
 | `RAG_RETRIEVE_K` | `5` | How many chunks to retrieve per query. |
-| `RAG_MIN_SCORE` | `0.5` | Relevance floor — chunks below this are dropped before grounding, so off-topic queries don't cite random docs. Tuned to nomic's score distribution. |
+| `RAG_MIN_SCORE` | `0.63` | Relevance floor — chunks below this are dropped before grounding, so off-topic queries don't cite random docs. Tuned to nomic's score distribution **and to the store's size** — a bigger store needs a higher floor, since more chunks means more chances an off-topic query finds something. Re-calibrated to 0.63 for the ~600-chunk store (was 0.5 at 64 chunks). |
 | `RAG_COLLECTION` | `shakti` | Chroma collection name. |
 
 ## Run
 
-Option A — reuse the BOT project's virtualenv (already has every dependency):
+**Option A (easiest) — `npm run rag`:**
+```bash
+cd rag-service
+npm run rag        # add :dev for --reload while editing the Python
+```
+There is no Node code here — `package.json` exists purely so this Python service starts
+the same way as the Node ones, instead of you having to remember the interpreter path.
+It wraps Option B below. Override with `RAG_PYTHON=` (interpreter) or `RAG_PORT=` (default 8100).
+
+Option B — reuse the BOT project's virtualenv (already has every dependency):
 ```bash
 cd rag-service
 /home/arbin/Arbeen/Development/BOT/BOT/.venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8100
 ```
+The absolute path matters: there is no venv in this directory, so a bare `uvicorn` or
+`python` uses the system interpreter and dies on the missing imports.
 
-Option B — fresh virtualenv:
+Option C — fresh virtualenv:
 ```bash
 cd rag-service
 python3 -m venv .venv && source .venv/bin/activate
@@ -91,6 +102,33 @@ Gemini vision when `AI_PROVIDER=gemini`, or OCR if `pytesseract` + the `tesserac
 binary are installed). Re-ingesting the same `source` name is idempotent (the old
 chunks are deleted first).
 
+### Screenshots in answers
+Embedded images are **extracted, kept and shown in answers** — the text loaders drop
+them otherwise, which silently loses every screenshot in an uploaded guide (see
+`images.py`):
+
+- **PDF** — images are pulled per page (`pypdf`) and attached to that page's text, so
+  a screenshot stays with the step it illustrates.
+- **DOCX** — images come from `word/media/`; zip order doesn't preserve position, so
+  they attach to the end of the document.
+- **A directly uploaded image** — the file is kept alongside its vision/OCR description,
+  so an answer can show the screenshot instead of only describing it.
+
+Logos, icons and dividers are filtered out (`MIN_BYTES` / `MIN_DIMENSION` in
+`images.py`). Each kept image is woven into the chunk text as
+`![Screenshot](/admin/knowledge/images/<source>/<file>)`, and `answer.py` instructs the
+model to reproduce that markdown verbatim next to the relevant step. `/chat` and `/ask`
+also return an `images` array of everything available in the grounded context, as a
+fallback when the model doesn't inline them.
+
+Files live in `data/images/<source>/` and are served by this service at `/images/...`.
+The admin UI never reaches :8100 directly, so the Node backend proxies them at
+`GET /api/v1/admin/knowledge/images/:dir/:file` behind admin auth (the KB can hold
+private uploads). The frontend can't use a plain `<img src>` there — it authenticates
+with a Bearer token — so `web/frontend/src/components/ai/Markdown.jsx` fetches the bytes
+through the authed client and renders an object URL. Deleting or re-ingesting a source
+removes its images too.
+
 ## Swapping the embedder (optional)
 A higher-quality Google embedder (`gemini-embedding-001`, 3072-dim, better
 multilingual/Nepali) is included as a **commented alternative** in `ingest.py`
@@ -108,6 +146,7 @@ retriever.py    similarity search with cosine relevance scores
 answer.py       grounding + system prompt + Gemini/Ollama generation & failover
 embeddings.py   optional Google embedder (documented alternative)
 vision.py       optional image description (Gemini vision / OCR)
+images.py       extract/persist/serve images embedded in ingested documents
 ```
 
 Data (Chroma + uploaded files) persists under `rag-service/data/` — gitignored.

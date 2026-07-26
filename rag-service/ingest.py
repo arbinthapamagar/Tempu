@@ -26,6 +26,7 @@ from config import (
 )
 # from embeddings import GeminiEmbeddings  # Google API embedder (see get_vectorstore)
 from vision import describe_image
+import images as imagelib
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".tif", ".gif"}
 
@@ -53,15 +54,34 @@ def get_vectorstore() -> Chroma:
     return _vs
 
 
-def _load_file(path: Path):
+def _load_file(path: Path, source: str | None = None):
+    """Load a file to Documents. Embedded images are extracted, persisted and
+    woven into the text as markdown refs (see images.py) — the text loaders drop
+    them otherwise, which loses every screenshot in an uploaded guide."""
     ext = path.suffix.lower()
+    source = source or path.name
     if ext in IMAGE_EXTS:
-        return [Document(page_content=describe_image(path), metadata={"source": path.name})]
+        # Keep the picture itself alongside the vision/OCR description, so an
+        # answer can show the screenshot rather than only describe it.
+        refs = imagelib.markdown_refs(imagelib.from_image_file(path, source), alt=path.stem)
+        return [Document(page_content=describe_image(path) + refs,
+                         metadata={"source": source})]
     try:
         if ext == ".pdf":
-            return PyPDFLoader(str(path)).load()
+            docs = PyPDFLoader(str(path)).load()
+            per_page = imagelib.from_pdf(path, source)
+            if per_page:
+                for d in docs:
+                    urls = per_page.get(d.metadata.get("page"))
+                    if urls:
+                        d.page_content += imagelib.markdown_refs(urls)
+            return docs
         if ext == ".docx":
-            return Docx2txtLoader(str(path)).load()
+            docs = Docx2txtLoader(str(path)).load()
+            urls = imagelib.from_docx(path, source)
+            if urls and docs:
+                docs[-1].page_content += imagelib.markdown_refs(urls)
+            return docs
         if ext == ".md":
             return UnstructuredMarkdownLoader(str(path)).load()
         if ext == ".txt":
@@ -97,8 +117,8 @@ def ingest_files(paths_and_names):
     """paths_and_names: iterable of (filepath, display_source_name)."""
     total, results = 0, []
     for path, name in paths_and_names:
-        delete_source(name)  # re-ingest is idempotent per source
-        n = _add(_load_file(Path(path)), name)
+        delete_source(name)  # idempotent per source — also clears its images
+        n = _add(_load_file(Path(path), name), name)
         results.append({"source": name, "chunks": n})
         total += n
     return total, results
@@ -157,6 +177,9 @@ def get_source_text(name: str):
 
 def delete_source(name: str) -> int:
     vs = get_vectorstore()
+    # Drop any images extracted from this source too, so deleting/re-ingesting
+    # doesn't leave orphaned files that nothing references.
+    imagelib.delete_for_source(name)
     try:
         existing = vs.get(where={"source": name}).get("ids", []) or []
         if existing:

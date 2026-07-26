@@ -3,3 +3,7 @@ data/
 __pycache__/
 *.pyc
 .env
+
+# autostart artefacts (backend/src/utils/ragAutostart.js)
+*.log
+.rag.pid
