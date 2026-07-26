@@ -2,8 +2,6 @@
 from Chroma first. Returns the reply, the cited sources, and the raw hits (with
 scores) so callers can apply their own relevance gate.
 """
-import re
-
 import requests
 from langchain_ollama import ChatOllama
 
@@ -22,8 +20,6 @@ from config import (
 from retriever import search
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
-# Markdown image refs woven into chunk text by images.py.
-IMAGE_REF_RE = re.compile(r"!\[[^\]]*\]\((/admin/knowledge/images/[^)\s]+)\)")
 # Last key/model that worked, so we don't re-hit an exhausted combo every call.
 _active_key_idx = 0
 _active_gemini_idx = 0
@@ -53,15 +49,19 @@ SYSTEM = (
     "- Cite sources naturally as [1], [2] right after the fact they back — don't stack "
     "citations on every clause.\n\n"
 
-    "SCREENSHOTS:\n"
-    "- The KNOWLEDGE may contain markdown images like ![Screenshot](/admin/knowledge/"
-    "images/...). When one illustrates a step you're describing, reproduce it "
-    "**verbatim, exactly as written**, on its own line right after that step.\n"
-    "- Copy the path character-for-character. NEVER invent, guess, shorten or "
-    "modify an image path, and never write an image that isn't in the KNOWLEDGE — "
-    "a broken image is worse than no image.\n"
-    "- If the knowledge has no images, just answer in text. Don't apologise for it "
-    "or mention that screenshots are missing.\n\n"
+    "SCREENSHOTS (important — users specifically want these):\n"
+    "- A source block may end with 'SCREENSHOTS available for [n]:' followed by "
+    "markdown images. When you use that source, you MUST include at least one of "
+    "its screenshots — pick the one that best illustrates the step, and put it on "
+    "its own line directly after that step.\n"
+    "- Reproduce the markdown **verbatim, character-for-character**, including the "
+    "full /admin/knowledge/images/... path. NEVER invent, guess, shorten or modify "
+    "a path, and never write an image that isn't listed — a broken image is worse "
+    "than no image.\n"
+    "- Include several when a procedure has several illustrated steps, but don't "
+    "dump every screenshot at the end; each one goes with its step.\n"
+    "- If no screenshots are listed, just answer in text. Don't apologise for it or "
+    "mention that screenshots are missing.\n\n"
 
     "GREETINGS & SMALL TALK:\n"
     "- For 'hi', 'hello', 'thanks', 'who are you', reply warmly in a line or two, say "
@@ -128,11 +128,23 @@ def _generate(oai_messages):
 
 
 def _context(hits) -> str:
+    """Grounding context. Screenshots live in metadata (they'd wreck the chunk
+    embeddings if they were in the text), so they're appended here as markdown
+    for the model to copy into its answer."""
     if not hits:
         return ""
-    return "\n\n".join(
-        f"[{i + 1}] ({h['source']})\n{h['content'].strip()}" for i, h in enumerate(hits)
-    )
+    blocks = []
+    for i, h in enumerate(hits):
+        block = f"[{i + 1}] ({h['source']})\n{h['content'].strip()}"
+        imgs = h.get("images") or []
+        if imgs:
+            # Labelled and grouped per source, so the model can tell which
+            # screenshots belong to the passage it's citing.
+            block += f"\n\nSCREENSHOTS available for [{i + 1}]:\n" + "\n".join(
+                f"![Screenshot {n} for source {i + 1}]({u})" for n, u in enumerate(imgs, 1)
+            )
+        blocks.append(block)
+    return "\n\n".join(blocks)
 
 
 def _friendly_error(exc, stage: str) -> str:
@@ -208,7 +220,5 @@ def answer(message: str, history=None, k: int = RETRIEVE_K, image=None):
     # Every image available in the grounded context, whether or not the model
     # chose to inline it — lets the UI offer them rather than losing them to a
     # model that ignored the instruction.
-    images = list(dict.fromkeys(
-        u for h in hits for u in IMAGE_REF_RE.findall(h.get("content") or "")
-    ))
+    images = list(dict.fromkeys(u for h in hits for u in (h.get("images") or [])))
     return {"reply": reply, "sources": sources, "hits": hits, "images": images}

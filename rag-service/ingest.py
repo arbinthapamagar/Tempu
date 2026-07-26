@@ -55,17 +55,23 @@ def get_vectorstore() -> Chroma:
 
 
 def _load_file(path: Path, source: str | None = None):
-    """Load a file to Documents. Embedded images are extracted, persisted and
-    woven into the text as markdown refs (see images.py) — the text loaders drop
-    them otherwise, which loses every screenshot in an uploaded guide."""
+    """Load a file to Documents. Embedded images are extracted, persisted, and
+    recorded in each Document's `images` metadata (see images.py) — the text
+    loaders drop them otherwise, which loses every screenshot in an uploaded
+    guide.
+
+    Deliberately metadata and NOT page_content: a markdown image ref embeds as a
+    meaningless URL string, so putting it in the text both dilutes the chunk's
+    embedding and can leave image-only chunks that no query can ever match.
+    answer.py re-attaches them to the context the model sees."""
     ext = path.suffix.lower()
     source = source or path.name
     if ext in IMAGE_EXTS:
         # Keep the picture itself alongside the vision/OCR description, so an
         # answer can show the screenshot rather than only describe it.
-        refs = imagelib.markdown_refs(imagelib.from_image_file(path, source), alt=path.stem)
-        return [Document(page_content=describe_image(path) + refs,
-                         metadata={"source": source})]
+        urls = imagelib.from_image_file(path, source)
+        return [Document(page_content=describe_image(path),
+                         metadata={"source": source, "images": ",".join(urls)})]
     try:
         if ext == ".pdf":
             docs = PyPDFLoader(str(path)).load()
@@ -74,13 +80,13 @@ def _load_file(path: Path, source: str | None = None):
                 for d in docs:
                     urls = per_page.get(d.metadata.get("page"))
                     if urls:
-                        d.page_content += imagelib.markdown_refs(urls)
+                        d.metadata["images"] = ",".join(urls)
             return docs
         if ext == ".docx":
             docs = Docx2txtLoader(str(path)).load()
             urls = imagelib.from_docx(path, source)
             if urls and docs:
-                docs[-1].page_content += imagelib.markdown_refs(urls)
+                docs[-1].metadata["images"] = ",".join(urls)
             return docs
         if ext == ".md":
             return UnstructuredMarkdownLoader(str(path)).load()
