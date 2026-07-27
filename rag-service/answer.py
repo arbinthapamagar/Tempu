@@ -3,6 +3,7 @@ from Chroma first. Returns the reply, the cited sources, and the raw hits (with
 scores) so callers can apply their own relevance gate.
 """
 import re
+import time
 
 import requests
 from langchain_ollama import ChatOllama
@@ -18,6 +19,8 @@ from config import (
     AI_PROVIDER,
     GEMINI_KEYS,
     GEMINI_MODELS,
+    GEMINI_TIMEOUT,
+    GEMINI_TOTAL_BUDGET,
 )
 from retriever import search
 
@@ -100,9 +103,16 @@ def _generate(oai_messages):
     rotates KEY × MODEL: a per-model daily 429/404 tries the next model, and once
     a key's whole chain is exhausted (or the key is rejected) it rolls to the
     next key — each key has its own quota buckets."""
+    # A model can also fail by never answering at all. Seen 2026-07-27:
+    # gemini-flash-lite-latest accepted generation POSTs and then hung
+    # indefinitely on a key whose GET /models returned 200 in 0.35s and for which
+    # gemini-flash-latest answered in 1.9s. A hang used to abort the whole call,
+    # so one sick model took down chat while a healthy one sat next in the chain.
+    # It's now treated like a 429 — give up on that model, try the next.
     global _active_key_idx, _active_gemini_idx
     if AI_PROVIDER == "gemini" and GEMINI_KEYS:
         last_exc = None
+        deadline = time.monotonic() + GEMINI_TOTAL_BUDGET
         for ka in range(len(GEMINI_KEYS)):
             key_idx = (_active_key_idx + ka) % len(GEMINI_KEYS)
             key = GEMINI_KEYS[key_idx]
@@ -110,12 +120,19 @@ def _generate(oai_messages):
             for ma in range(len(GEMINI_MODELS)):
                 m_idx = (_active_gemini_idx + ma) % len(GEMINI_MODELS)
                 model = GEMINI_MODELS[m_idx]
-                res = requests.post(
-                    GEMINI_URL,
-                    headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-                    json={"model": model, "messages": oai_messages, "temperature": LLM_TEMPERATURE},
-                    timeout=60,
-                )
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                try:
+                    res = requests.post(
+                        GEMINI_URL,
+                        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                        json={"model": model, "messages": oai_messages, "temperature": LLM_TEMPERATURE},
+                        timeout=min(GEMINI_TIMEOUT, remaining),
+                    )
+                except (requests.Timeout, requests.ConnectionError) as exc:
+                    last_exc = exc
+                    continue  # this model isn't answering — next model on this key
                 if res.status_code in (401, 403):
                     last_exc = requests.HTTPError(f"key#{key_idx + 1} -> {res.status_code}", response=res)
                     key_rejected = True

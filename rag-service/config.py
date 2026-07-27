@@ -54,6 +54,15 @@ _GEMINI_FALLBACKS = os.environ.get(
 GEMINI_MODELS = list(dict.fromkeys(
     [GEMINI_MODEL] + [m.strip() for m in _GEMINI_FALLBACKS.split(",") if m.strip()]
 ))
+# How long to wait on ONE model before writing it off and trying the next, and
+# how long the whole KEY × MODEL rotation may take. A model that hangs rather
+# than erroring (see _generate in answer.py) burns the per-attempt timeout each
+# time, so without a total budget a long chain could outlast the Node client's
+# RAG_SERVICE_TIMEOUT_MS (180s) — at which point the admin gets "service
+# unreachable" instead of the real diagnostic. 45 × a few attempts, capped at
+# 150s, stays inside it.
+GEMINI_TIMEOUT = float(os.environ.get("GEMINI_TIMEOUT", "45"))
+GEMINI_TOTAL_BUDGET = float(os.environ.get("GEMINI_TOTAL_BUDGET", "150"))
 
 # Generation params (mirror BOT/config.py).
 LLM_TEMPERATURE = float(os.environ.get("RAG_TEMPERATURE", "0.3"))
