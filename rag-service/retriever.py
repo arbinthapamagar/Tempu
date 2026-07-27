@@ -44,28 +44,67 @@ def wants_images(query: str) -> bool:
     return bool(IMAGE_INTENT.search(query or ""))
 
 
+# Which platform's docs the user is asking about. The illustrated PDFs are filed
+# per platform ("Shipos Documentation (Shopify)-…"), and so are the help-center
+# articles ("shopify-en-02-…"), so matching the source name is enough.
+PLATFORM_OF_QUERY = (
+    ("shopify", r"\bshopify\b"),
+    ("wix", r"\bwix\b"),
+    ("woocommerce", r"\b(woocommerce|wordpress|wp|woo)\b"),
+)
+
+# How many of the k slots may be given to illustrated chunks that text ranking
+# alone would have left out. Two is enough to carry a procedure's key screens
+# without crowding out the prose that explains them.
+IMAGE_RESERVE = 2
+
+
+def _platform(query: str):
+    for name, pat in PLATFORM_OF_QUERY:
+        if re.search(pat, query or "", re.I):
+            return name
+    return None
+
+
+def _has_images(pair) -> bool:
+    return bool((pair[0].metadata or {}).get("images"))
+
+
 def search(query: str, k: int = RETRIEVE_K):
     vs = get_vectorstore()
-    expanded = expand_query(query)
 
-    # Only two of the ~150 sources are illustrated PDFs; the rest are text-only
-    # help-center articles that reliably out-rank them on how-to phrasing. So when
-    # the user explicitly asks to SEE something, ranking on text similarity alone
-    # returns k text chunks and the answer says there are no screenshots — while
-    # the screenshots sit right there in the corpus. Widen the candidate pool and
-    # let chunks that actually carry images take the slots.
-    #
-    # Scores are never altered, only the ordering: MIN_SCORE gating downstream
-    # still means the same thing, so this surfaces relevant screenshots without
-    # promoting a weak match.
+    # Over-retrieve, then choose. Only two of the ~152 sources are illustrated
+    # PDFs; the ~144 text-only help-center articles reliably out-rank them on
+    # how-to phrasing, so plain top-k retrieval fills every slot with prose and
+    # the answer arrives with no screenshots — while the screenshots sit right
+    # there in the corpus, scoring 0.66+, just below the cutoff.
+    pool = vs.similarity_search_with_relevance_scores(
+        expand_query(query), k=min(max(k * 4, 24), 40)
+    )
+
+    illustrated = [p for p in pool if _has_images(p)]
+    plain = [p for p in pool if not _has_images(p)]
+
+    # Prefer the platform the user named. Without this, "how to create a shipment
+    # in shopify" answered with Wix screenshots purely because the Wix chunk
+    # scored a hair higher — the right screens existed, in the Shopify doc.
+    plat = _platform(query)
+    if plat:
+        illustrated.sort(key=lambda p: plat not in str((p[0].metadata or {}).get("source", "")).lower())
+
     if wants_images(query):
-        pool = vs.similarity_search_with_relevance_scores(expanded, k=min(k * 4, 40))
-        with_imgs = [p for p in pool if (p[0].metadata or {}).get("images")]
-        without = [p for p in pool if not (p[0].metadata or {}).get("images")]
-        # Keep some text context too — the screenshots need explaining.
-        pairs = (with_imgs + without)[:k]
+        # Asked to SEE something: illustrated chunks take the slots, with some
+        # prose kept behind them because the screenshots still need explaining.
+        pairs = (illustrated + plain)[:k]
     else:
-        pairs = vs.similarity_search_with_relevance_scores(expanded, k=k)
+        # Otherwise keep text ranking in the lead but always reserve a couple of
+        # slots for illustrations, so a "how do I…" answer can show the screens
+        # without the user having to ask for them in a second message.
+        reserve = illustrated[:IMAGE_RESERVE]
+        keep = max(k - len(reserve), 1)
+        chosen = plain[:keep] + reserve
+        # Back to score order so the cited [1], [2] numbering reads naturally.
+        pairs = sorted(chosen, key=lambda p: -p[1])[:k]
 
     out = []
     for doc, score in pairs:
