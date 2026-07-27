@@ -32,9 +32,41 @@ def expand_query(query: str) -> str:
     return f"{q} ({' '.join(extra)})" if extra else q
 
 
+# "some images?", "any screenshots", "show me a picture" — the user is asking to
+# SEE something, not to read about it.
+IMAGE_INTENT = re.compile(
+    r"\b(image|images|screenshot|screenshots|picture|pictures|photo|photos|"
+    r"diagram|diagrams|visual|visuals|show me|see it)\b", re.I,
+)
+
+
+def wants_images(query: str) -> bool:
+    return bool(IMAGE_INTENT.search(query or ""))
+
+
 def search(query: str, k: int = RETRIEVE_K):
     vs = get_vectorstore()
-    pairs = vs.similarity_search_with_relevance_scores(expand_query(query), k=k)
+    expanded = expand_query(query)
+
+    # Only two of the ~150 sources are illustrated PDFs; the rest are text-only
+    # help-center articles that reliably out-rank them on how-to phrasing. So when
+    # the user explicitly asks to SEE something, ranking on text similarity alone
+    # returns k text chunks and the answer says there are no screenshots — while
+    # the screenshots sit right there in the corpus. Widen the candidate pool and
+    # let chunks that actually carry images take the slots.
+    #
+    # Scores are never altered, only the ordering: MIN_SCORE gating downstream
+    # still means the same thing, so this surfaces relevant screenshots without
+    # promoting a weak match.
+    if wants_images(query):
+        pool = vs.similarity_search_with_relevance_scores(expanded, k=min(k * 4, 40))
+        with_imgs = [p for p in pool if (p[0].metadata or {}).get("images")]
+        without = [p for p in pool if not (p[0].metadata or {}).get("images")]
+        # Keep some text context too — the screenshots need explaining.
+        pairs = (with_imgs + without)[:k]
+    else:
+        pairs = vs.similarity_search_with_relevance_scores(expanded, k=k)
+
     out = []
     for doc, score in pairs:
         meta = doc.metadata or {}

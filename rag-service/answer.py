@@ -2,6 +2,8 @@
 from Chroma first. Returns the reply, the cited sources, and the raw hits (with
 scores) so callers can apply their own relevance gate.
 """
+import re
+
 import requests
 from langchain_ollama import ChatOllama
 
@@ -169,6 +171,53 @@ def _friendly_error(exc, stage: str) -> str:
     return f"⚠️ The AI service hit an error while trying to answer ({stage}). Please try again shortly."
 
 
+# Words that carry no retrievable subject on their own. A message made only of
+# these is a follow-up ("some images?", "and then?", "show me more") whose real
+# subject is in the previous turn.
+_FILLER = frozenset("""
+a an the is are was were do does did can could would should will shall may might
+i you he she it we they me my your our their this that these those there here
+and or but so then also too very just only some any more other another else next
+of in on at to for from with about by as if what which how why when where who
+please thanks thank ok okay yes no not got have has had show see give tell me
+""".split())
+
+
+def _retrieval_query(message: str, history=None) -> str:
+    """Query to embed for retrieval.
+
+    A contextless follow-up must inherit its subject from the conversation.
+    Embedded literally, "some images ?" retrieves near-noise: it matched almost
+    nothing above MIN_SCORE, so the reply claimed the knowledge base had no
+    screenshots for the thing that had just been explained — while the previous
+    turn's subject would have retrieved them at 0.75+.
+
+    Only short, subject-free messages get contextualised, and only from the last
+    user turn (truncated): a standalone question must keep retrieving on its own
+    terms, or a topic change would drag the old subject along.
+    """
+    msg = (message or "").strip()
+    if not msg:
+        return "image"
+    if not history:
+        return msg
+
+    words = re.findall(r"[A-Za-z0-9']+", msg.lower())
+    content = [w for w in words if w not in _FILLER]
+    # Two content words ("bulk shipments") are already a subject worth retrieving
+    # on, and borrowing the previous turn there would drag the old topic into a
+    # genuine topic change. Only a message with nothing of its own inherits.
+    if len(content) > 1 or len(words) > 8:
+        return msg
+
+    prior = next(
+        (m.get("text", "").strip() for m in reversed(history)
+         if m.get("role") == "user" and (m.get("text") or "").strip()),
+        "",
+    )
+    return f"{prior[:300]}\n{msg}".strip() if prior else msg
+
+
 def answer(message: str, history=None, k: int = RETRIEVE_K, image=None):
     """Answer a question from the knowledge base. `image` (optional) is a base64
     data URL ("data:image/png;base64,…") — when present, Tempu Rag also looks at
@@ -177,7 +226,7 @@ def answer(message: str, history=None, k: int = RETRIEVE_K, image=None):
     # Retrieval (uses local Ollama embeddings). If Ollama is down this is where
     # it fails — return a clear message rather than a 500 so the admin knows why.
     try:
-        raw_hits = search(message or "image", k=k)
+        raw_hits = search(_retrieval_query(message, history), k=k)
     except Exception as exc:  # noqa: BLE001 - surface any dependency failure cleanly
         return {"reply": _friendly_error(exc, "embed"), "sources": [], "hits": [], "error": True}
 
