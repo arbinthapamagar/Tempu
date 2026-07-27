@@ -1619,8 +1619,11 @@ export const HANDLERS = {
                 .populate({ path: 'driverId', select: 'vehiclePlate userId', populate: { path: 'userId', select: 'name phone' } })
                 .populate({ path: 'backupDriverId', select: 'vehiclePlate userId', populate: { path: 'userId', select: 'name' } }),
         ]);
+        // Format from the LOCAL parts, not toISOString() — Nepal is UTC+05:45, so
+        // converting local midnight to UTC would report the previous day.
+        const pad = (n) => String(n).padStart(2, '0');
         return {
-            date: dayStart.toISOString().slice(0, 10),
+            date: `${dayStart.getFullYear()}-${pad(dayStart.getMonth() + 1)}-${pad(dayStart.getDate())}`,
             count, checkedInCount: checkedIn,
             drivers: rows.map((r) => ({
                 driver: r.driverId?.userId?.name || null,

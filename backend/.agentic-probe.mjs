@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { HANDLERS } from './src/utils/agenticTools.js';
 
-await mongoose.connect(`${process.env.MONGODB_URI}/${process.env.DB_NAME || ''}`);
+await mongoose.connect(`${process.env.MONGODB_URI}/${(await import('./src/utils/constant.js')).DB_NAME}`);
 console.log('connected:', mongoose.connection.name);
 
 const { proposeAction } = await import('/home/arbin/Arbeen/Development/Shakti/backend/src/utils/agenticActions.js');
