@@ -58,6 +58,13 @@ PLATFORM_OF_QUERY = (
 # without crowding out the prose that explains them.
 IMAGE_RESERVE = 2
 
+# A screenshot only earns a reserved slot if it is properly on topic. MIN_SCORE
+# (0.55) is the floor for "worth grounding on at all", which is too low here: at
+# that level "hello" reaches an illustrated chunk, and answering a greeting with a
+# screenshot of the shipment form is worse than answering it with nothing. Real
+# procedural matches sit at 0.66+, so this only drops the incidental ones.
+ILLUSTRATION_FLOOR = 0.60
+
 
 def _platform(query: str):
     for name, pat in PLATFORM_OF_QUERY:
@@ -68,6 +75,11 @@ def _platform(query: str):
 
 def _has_images(pair) -> bool:
     return bool((pair[0].metadata or {}).get("images"))
+
+
+def _source_platform(pair):
+    src = str((pair[0].metadata or {}).get("source", "")).lower()
+    return next((name for name, _ in PLATFORM_OF_QUERY if name in src), None)
 
 
 def search(query: str, k: int = RETRIEVE_K):
@@ -85,12 +97,16 @@ def search(query: str, k: int = RETRIEVE_K):
     illustrated = [p for p in pool if _has_images(p)]
     plain = [p for p in pool if not _has_images(p)]
 
-    # Prefer the platform the user named. Without this, "how to create a shipment
-    # in shopify" answered with Wix screenshots purely because the Wix chunk
-    # scored a hair higher — the right screens existed, in the Shopify doc.
+    # Respect the platform the user named. Two ways this went wrong: "how to
+    # create a shipment in shopify" answered with Wix screenshots because the Wix
+    # chunk scored a hair higher (the right screens existed, in the Shopify doc),
+    # and a WordPress question pulled in Shopify screenshots because no
+    # WooCommerce PDF exists at all. Showing another platform's UI is worse than
+    # showing none, so mismatches are dropped rather than reordered.
+    # Platform-neutral sources (the REST API PDF, standalone uploads) still count.
     plat = _platform(query)
     if plat:
-        illustrated.sort(key=lambda p: plat not in str((p[0].metadata or {}).get("source", "")).lower())
+        illustrated = [p for p in illustrated if (_source_platform(p) or plat) == plat]
 
     if wants_images(query):
         # Asked to SEE something: illustrated chunks take the slots, with some
@@ -100,7 +116,7 @@ def search(query: str, k: int = RETRIEVE_K):
         # Otherwise keep text ranking in the lead but always reserve a couple of
         # slots for illustrations, so a "how do I…" answer can show the screens
         # without the user having to ask for them in a second message.
-        reserve = illustrated[:IMAGE_RESERVE]
+        reserve = [p for p in illustrated if p[1] >= ILLUSTRATION_FLOOR][:IMAGE_RESERVE]
         keep = max(k - len(reserve), 1)
         chosen = plain[:keep] + reserve
         # Back to score order so the cited [1], [2] numbering reads naturally.

@@ -2,14 +2,13 @@ import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { api } from '../../api/client'
+import { KB_IMAGE_PREFIX } from './kbImages'
 
 // Screenshots pulled out of ingested documents (see rag-service/images.py).
 // They're behind admin auth and the app authenticates with a Bearer token from
 // localStorage, which a plain <img src> can't send — so fetch the bytes through
 // the authed client and render an object URL instead.
-const KB_IMAGE_PREFIX = '/admin/knowledge/images/'
-
-function KbImage({ src, alt }) {
+export function KbImage({ src, alt }) {
   const [url, setUrl] = useState(null)
   const [failed, setFailed] = useState(false)
 

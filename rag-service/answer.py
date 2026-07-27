@@ -155,6 +155,50 @@ def _context(hits) -> str:
     return "\n\n".join(blocks)
 
 
+# The prompt tells the model to copy screenshot paths character-for-character
+# and never to write the <image> markers, and it mostly complies — but "mostly"
+# reaches the admin as a broken image. All three failures below were observed on
+# one query with gemini-flash-lite: the <image> wrapper copied through verbatim,
+# every screenshot emitted twice (once wrapped, once bare), and a path stitched
+# together from two different documents ("…-Wix--<the Shopify doc's id>.pdf/
+# p20-1.png") that exists nowhere on disk. So the reply is repaired here instead
+# of trusted: only paths that were actually in the grounded context survive.
+_IMAGE_TAG = re.compile(r"</?image>")
+_MD_IMAGE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)\)")
+# What's left of a line once its screenshot is gone — a bare bullet or "3." that
+# would otherwise render as an empty list item.
+_LIST_MARKER = re.compile(r"^\s*(?:[-*+]|\d+[.)])?\s*$")
+
+
+def _clean_images(reply: str, allowed) -> str:
+    """Drop the internal <image> markers, any screenshot path that wasn't in the
+    context, and repeats of one already shown."""
+    seen = set()
+
+    def keep(m):
+        url = m.group(1)
+        if url not in allowed or url in seen:
+            return ""
+        seen.add(url)
+        return m.group(0)
+
+    lines = []
+    for line in _IMAGE_TAG.sub("", reply or "").split("\n"):
+        had_image = _MD_IMAGE.search(line)
+        line = _MD_IMAGE.sub(keep, line).rstrip()
+        if had_image:
+            # Close the gap a removed screenshot leaves mid-sentence, without
+            # touching the leading indent that keeps a nested bullet nested.
+            indent = line[: len(line) - len(line.lstrip())]
+            line = indent + re.sub(r"[ \t]{2,}", " ", line.lstrip())
+        # A line that existed only to carry a dropped screenshot goes with it,
+        # bullet included, rather than leaving a stray "*" behind.
+        if had_image and _LIST_MARKER.match(line):
+            continue
+        lines.append(line)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+
+
 def _friendly_error(exc, stage: str) -> str:
     """Turn a provider/dependency failure into a clear message the admin sees
     (and that gets logged), instead of a bare 500."""
@@ -274,6 +318,12 @@ def answer(message: str, history=None, k: int = RETRIEVE_K, image=None):
     sources = list(dict.fromkeys(h["source"] for h in hits))
     # Every image available in the grounded context, whether or not the model
     # chose to inline it — lets the UI offer them rather than losing them to a
-    # model that ignored the instruction.
+    # model that ignored the instruction. Doubles as the allow-list the reply's
+    # own image markdown is checked against.
     images = list(dict.fromkeys(u for h in hits for u in (h.get("images") or [])))
-    return {"reply": reply, "sources": sources, "hits": hits, "images": images}
+    return {
+        "reply": _clean_images(reply, set(images)),
+        "sources": sources,
+        "hits": hits,
+        "images": images,
+    }

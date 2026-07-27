@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Sparkles, Send, MessageSquare, Plus, Paperclip, X } from '@/components/ui/icons'
 import { cn } from '../../utils/cn'
-import { Markdown } from './Markdown'
+import { Markdown, KbImage } from './Markdown'
+import { hasInlineKbImage } from './kbImages'
 import { ActionCard } from './ActionCard'
 import toast from 'react-hot-toast'
 
@@ -16,6 +17,11 @@ import toast from 'react-hot-toast'
 // Only the last N turns are persisted — plenty for continuity without letting
 // localStorage grow unbounded over weeks of use.
 const HISTORY_LIMIT = 60
+
+// Screenshots to show beneath an answer that didn't place any itself. A query
+// can ground on 9 of them across several documents; four is enough to be useful
+// without turning the reply into a contact sheet.
+const KB_IMAGE_FALLBACK = 4
 
 function loadStoredMessages(storageKey) {
   if (!storageKey) return []
@@ -40,6 +46,9 @@ function toStorable(messages) {
     role: m.role,
     text: m.text,
     ...(m.sources?.length ? { sources: m.sources } : {}),
+    // Just short URLs — the bytes are fetched on demand, so these are safe to
+    // persist (unlike an attached base64 image).
+    ...(m.images?.length ? { images: m.images } : {}),
     ...(m.image ? { hadImage: true } : {}),
     ...(m.actions?.length
       ? {
@@ -59,7 +68,7 @@ export function ChatPanel({
   suggestions = [], placeholder, footerNote, sendFn, actionFn = null,
   showSources = false, allowImage = false, storageKey = null,
 }) {
-  const [messages, setMessages] = useState(() => loadStoredMessages(storageKey)) // { role: 'user' | 'model', text, sources?, image?, hadImage?, actions? }
+  const [messages, setMessages] = useState(() => loadStoredMessages(storageKey)) // { role: 'user' | 'model', text, sources?, images?, image?, hadImage?, actions? }
   const [input, setInput] = useState('')
   const [image, setImage] = useState(null) // base64 data URL, attached to the next message
   const scrollRef = useRef(null)
@@ -88,6 +97,11 @@ export function ChatPanel({
         role: 'model',
         text: data.reply || data.answer || '…',
         sources: data.sources || [],
+        // Screenshots that were in the grounding context. The model is asked to
+        // place them inline beside the step they illustrate and often does, but
+        // it skips them on plenty of runs — including on an explicit "show me
+        // screenshots". These are the safety net for exactly that case.
+        images: Array.isArray(data.images) ? data.images : [],
         // Write actions the agent prepared. Nothing has run yet — each renders
         // as a card the admin has to confirm.
         actions: Array.isArray(data.pendingActions) ? data.pendingActions : [],
@@ -227,6 +241,18 @@ export function ChatPanel({
                 ) : (
                   <div key={i} className="text-sm text-gray-800">
                     <Markdown>{m.text}</Markdown>
+                    {/* Only when the answer didn't already place them itself —
+                        otherwise the same screens appear twice. */}
+                    {m.images?.length > 0 && !hasInlineKbImage(m.text) && (
+                      <div className="mt-3">
+                        <p className="mb-1.5 text-xs text-gray-400">Screenshots from these sources</p>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {m.images.slice(0, KB_IMAGE_FALLBACK).map((src) => (
+                            <KbImage key={src} src={src} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {actionFn && m.actions?.map((a, j) => (
                       <ActionCard
                         key={j}
