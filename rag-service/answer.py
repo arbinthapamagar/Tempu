@@ -211,10 +211,20 @@ def _friendly_error(exc, stage: str) -> str:
                 "to use the local model.")
     if status in (401, 403):
         return "⚠️ The Gemini API key was rejected. Check GEMINI_API_KEY in rag-service/.env."
-    if "connect to ollama" in msg.lower() or "connection" in msg.lower():
+    lowered = msg.lower()
+    if "connect to ollama" in lowered or "connection" in lowered or "timed out" in lowered:
         if stage == "embed":
+            # Embeddings are always local Ollama, whichever provider does the chat.
             return ("⚠️ The knowledge base search is unavailable — the local embedding model "
                     "(Ollama) can't be reached. Start it with `ollama serve` and try again.")
+        # Generation, though, follows AI_PROVIDER. A Gemini read-timeout raises
+        # "HTTPSConnectionPool(...): Read timed out", which matches on
+        # "connection" and used to be reported as Ollama being down — sending the
+        # admin to restart a service that was running fine and wasn't involved.
+        if AI_PROVIDER == "gemini":
+            return ("⚠️ Gemini didn't respond in time. Check this machine can reach "
+                    "generativelanguage.googleapis.com, or set AI_PROVIDER=ollama in "
+                    "rag-service/.env to answer with the local model instead.")
         return ("⚠️ The local AI (Ollama) isn't reachable. Start it with `ollama serve`, or set "
                 "AI_PROVIDER=gemini in rag-service/.env.")
     return f"⚠️ The AI service hit an error while trying to answer ({stage}). Please try again shortly."

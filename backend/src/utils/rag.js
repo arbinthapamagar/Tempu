@@ -5,7 +5,14 @@
 import fs from 'fs/promises';
 
 const RAG_URL = (process.env.RAG_SERVICE_URL || 'http://localhost:8100').replace(/\/+$/, '');
-const TIMEOUT_MS = Number(process.env.RAG_SERVICE_TIMEOUT_MS) || 60000;
+// Must stay ABOVE the RAG service's own generation time, or this client aborts
+// a request the service is about to answer and the admin sees "the knowledge
+// service isn't reachable" for a service that is up and working — with the
+// service's own diagnostic message lost. 60s was exactly wrong: it matched the
+// per-call Gemini timeout in answer.py, so the two always raced. Measured on
+// this box with AI_PROVIDER=ollama (the slow path — llama3.1:8b on CPU): 34s for
+// a short answer, 93s for a long one. 180s leaves headroom for both providers.
+const TIMEOUT_MS = Number(process.env.RAG_SERVICE_TIMEOUT_MS) || 180000;
 // Ingestion is far slower than a query: parsing a large PDF, extracting its
 // images and embedding every chunk can run for minutes, and image-heavy files
 // may spend 60s per Gemini vision call alone. The 60s query timeout aborted
