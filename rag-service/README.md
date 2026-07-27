@@ -150,3 +150,48 @@ images.py       extract/persist/serve images embedded in ingested documents
 ```
 
 Data (Chroma + uploaded files) persists under `rag-service/data/` — gitignored.
+
+## Troubleshooting
+
+**Nothing ingests, and requests hang forever with no error.**
+
+Check Ollama first — embeddings and retrieval both need it, and it has no systemd
+unit on this machine, so it does not come back after a reboot:
+
+```bash
+curl localhost:8100/health      # "ollama": {"reachable": true, ...}
+ollama serve &                  # if unreachable
+```
+
+If Ollama is up but calls still hang, suspect the persisted Chroma HNSW index.
+When the service is killed mid-write, the vector segment under
+`data/chroma/<segment-uuid>/` can be left corrupt, and Chroma's Rust core then
+**hangs indefinitely on any collection operation** — `count()` included. There is
+no error and no timeout, so it looks like a dead service rather than a broken
+index. Confirm with:
+
+```bash
+# hangs => corrupt index;  prints a number => index is fine
+python -c "import chromadb; c=chromadb.PersistentClient(path='data/chroma'); print(c.get_collection('shakti').count())"
+```
+
+To recover, stop the service, back up `data/chroma`, and move the vector segment
+directory aside — Chroma reloads the collection from SQLite:
+
+```bash
+sqlite3 data/chroma/chroma.sqlite3 "select id from segments where scope='VECTOR';"
+mv data/chroma/<that-uuid> /tmp/
+```
+
+That unblocks the service, but **it does not restore the vectors**: only records
+still in `embeddings_queue` get replayed into the new index, so most chunks end up
+in SQLite yet absent from the vector index — retrieval then silently searches a
+fraction of the knowledge base. Verify and, if needed, re-embed every chunk from
+the text SQLite still holds (no PDF re-parsing or vision calls required):
+
+```bash
+python -c "
+import chromadb; c=chromadb.PersistentClient(path='data/chroma'); col=c.get_collection('shakti')
+n=len(col.query(query_embeddings=[[0.01]*768], n_results=10000, include=[])['ids'][0])
+print('in vector index:', n, 'of', col.count())"
+```
