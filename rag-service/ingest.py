@@ -3,6 +3,7 @@
 Same pipeline as BOT/rag/ingest.py: LangChain loaders + RecursiveCharacterTextSplitter
 + OllamaEmbeddings + Chroma.
 """
+import logging
 from pathlib import Path
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -29,6 +30,8 @@ from vision import describe_image
 import images as imagelib
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff", ".tif", ".gif"}
+
+log = logging.getLogger("rag.ingest")
 
 _vs = None
 
@@ -93,7 +96,11 @@ def _load_file(path: Path, source: str | None = None):
         if ext == ".txt":
             return TextLoader(str(path), encoding="utf-8").load()
     except Exception:
-        pass  # fall through to a plain text read
+        # Fall through to a plain text read — but say so. Silently swallowing this
+        # turned "the loader for this file type is broken" into "the upload just
+        # produced nothing", with nothing in the log to explain why.
+        log.warning("loader failed for %s (%s); falling back to plain text read",
+                    path.name, ext, exc_info=True)
     try:
         text = path.read_text(encoding="utf-8", errors="ignore")
     except Exception:
@@ -120,13 +127,25 @@ def _add(docs, source: str) -> int:
 
 
 def ingest_files(paths_and_names):
-    """paths_and_names: iterable of (filepath, display_source_name)."""
+    """paths_and_names: iterable of (filepath, display_source_name).
+
+    One unusable file reports its own error instead of failing the whole upload —
+    a batch of ten documents shouldn't be lost because the third one is corrupt.
+    """
     total, results = 0, []
     for path, name in paths_and_names:
-        delete_source(name)  # idempotent per source — also clears its images
-        n = _add(_load_file(Path(path), name), name)
-        results.append({"source": name, "chunks": n})
-        total += n
+        try:
+            delete_source(name)  # idempotent per source — also clears its images
+            n = _add(_load_file(Path(path), name), name)
+            if not n:
+                log.warning("ingested %s but it produced no chunks (empty or unreadable)", name)
+            else:
+                log.info("ingested %s -> %d chunks", name, n)
+            results.append({"source": name, "chunks": n})
+            total += n
+        except Exception as e:  # noqa: BLE001 - report per file, keep going
+            log.exception("ingest failed for %s", name)
+            results.append({"source": name, "chunks": 0, "error": f"{type(e).__name__}: {e}"})
     return total, results
 
 

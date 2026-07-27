@@ -6,15 +6,21 @@ import fs from 'fs/promises';
 
 const RAG_URL = (process.env.RAG_SERVICE_URL || 'http://localhost:8100').replace(/\/+$/, '');
 const TIMEOUT_MS = Number(process.env.RAG_SERVICE_TIMEOUT_MS) || 60000;
+// Ingestion is far slower than a query: parsing a large PDF, extracting its
+// images and embedding every chunk can run for minutes, and image-heavy files
+// may spend 60s per Gemini vision call alone. The 60s query timeout aborted
+// those uploads mid-write, which reported "ingest failed" for work the service
+// was still doing — and left half-written state behind.
+const INGEST_TIMEOUT_MS = Number(process.env.RAG_INGEST_TIMEOUT_MS) || 600000;
 
 // Kept for the admin UI (displayed next to ingested sources) and for the
 // support relevance gate in supportAi.js.
 export const EMBED_MODEL = process.env.RAG_EMBED_MODEL || 'nomic-embed-text';
 export const MIN_SCORE = Number(process.env.RAG_MIN_SCORE) || 0.35;
 
-async function call(path, { method = 'POST', json, form } = {}) {
+async function call(path, { method = 'POST', json, form, timeoutMs = TIMEOUT_MS } = {}) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
         const opts = { method, signal: controller.signal };
         if (form) {
@@ -70,7 +76,7 @@ export async function ingestFiles(files) {
         const buf = await fs.readFile(f.path);
         form.append('files', new Blob([buf], { type: f.mimetype || 'application/octet-stream' }), f.originalname || 'file');
     }
-    return call('/ingest', { form });
+    return call('/ingest', { form, timeoutMs: INGEST_TIMEOUT_MS });
 }
 
 export async function listSources() {

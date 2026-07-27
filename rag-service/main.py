@@ -6,12 +6,13 @@ Run:  uvicorn main:app --host 0.0.0.0 --port 8100
 import shutil
 from typing import Optional
 
+import requests
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from config import DOCS_DIR, ACTIVE_EMBED_MODEL, LLM_MODEL, RETRIEVE_K
+from config import DOCS_DIR, ACTIVE_EMBED_MODEL, LLM_MODEL, RETRIEVE_K, OLLAMA_BASE_URL
 import ingest
 import retriever
 import answer as answer_mod
@@ -35,11 +36,38 @@ app.mount("/images", StaticFiles(directory=str(IMAGES_DIR)), name="images")
 
 @app.get("/health")
 def health():
-    return {"ok": True, "embedModel": ACTIVE_EMBED_MODEL, "chatModel": LLM_MODEL}
+    # Reports whether Ollama is actually reachable, not just which model is
+    # configured. Embeddings and retrieval both depend on it, so when it is down
+    # nothing can be ingested or searched — previously this endpoint still said
+    # "ok" and named the model, so a stopped Ollama looked like a healthy service.
+    # Short timeout and never raises: /health must stay fast and always answer.
+    ollama = {"reachable": False, "error": None}
+    try:
+        res = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2)
+        ollama["reachable"] = res.ok
+        if res.ok:
+            names = [m.get("name", "") for m in res.json().get("models", [])]
+            ollama["embedModelPresent"] = any(n.split(":")[0] == ACTIVE_EMBED_MODEL.split(":")[0] for n in names)
+        else:
+            ollama["error"] = f"HTTP {res.status_code}"
+    except Exception as e:  # noqa: BLE001 - unreachable is a reportable state, not a crash
+        ollama["error"] = f"{type(e).__name__}: {e}"
+    return {
+        "ok": True,
+        "embedModel": ACTIVE_EMBED_MODEL,
+        "chatModel": LLM_MODEL,
+        "ollama": ollama,
+    }
 
 
+# Deliberately sync (`def`, not `async def`) like every other endpoint here:
+# ingestion is entirely blocking work (PDF parsing, image extraction, embedding
+# round-trips) and FastAPI runs sync endpoints in a threadpool. As `async def` it
+# ran that blocking work directly on the event loop, so one slow or stuck ingest
+# froze the whole service — /health included, which made an ingest problem look
+# like a dead service.
 @app.post("/ingest")
-async def ingest_endpoint(files: list[UploadFile] = File(...)):
+def ingest_endpoint(files: list[UploadFile] = File(...)):
     saved = []
     for f in files:
         dest = DOCS_DIR / f.filename

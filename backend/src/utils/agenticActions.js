@@ -66,9 +66,45 @@ function sign(body) {
     return crypto.createHmac('sha256', SIGNING_SECRET).update(body).digest('base64url');
 }
 
-// token = base64url(claims).hmac — claims pin the action, args, admin and expiry.
+// Confirmation tokens are single-use. Without this, re-posting the same token
+// inside its 15-minute window would run the action again — harmless for a status
+// change, but a second grant_driver_money is real money out the door. Each
+// proposal carries a random `j` (jti) that is burned on the first execute
+// attempt, success or failure.
+//
+// In-memory: this backend runs as a single process, and the map self-empties
+// because entries only need to outlive the token's own TTL. Behind multiple
+// instances it would degrade to per-instance protection, at which point this
+// should move to a shared store.
+const usedTokens = new Map(); // jti -> expiry ms
+
+function burnToken(jti, expiresAt) {
+    // Opportunistic sweep so the map can't grow unbounded over a long uptime.
+    if (usedTokens.size > 500) {
+        const now = Date.now();
+        for (const [k, exp] of usedTokens) if (exp < now) usedTokens.delete(k);
+    }
+    usedTokens.set(jti, expiresAt);
+}
+
+const isTokenUsed = (jti) => {
+    const exp = usedTokens.get(jti);
+    if (exp === undefined) return false;
+    // Past its expiry the signature check rejects it anyway, so drop the entry.
+    if (exp < Date.now()) { usedTokens.delete(jti); return false; }
+    return true;
+};
+
+// token = base64url(claims).hmac — claims pin the action, args, admin, expiry
+// and a single-use id.
 function signProposal({ name, payload, adminId }) {
-    const claims = b64url(JSON.stringify({ n: name, p: payload, a: String(adminId), x: Date.now() + PROPOSAL_TTL_MS }));
+    const claims = b64url(JSON.stringify({
+        n: name,
+        p: payload,
+        a: String(adminId),
+        x: Date.now() + PROPOSAL_TTL_MS,
+        j: crypto.randomBytes(12).toString('base64url'),
+    }));
     return `${claims}.${sign(claims)}`;
 }
 
@@ -95,7 +131,7 @@ export function verifyProposal(token, adminId) {
     if (Date.now() > Number(decoded.x || 0)) throw new Error('This confirmation expired — ask Tempu Ai to propose it again');
     if (String(decoded.a) !== String(adminId)) throw new Error('This confirmation belongs to a different admin');
 
-    return { name: decoded.n, payload: decoded.p || {} };
+    return { name: decoded.n, payload: decoded.p || {}, jti: decoded.j, expiresAt: Number(decoded.x) };
 }
 
 // ── Shared resolvers ─────────────────────────────────────────────────────────
@@ -1430,8 +1466,16 @@ export async function proposeAction(name, args = {}, admin) {
 // arguments, the admin and the expiry) and re-checks the permission, because the
 // admin's rights may have changed between proposal and confirmation.
 export async function executeConfirmedAction(token, admin) {
-    const { name, payload } = verifyProposal(token, admin?._id);
+    const { name, payload, jti, expiresAt } = verifyProposal(token, admin?._id);
     if (!canRunAction(admin, name)) throw new Error('You do not have permission to do that.');
+    if (jti) {
+        if (isTokenUsed(jti)) throw new Error('This confirmation has already been used — ask Tempu Ai to prepare it again.');
+        // Burn BEFORE running, not after: two clicks landing at once must not
+        // both get through. The cost is that a genuinely failed execute can't be
+        // retried on the same token — the boss re-asks, which is the safe way
+        // round for anything that moves money.
+        burnToken(jti, expiresAt);
+    }
     const result = await ACTIONS[name].execute(payload, admin);
     return { action: name, message: result?.message || 'Done.' };
 }
