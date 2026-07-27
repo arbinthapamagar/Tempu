@@ -22,15 +22,24 @@ import { Pricing } from '../models/pricing.model.js';
 import { Notification } from '../models/notification.model.js';
 import { Document } from '../models/doeument.model.js';
 import { CallLog } from '../models/callLog.model.js';
+import { AdminNotification } from '../models/adminNotification.model.js';
+import { ApiLog } from '../models/apiLog.model.js';
+import { MapSettings } from '../models/mapSettings.model.js';
+import { SupportSettings } from '../models/supportSettings.model.js';
+import { SupportReview } from '../models/supportReview.model.js';
+import { DriverAvailability } from '../models/driverAvaibility.mdoel.js';
 
-const MAX_LIMIT = 20;
+// Listing tools cap out higher than single-record tools: when the boss asks for
+// "all tickets" / "all pending documents" they mean the whole queue, not a
+// sample. 50 compact rows is still well inside the model's context budget.
+const MAX_LIMIT = 50;
 const clampLimit = (n, def = 5) => Math.max(1, Math.min(MAX_LIMIT, Number(n) || def));
 
 // Ollama's tool-calling sometimes sends the literal string "null"/"undefined"
 // (or "") for an omitted optional argument instead of leaving it out entirely.
 // Treat those the same as "not provided" so an optional filter like `status` or
 // `role` doesn't silently turn into a filter that matches nothing.
-const clean = (v) => (v === undefined || v === null || v === 'null' || v === 'undefined' || v === '' ? undefined : v);
+export const clean = (v) => (v === undefined || v === null || v === 'null' || v === 'undefined' || v === '' ? undefined : v);
 const cleanBool = (v) => {
     if (v === true || v === 'true') return true;
     if (v === false || v === 'false') return false;
@@ -47,7 +56,7 @@ const TICKET_STATUS_SYNONYMS = {
     progress: 'in_progress', ongoing: 'in_progress', active: 'in_progress', working: 'in_progress',
     done: 'resolved', complete: 'resolved', completed: 'resolved', fixed: 'resolved', solved: 'resolved',
 };
-const normalizeTicketStatus = (s) => {
+export const normalizeTicketStatus = (s) => {
     const v = clean(s);
     if (!v) return v;
     const key = String(v).toLowerCase().trim();
@@ -55,15 +64,15 @@ const normalizeTicketStatus = (s) => {
 };
 
 const USER_FIELDS = 'name phone email rating accountStatus userType walletBalance createdAt';
-const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-async function findBestUser(query) {
+export async function findBestUser(query) {
     if (!query) return null;
     const rx = new RegExp(escapeRegex(query), 'i');
     return User.findOne({ $or: [{ name: rx }, { phone: rx }, { email: rx }] }).select(USER_FIELDS);
 }
 
-async function findBestDriver(query) {
+export async function findBestDriver(query) {
     if (!query) return null;
     const rx = new RegExp(escapeRegex(query), 'i');
     // Try direct driver fields first (plate/license), else search by the linked user's name/phone.
@@ -75,20 +84,62 @@ async function findBestDriver(query) {
     return Driver.findOne({ userId: user._id }).populate('userId', 'name phone email');
 }
 
-const shapeUser = (u) => u && ({
+export const shapeUser = (u) => u && ({
     id: u._id, name: u.name, phone: u.phone, email: u.email,
     rating: u.rating?.average, ratingCount: u.rating?.total,
     accountStatus: u.accountStatus, userType: u.userType,
     walletBalance: u.walletBalance, createdAt: u.createdAt,
 });
 
-const shapeDriver = (d) => d && ({
+export const shapeDriver = (d) => d && ({
     id: d._id, name: d.userId?.name, phone: d.userId?.phone, email: d.userId?.email,
     vehicleType: d.vehicleType, vehiclePlate: d.vehiclePlate, vehicleModel: d.vehicleModel,
     status: d.status, isOnline: d.isOnline, rating: d.rating, totalRatings: d.totalRatings,
     totalRides: d.totalRides, earnings: d.earnings, walletBalance: d.walletBalance,
     cancelledRides: d.cancelledRides, city: d.city,
 });
+
+export async function findBestAdmin(query) {
+    if (!query) return null;
+    const rx = new RegExp(escapeRegex(query), 'i');
+    return Admin.findOne({ $or: [{ name: rx }, { email: rx }, { phone: rx }] }).select('name email phone role isActive supportRating');
+}
+
+// Resolve a subscription by id, child name, school, or the parent's name/phone.
+export async function findBestSubscription({ subscriptionId, query }) {
+    if (subscriptionId && /^[a-f\d]{24}$/i.test(String(subscriptionId))) {
+        const byId = await Subscription.findById(subscriptionId)
+            .populate('userId', 'name phone email')
+            .populate({ path: 'primaryDriver', select: 'vehiclePlate vehicleType', populate: { path: 'userId', select: 'name phone' } });
+        if (byId) return byId;
+    }
+    if (!query) return null;
+    const rx = new RegExp(escapeRegex(query), 'i');
+    const or = [{ childName: rx }, { schoolName: rx }];
+    const user = await User.findOne({ $or: [{ name: rx }, { phone: rx }, { email: rx }] }).select('_id');
+    if (user) or.push({ userId: user._id });
+    return Subscription.findOne({ $or: or })
+        .sort({ createdAt: -1 })
+        .populate('userId', 'name phone email')
+        .populate({ path: 'primaryDriver', select: 'vehiclePlate vehicleType', populate: { path: 'userId', select: 'name phone' } });
+}
+
+// "today" | "week" | "month" | "year" | "all" → the Date to filter createdAt from.
+// Anything unrecognised (including "all") means no date filter at all.
+function periodStart(period) {
+    const now = new Date();
+    switch (String(period || '').toLowerCase()) {
+        case 'today': return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        case 'week': { const d = new Date(now); d.setDate(d.getDate() - 7); return d; }
+        case 'month': { const d = new Date(now); d.setMonth(d.getMonth() - 1); return d; }
+        case 'year': { const d = new Date(now); d.setFullYear(d.getFullYear() - 1); return d; }
+        default: return null;
+    }
+}
+const sinceFilter = (period) => {
+    const from = periodStart(period);
+    return from ? { createdAt: { $gte: from } } : {};
+};
 
 // A support ticket is "awaiting reply" (unanswered) when it is still live
 // (open/in_progress) and the last message in the customer thread came from the
@@ -253,7 +304,7 @@ export const TOOLS = [
                     status: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'closed'] },
                     category: { type: 'string' },
                     awaitingReply: { type: 'boolean', description: 'true = only tickets whose last message is from the customer (unanswered / waiting on us)' },
-                    limit: { type: 'integer' },
+                    limit: { type: 'integer', description: 'Rows to return (max 50). Pass 50 whenever the boss asks for ALL tickets or wants to see the whole list.' },
                 },
             },
         },
@@ -424,6 +475,292 @@ export const TOOLS = [
                 type: 'object',
                 properties: { tripId: { type: 'string' } },
                 required: ['tripId'],
+            },
+        },
+    },
+
+    // ── Platform-wide listings (every admin section) ─────────────────────────
+    {
+        type: 'function',
+        function: {
+            name: 'list_users',
+            description: 'List riders/customers across the WHOLE platform with an exact `count` — use for "how many users", "all suspended users", "list our business accounts", "users who joined this week". Omit every optional filter unless the boss named one.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    status: { type: 'string', enum: ['active', 'suspended', 'banned'], description: 'accountStatus filter' },
+                    userType: { type: 'string', enum: ['regular', 'parent', 'business'] },
+                    search: { type: 'string', description: 'Name, phone or email fragment' },
+                    period: { type: 'string', enum: ['today', 'week', 'month', 'year', 'all'], description: 'Only users who signed up within this window' },
+                    limit: { type: 'integer', description: 'Rows to return (max 50). Pass 50 when the boss wants them all.' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_drivers',
+            description: 'List drivers across the WHOLE platform with an exact `count` — use for "how many drivers", "all pending driver applications", "who is online right now", "suspended drivers".',
+            parameters: {
+                type: 'object',
+                properties: {
+                    status: { type: 'string', enum: ['pending', 'approved', 'rejected', 'suspended'] },
+                    vehicleType: { type: 'string', enum: ['tuktuk', 'tuktuk_delivery', 'scooter', 'bike', 'taxi', 'comfort'] },
+                    isOnline: { type: 'boolean', description: 'true = only drivers currently online' },
+                    city: { type: 'string' },
+                    limit: { type: 'integer' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_subscriptions',
+            description: 'List parent/school subscription plans across the platform with an exact `count` — use for "how many subscriptions", "all paused subscriptions", "subscriptions with no driver assigned". Each row shows the parent, child, school, route, monthly price and assigned driver.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    status: { type: 'string', enum: ['active', 'paused', 'cancelled', 'expired'] },
+                    unassigned: { type: 'boolean', description: 'true = only subscriptions with no primary driver yet' },
+                    limit: { type: 'integer' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_subscription_detail',
+            description: 'Get the FULL detail of one subscription — parent, child (name/age/school), pickup & dropoff route and times, primary + backup drivers, monthly price, missed days, status and dates. Identify it by id, or by child name, school, or parent name/phone.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    subscriptionId: { type: 'string' },
+                    query: { type: 'string', description: 'Child name, school, or parent name/phone' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_transactions',
+            description: 'List payment transactions across the WHOLE platform with an exact `count` — use for "recent payments", "all failed transactions", "admin credits this month".',
+            parameters: {
+                type: 'object',
+                properties: {
+                    type: { type: 'string', enum: ['trip_payment', 'trip_earning', 'subscription_payment', 'wallet_topup', 'wallet_withdrawal', 'admin_credit', 'platform_fee', 'refund'] },
+                    status: { type: 'string', enum: ['pending', 'completed', 'failed', 'refunded'] },
+                    method: { type: 'string', enum: ['cash', 'khalti', 'esewa', 'wallet'] },
+                    period: { type: 'string', enum: ['today', 'week', 'month', 'year', 'all'] },
+                    limit: { type: 'integer' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'revenue_summary',
+            description: 'Money totals for a period — total volume, platform fee revenue, rider payments, driver earnings, refunds and admin credits, each with a transaction count. Use for "how much revenue this month", "what did we earn today", "how much did we pay out".',
+            parameters: {
+                type: 'object',
+                properties: { period: { type: 'string', enum: ['today', 'week', 'month', 'year', 'all'] } },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_withdrawals',
+            description: 'List driver cashout requests across the WHOLE platform with an exact `count` and the total amount — use for "pending withdrawals", "how much is waiting to be paid out".',
+            parameters: {
+                type: 'object',
+                properties: {
+                    status: { type: 'string', enum: ['pending', 'approved', 'rejected', 'paid'] },
+                    limit: { type: 'integer' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_documents',
+            description: 'List driver verification documents across the WHOLE platform with an exact `count` — use for "the document queue", "how many documents are pending", "rejected documents", "expired documents". Each row shows the driver, document type, status and reason.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    status: { type: 'string', enum: ['pending', 'approved', 'rejected'] },
+                    type: { type: 'string', enum: ['citizenship', 'driving_license', 'police_clearance', 'vehicle_registration', 'insurance', 'bluebook', 'profile_photo', 'vehicle_photo'] },
+                    expired: { type: 'boolean', description: 'true = only documents past their expiry date' },
+                    limit: { type: 'integer' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_trip_detail',
+            description: 'Get the FULL detail of one trip — rider, driver, vehicle, pickup/dropoff addresses and coordinates, distance, offered vs final price, payment method and status, cancellation reason, and the bids placed on it. Identify it by trip id.',
+            parameters: {
+                type: 'object',
+                properties: { tripId: { type: 'string' } },
+                required: ['tripId'],
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_emergency_detail',
+            description: 'Get the FULL detail of one SOS/emergency alert — who raised it, their phone, location and address, the linked trip, priority, status, assigned admin, and every internal handling note. Identify it by id or by the reporter\'s name/phone.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    emergencyId: { type: 'string' },
+                    query: { type: 'string', description: "Reporter's name or phone" },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_notifications',
+            description: 'List in-app notifications sent to riders/drivers across the platform, newest first, with an exact `count` — use for "what did we send out", "notification history", "how many unread notifications".',
+            parameters: {
+                type: 'object',
+                properties: {
+                    type: { type: 'string', description: 'Notification type, e.g. general, payment, document_verified' },
+                    unreadOnly: { type: 'boolean' },
+                    period: { type: 'string', enum: ['today', 'week', 'month', 'year', 'all'] },
+                    limit: { type: 'integer' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_admin_notifications',
+            description: 'List internal staff notifications (e.g. "a ticket was assigned to you"), optionally for one named admin. Use for "what notifications does Sita have", "unread staff alerts".',
+            parameters: {
+                type: 'object',
+                properties: {
+                    adminQuery: { type: 'string', description: 'Admin name/email to scope to; omit for all staff' },
+                    unreadOnly: { type: 'boolean' },
+                    limit: { type: 'integer' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_support_agents',
+            description: 'List support agents with their current workload (active tickets) and their customer rating average. Use for "who is our best support agent", "who has the most open tickets", "is anyone at capacity".',
+            parameters: { type: 'object', properties: { limit: { type: 'integer' } } },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_support_agent_ratings',
+            description: 'Get the individual customer ratings and written feedback a named support agent received. Use for "what do customers say about Ram", "show me Sita\'s support reviews".',
+            parameters: {
+                type: 'object',
+                properties: { adminQuery: { type: 'string' }, limit: { type: 'integer' } },
+                required: ['adminQuery'],
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_support_settings',
+            description: 'Get the global support configuration — whether voice notes / documents / audio & video calls are allowed, auto-assignment on/off, per-agent ticket capacity, and the published working hours.',
+            parameters: { type: 'object', properties: {} },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_map_settings',
+            description: 'Get the map/geo provider configuration — which provider (google or osm) powers place search, geocoding and directions, the restricted country code, and whether a Google Maps API key has been entered. The key value itself is never returned.',
+            parameters: { type: 'object', properties: {} },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'api_log_stats',
+            description: 'Get API traffic health — total captured calls, a breakdown by client (web/mobile/backend) and by domain, the error count and error rate, and the slowest recent endpoints. Use for "is the API healthy", "how many errors today", "which endpoint is slowest".',
+            parameters: {
+                type: 'object',
+                properties: { period: { type: 'string', enum: ['today', 'week', 'month', 'year', 'all'] } },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_api_logs',
+            description: 'List captured API calls (metadata only — method, URL, status, duration, client, who was authenticated). Use for "recent API errors", "what mobile calls failed", "show me 500s". Request and response BODIES are deliberately not returned.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    source: { type: 'string', enum: ['web', 'mobile', 'backend'] },
+                    domain: { type: 'string', description: 'Resource area, e.g. users, drivers, admin, support, trips' },
+                    onlyErrors: { type: 'boolean', description: 'true = only calls that returned 4xx/5xx' },
+                    method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] },
+                    period: { type: 'string', enum: ['today', 'week', 'month', 'year', 'all'] },
+                    limit: { type: 'integer' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'analytics_overview',
+            description: 'Business analytics for a period — new users and drivers, trips by status with a completion rate, revenue, average fare, plus the top drivers and the vehicle-type split. Use for "how did we do this month", "growth numbers", "top drivers this week".',
+            parameters: {
+                type: 'object',
+                properties: { period: { type: 'string', enum: ['today', 'week', 'month', 'year', 'all'] } },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_driver_availability',
+            description: "Today's driver check-in / availability board for subscription routes — who checked in, who is unavailable and why, and which routes have a backup driver assigned. Use for \"who checked in today\", \"which drivers are off sick\".",
+            parameters: {
+                type: 'object',
+                properties: {
+                    date: { type: 'string', description: 'YYYY-MM-DD; defaults to today' },
+                    availableOnly: { type: 'boolean' },
+                    limit: { type: 'integer' },
+                },
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_reviews',
+            description: 'List recent rider reviews of drivers across the platform with an exact `count` — use for "recent complaints", "all 1-star reviews", "what are riders saying".',
+            parameters: {
+                type: 'object',
+                properties: {
+                    maxRating: { type: 'integer', description: 'Only reviews at or below this star rating (e.g. 2 for complaints)' },
+                    period: { type: 'string', enum: ['today', 'week', 'month', 'year', 'all'] },
+                    limit: { type: 'integer' },
+                },
             },
         },
     },
@@ -780,23 +1117,581 @@ export const HANDLERS = {
         return { callLogs: logs };
     },
 
+    // ── Platform-wide listings ───────────────────────────────────────────────
+    async list_users({ status, userType, search, period, limit = 20 } = {}) {
+        status = clean(status);
+        userType = clean(userType);
+        search = clean(search);
+        const filter = {
+            ...(status ? { accountStatus: status } : {}),
+            ...(userType ? { userType } : {}),
+            ...sinceFilter(period),
+        };
+        if (search) {
+            const rx = new RegExp(escapeRegex(search), 'i');
+            filter.$or = [{ name: rx }, { phone: rx }, { email: rx }];
+        }
+        const [count, users] = await Promise.all([
+            User.countDocuments(filter),
+            User.find(filter).sort({ createdAt: -1 }).limit(clampLimit(limit, 20)).select(USER_FIELDS),
+        ]);
+        return { count, users: users.map(shapeUser) };
+    },
+
+    async list_drivers({ status, vehicleType, isOnline, city, limit = 20 } = {}) {
+        status = clean(status);
+        vehicleType = clean(vehicleType);
+        city = clean(city);
+        isOnline = cleanBool(isOnline);
+        const filter = {
+            ...(status ? { status } : {}),
+            ...(vehicleType ? { vehicleType } : {}),
+            ...(city ? { city } : {}),
+            ...(typeof isOnline === 'boolean' ? { isOnline } : {}),
+        };
+        const [count, drivers] = await Promise.all([
+            Driver.countDocuments(filter),
+            Driver.find(filter).sort({ createdAt: -1 }).limit(clampLimit(limit, 20)).populate('userId', 'name phone email'),
+        ]);
+        return { count, drivers: drivers.map(shapeDriver) };
+    },
+
+    async list_subscriptions({ status, unassigned, limit = 20 } = {}) {
+        status = clean(status);
+        unassigned = cleanBool(unassigned);
+        const filter = {
+            ...(status ? { status } : {}),
+            ...(unassigned === true ? { primaryDriver: null } : {}),
+            ...(unassigned === false ? { primaryDriver: { $ne: null } } : {}),
+        };
+        const [count, subs] = await Promise.all([
+            Subscription.countDocuments(filter),
+            Subscription.find(filter)
+                .sort({ createdAt: -1 })
+                .limit(clampLimit(limit, 20))
+                .populate('userId', 'name phone')
+                .populate({ path: 'primaryDriver', select: 'vehiclePlate', populate: { path: 'userId', select: 'name phone' } }),
+        ]);
+        return {
+            count,
+            subscriptions: subs.map((s) => ({
+                id: s._id, parent: s.userId?.name, parentPhone: s.userId?.phone,
+                child: s.childName, school: s.schoolName, status: s.status,
+                pickup: s.pickup?.address, dropoff: s.dropoff?.address,
+                pickupTime: s.pickupTime, dropoffTime: s.dropoffTime,
+                vehicleType: s.vehicleType, monthlyPrice: s.monthlyPrice,
+                driver: s.primaryDriver?.userId?.name || null,
+                driverPlate: s.primaryDriver?.vehiclePlate || null,
+                missedDays: s.missedDays?.length || 0,
+                startDate: s.startDate, endDate: s.endDate,
+            })),
+        };
+    },
+
+    async get_subscription_detail({ subscriptionId, query } = {}) {
+        const s = await findBestSubscription({ subscriptionId: clean(subscriptionId), query: clean(query) });
+        if (!s) return { found: false };
+        const backups = await Driver.find({ _id: { $in: s.backupDrivers || [] } })
+            .select('vehiclePlate userId')
+            .populate('userId', 'name phone');
+        return {
+            found: true,
+            subscription: {
+                id: s._id, status: s.status, plan: s.plan,
+                parent: s.userId?.name, parentPhone: s.userId?.phone, parentEmail: s.userId?.email,
+                child: s.childName, childAge: s.childAge, school: s.schoolName,
+                pickup: s.pickup?.address, pickupCoordinates: s.pickup?.location?.coordinates,
+                dropoff: s.dropoff?.address, dropoffCoordinates: s.dropoff?.location?.coordinates,
+                pickupTime: s.pickupTime, dropoffTime: s.dropoffTime,
+                vehicleType: s.vehicleType, monthlyPrice: s.monthlyPrice,
+                primaryDriver: s.primaryDriver?.userId?.name || null,
+                primaryDriverPhone: s.primaryDriver?.userId?.phone || null,
+                primaryDriverPlate: s.primaryDriver?.vehiclePlate || null,
+                backupDrivers: backups.map((d) => ({ name: d.userId?.name, phone: d.userId?.phone, plate: d.vehiclePlate })),
+                missedDays: (s.missedDays || []).length,
+                startDate: s.startDate, endDate: s.endDate, createdAt: s.createdAt,
+            },
+        };
+    },
+
+    async list_transactions({ type, status, method, period, limit = 20 } = {}) {
+        const filter = {
+            ...(clean(type) ? { type: clean(type) } : {}),
+            ...(clean(status) ? { status: clean(status) } : {}),
+            ...(clean(method) ? { method: clean(method) } : {}),
+            ...sinceFilter(period),
+        };
+        const [count, totalAgg, txns] = await Promise.all([
+            Transaction.countDocuments(filter),
+            Transaction.aggregate([{ $match: filter }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+            Transaction.find(filter)
+                .sort({ createdAt: -1 })
+                .limit(clampLimit(limit, 20))
+                .populate('userId', 'name phone')
+                .populate({ path: 'driverId', select: 'vehiclePlate userId', populate: { path: 'userId', select: 'name' } })
+                .select('amount type method status note gatewayRef createdAt userId driverId'),
+        ]);
+        return {
+            count,
+            totalAmount: totalAgg[0]?.total || 0,
+            transactions: txns.map((t) => ({
+                id: t._id, amount: t.amount, type: t.type, method: t.method, status: t.status,
+                user: t.userId?.name || null, driver: t.driverId?.userId?.name || null,
+                note: t.note, createdAt: t.createdAt,
+            })),
+        };
+    },
+
+    async revenue_summary({ period = 'month' } = {}) {
+        const match = sinceFilter(period);
+        const rows = await Transaction.aggregate([
+            { $match: { ...match, status: 'completed' } },
+            { $group: { _id: '$type', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+        ]);
+        const byType = Object.fromEntries(rows.map((r) => [r._id, { total: r.total, count: r.count }]));
+        const get = (k) => byType[k]?.total || 0;
+        return {
+            period,
+            byType,
+            platformFeeRevenue: get('platform_fee'),
+            riderPayments: get('trip_payment') + get('subscription_payment'),
+            driverEarnings: get('trip_earning'),
+            payouts: get('wallet_withdrawal'),
+            refunds: get('refund'),
+            adminCredits: get('admin_credit'),
+            walletTopups: get('wallet_topup'),
+            totalVolume: rows.reduce((sum, r) => sum + r.total, 0),
+            transactionCount: rows.reduce((sum, r) => sum + r.count, 0),
+        };
+    },
+
+    async list_withdrawals({ status, limit = 20 } = {}) {
+        status = clean(status);
+        const filter = status ? { status } : {};
+        const [count, totalAgg, withdrawals] = await Promise.all([
+            Withdrawal.countDocuments(filter),
+            Withdrawal.aggregate([{ $match: filter }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
+            Withdrawal.find(filter)
+                .sort({ createdAt: -1 })
+                .limit(clampLimit(limit, 20))
+                .populate({ path: 'driverId', select: 'vehiclePlate walletBalance userId', populate: { path: 'userId', select: 'name phone' } })
+                .populate('processedBy', 'name')
+                .select('amount method status note adminNote createdAt processedAt driverId processedBy'),
+        ]);
+        return {
+            count,
+            totalAmount: totalAgg[0]?.total || 0,
+            withdrawals: withdrawals.map((w) => ({
+                id: w._id, amount: w.amount, method: w.method, status: w.status,
+                driver: w.driverId?.userId?.name, driverPhone: w.driverId?.userId?.phone,
+                driverPlate: w.driverId?.vehiclePlate,
+                driverNote: w.note, adminNote: w.adminNote,
+                processedBy: w.processedBy?.name || null,
+                createdAt: w.createdAt, processedAt: w.processedAt,
+            })),
+        };
+    },
+
+    async list_documents({ status, type, expired, limit = 20 } = {}) {
+        status = clean(status);
+        type = clean(type);
+        expired = cleanBool(expired);
+        const filter = {
+            ...(status ? { status } : {}),
+            ...(type ? { type } : {}),
+            ...(expired === true ? { expiresAt: { $ne: null, $lt: new Date() } } : {}),
+        };
+        const [count, docs] = await Promise.all([
+            Document.countDocuments(filter),
+            Document.find(filter)
+                .sort({ createdAt: -1 })
+                .limit(clampLimit(limit, 20))
+                .populate({ path: 'driverId', select: 'vehiclePlate vehicleType userId', populate: { path: 'userId', select: 'name phone' } })
+                .populate('verifiedBy', 'name')
+                .select('type status rejectionReason expiresAt verifiedAt createdAt driverId verifiedBy'),
+        ]);
+        return {
+            count,
+            documents: docs.map((d) => ({
+                id: d._id, type: d.type, status: d.status,
+                driver: d.driverId?.userId?.name || null,
+                driverPhone: d.driverId?.userId?.phone || null,
+                driverPlate: d.driverId?.vehiclePlate || null,
+                rejectionReason: d.rejectionReason,
+                expiresAt: d.expiresAt, verifiedBy: d.verifiedBy?.name || null,
+                verifiedAt: d.verifiedAt, createdAt: d.createdAt,
+            })),
+        };
+    },
+
+    async get_trip_detail({ tripId }) {
+        if (!tripId || !/^[a-f\d]{24}$/i.test(String(tripId))) return { found: false };
+        const t = await Trip.findById(tripId)
+            .populate('userId', 'name phone email')
+            .populate({ path: 'driverId', select: 'vehiclePlate vehicleType vehicleModel rating userId', populate: { path: 'userId', select: 'name phone' } });
+        if (!t) return { found: false };
+        const bids = await Bid.find({ tripId: t._id })
+            .populate({ path: 'driverId', select: 'vehiclePlate', populate: { path: 'userId', select: 'name' } })
+            .select('amount status driverId');
+        return {
+            found: true,
+            trip: {
+                id: t._id, status: t.status, vehicleType: t.vehicleType,
+                rider: t.userId?.name, riderPhone: t.userId?.phone,
+                driver: t.driverId?.userId?.name || null, driverPhone: t.driverId?.userId?.phone || null,
+                driverPlate: t.driverId?.vehiclePlate || null, driverRating: t.driverId?.rating ?? null,
+                pickup: t.pickup?.address, pickupCoordinates: t.pickup?.location?.coordinates,
+                dropoff: t.dropoff?.address, dropoffCoordinates: t.dropoff?.location?.coordinates,
+                distanceKm: t.distance, offeredPrice: t.offeredPrice, finalPrice: t.finalPrice,
+                paymentMethod: t.paymentMethod, paymentStatus: t.paymentStatus,
+                cancelledBy: t.cancelledBy, cancelReason: t.cancelReason,
+                isSubscriptionTrip: !!t.subscriptionId,
+                createdAt: t.createdAt,
+                bids: bids.map((b) => ({ driver: b.driverId?.userId?.name, plate: b.driverId?.vehiclePlate, amount: b.amount, status: b.status })),
+            },
+        };
+    },
+
+    async get_emergency_detail({ emergencyId, query } = {}) {
+        emergencyId = clean(emergencyId);
+        query = clean(query);
+        let e = null;
+        if (emergencyId && /^[a-f\d]{24}$/i.test(String(emergencyId))) {
+            e = await Emergency.findById(emergencyId);
+        }
+        if (!e && query) {
+            const user = await findBestUser(query);
+            if (user) e = await Emergency.findOne({ userId: user._id }).sort({ createdAt: -1 });
+        }
+        if (!e) return { found: false };
+        await e.populate([
+            { path: 'userId', select: 'name phone email' },
+            { path: 'handledBy', select: 'name' },
+            { path: 'assignedTo', select: 'name' },
+            { path: 'notes.authorId', select: 'name' },
+        ]);
+        return {
+            found: true,
+            emergency: {
+                id: e._id, role: e.role, status: e.status, priority: e.priority,
+                reportedBy: e.userId?.name, contactPhone: e.contactPhone || e.userId?.phone,
+                address: e.address, coordinates: [e.location?.lng, e.location?.lat],
+                message: e.message, tripId: e.tripId,
+                handledBy: e.handledBy?.name || null, assignedTo: e.assignedTo?.name || null,
+                notes: (e.notes || []).map((n) => ({ by: n.authorId?.name || 'Admin', body: n.body, at: n.createdAt })),
+                createdAt: e.createdAt, acknowledgedAt: e.acknowledgedAt, resolvedAt: e.resolvedAt,
+            },
+        };
+    },
+
+    async list_notifications({ type, unreadOnly, period, limit = 20 } = {}) {
+        type = clean(type);
+        unreadOnly = cleanBool(unreadOnly);
+        const filter = {
+            ...(type ? { type } : {}),
+            ...(unreadOnly === true ? { isRead: false } : {}),
+            ...sinceFilter(period),
+        };
+        const [count, notifs] = await Promise.all([
+            Notification.countDocuments(filter),
+            Notification.find(filter)
+                .sort({ createdAt: -1 })
+                .limit(clampLimit(limit, 20))
+                .populate('userId', 'name phone')
+                .populate({ path: 'driverId', select: 'vehiclePlate userId', populate: { path: 'userId', select: 'name' } })
+                .select('title body type isRead createdAt userId driverId'),
+        ]);
+        return {
+            count,
+            notifications: notifs.map((n) => ({
+                id: n._id, title: n.title, body: n.body, type: n.type, isRead: n.isRead,
+                recipient: n.userId?.name || n.driverId?.userId?.name || null,
+                recipientType: n.driverId ? 'driver' : 'rider',
+                createdAt: n.createdAt,
+            })),
+        };
+    },
+
+    async list_admin_notifications({ adminQuery, unreadOnly, limit = 20 } = {}) {
+        adminQuery = clean(adminQuery);
+        unreadOnly = cleanBool(unreadOnly);
+        const filter = { ...(unreadOnly === true ? { isRead: false } : {}) };
+        if (adminQuery) {
+            const admin = await findBestAdmin(adminQuery);
+            if (!admin) return { found: false, count: 0, notifications: [] };
+            filter.adminId = admin._id;
+        }
+        const [count, notifs] = await Promise.all([
+            AdminNotification.countDocuments(filter),
+            AdminNotification.find(filter)
+                .sort({ createdAt: -1 })
+                .limit(clampLimit(limit, 20))
+                .populate('adminId', 'name role'),
+        ]);
+        return {
+            count,
+            notifications: notifs.map((n) => ({
+                id: n._id, admin: n.adminId?.name, role: n.adminId?.role,
+                title: n.title, body: n.body, type: n.type, link: n.link,
+                isRead: n.isRead, createdAt: n.createdAt,
+            })),
+        };
+    },
+
+    async list_support_agents({ limit = 20 } = {}) {
+        const [settings, agents] = await Promise.all([
+            SupportSettings.findOne({ key: 'global' }).select('agentCapacity autoAssign'),
+            Admin.find({ isActive: true })
+                .sort({ name: 1 })
+                .limit(clampLimit(limit, 20))
+                .select('name email role supportRating'),
+        ]);
+        const capacity = settings?.agentCapacity ?? 5;
+        const loads = await SupportTicket.aggregate([
+            { $match: { status: { $in: ['open', 'in_progress'] }, assignedTo: { $ne: null } } },
+            { $group: { _id: '$assignedTo', active: { $sum: 1 } } },
+        ]);
+        const loadBy = Object.fromEntries(loads.map((l) => [String(l._id), l.active]));
+        const unassigned = await SupportTicket.countDocuments({ status: { $in: ['open', 'in_progress'] }, assignedTo: null });
+        return {
+            agentCapacity: capacity,
+            autoAssign: settings?.autoAssign ?? true,
+            unassignedQueue: unassigned,
+            agents: agents.map((a) => {
+                const active = loadBy[String(a._id)] || 0;
+                return {
+                    name: a.name, email: a.email, role: a.role,
+                    activeTickets: active, atCapacity: active >= capacity,
+                    ratingAverage: a.supportRating?.average ?? 0,
+                    ratingCount: a.supportRating?.count ?? 0,
+                };
+            }),
+        };
+    },
+
+    async get_support_agent_ratings({ adminQuery, limit = 10 }) {
+        const admin = await findBestAdmin(adminQuery);
+        if (!admin) return { found: false };
+        const reviews = await SupportReview.find({ agentId: admin._id })
+            .sort({ ratedAt: -1 })
+            .limit(clampLimit(limit, 10))
+            .select('score comment tags customer subject ratedAt');
+        return {
+            found: true,
+            agent: {
+                name: admin.name, email: admin.email, role: admin.role,
+                ratingAverage: admin.supportRating?.average ?? 0,
+                ratingCount: admin.supportRating?.count ?? 0,
+            },
+            reviews: reviews.map((r) => ({
+                score: r.score, comment: r.comment, tags: r.tags,
+                customer: r.customer, subject: r.subject, ratedAt: r.ratedAt,
+            })),
+        };
+    },
+
+    async get_support_settings() {
+        const s = await SupportSettings.findOne({ key: 'global' });
+        if (!s) return { found: false };
+        return {
+            found: true,
+            voiceMessages: s.voiceMessages, documents: s.documents,
+            audioCall: s.audioCall, videoCall: s.videoCall,
+            autoAssign: s.autoAssign, agentCapacity: s.agentCapacity,
+            workingHours: s.workingHours,
+        };
+    },
+
+    // The Google Maps key is a platform-wide secret — report only whether one is
+    // configured, never the value, so it can't be echoed back into a chat reply.
+    async get_map_settings() {
+        const s = await MapSettings.findOne({ key: 'global' });
+        if (!s) return { found: false };
+        const hasKey = !!(s.googleMapsApiKey || '').trim();
+        return {
+            found: true,
+            provider: s.provider,
+            countryCode: s.countryCode,
+            googleKeyConfigured: hasKey,
+            effectiveProvider: s.provider === 'google' && hasKey ? 'google' : 'osm',
+            updatedAt: s.updatedAt,
+        };
+    },
+
+    async api_log_stats({ period = 'week' } = {}) {
+        const match = sinceFilter(period);
+        const [total, errors, bySource, byDomain, slowest] = await Promise.all([
+            ApiLog.countDocuments(match),
+            ApiLog.countDocuments({ ...match, statusCode: { $gte: 400 } }),
+            ApiLog.aggregate([{ $match: match }, { $group: { _id: '$source', count: { $sum: 1 } } }]),
+            ApiLog.aggregate([{ $match: match }, { $group: { _id: '$domain', count: { $sum: 1 } } }]),
+            ApiLog.find(match).sort({ durationMs: -1 }).limit(5).select('method path durationMs statusCode source'),
+        ]);
+        const toMap = (rows) => Object.fromEntries(rows.map((r) => [r._id || 'other', r.count]));
+        return {
+            period, total, errors,
+            errorRatePercent: total ? Math.round((errors / total) * 1000) / 10 : 0,
+            bySource: toMap(bySource), byDomain: toMap(byDomain),
+            slowestCalls: slowest.map((l) => ({ method: l.method, path: l.path, durationMs: l.durationMs, statusCode: l.statusCode, source: l.source })),
+        };
+    },
+
+    // Metadata only. Request/response bodies are intentionally excluded — they
+    // carry raw personal data (phones, tokens, addresses) from every domain.
+    async list_api_logs({ source, domain, onlyErrors, method, period, limit = 20 } = {}) {
+        onlyErrors = cleanBool(onlyErrors);
+        const filter = {
+            ...(clean(source) ? { source: clean(source) } : {}),
+            ...(clean(domain) ? { domain: clean(domain) } : {}),
+            ...(clean(method) ? { method: String(clean(method)).toUpperCase() } : {}),
+            ...(onlyErrors === true ? { statusCode: { $gte: 400 } } : {}),
+            ...sinceFilter(period),
+        };
+        const [count, logs] = await Promise.all([
+            ApiLog.countDocuments(filter),
+            ApiLog.find(filter)
+                .sort({ createdAt: -1 })
+                .limit(clampLimit(limit, 20))
+                .select('method path statusCode ok durationMs source domain actorType normalized.message createdAt'),
+        ]);
+        return {
+            count,
+            logs: logs.map((l) => ({
+                id: l._id, method: l.method, path: l.path, statusCode: l.statusCode, ok: l.ok,
+                durationMs: l.durationMs, source: l.source, domain: l.domain,
+                actorType: l.actorType, message: l.normalized?.message || null, at: l.createdAt,
+            })),
+        };
+    },
+
+    async analytics_overview({ period = 'month' } = {}) {
+        const match = sinceFilter(period);
+        const [newUsers, newDrivers, tripsByStatus, revenue, topDrivers, vehicleSplit] = await Promise.all([
+            User.countDocuments(match),
+            Driver.countDocuments(match),
+            Trip.aggregate([{ $match: match }, { $group: { _id: '$status', count: { $sum: 1 }, revenue: { $sum: '$finalPrice' } } }]),
+            Transaction.aggregate([
+                { $match: { ...match, status: 'completed', type: { $in: ['trip_payment', 'subscription_payment'] } } },
+                { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } },
+            ]),
+            Driver.find({ totalRides: { $gt: 0 } })
+                .sort({ totalRides: -1 })
+                .limit(5)
+                .populate('userId', 'name')
+                .select('totalRides rating earnings vehiclePlate userId'),
+            Trip.aggregate([{ $match: match }, { $group: { _id: '$vehicleType', count: { $sum: 1 } } }]),
+        ]);
+        const statusMap = Object.fromEntries(tripsByStatus.map((s) => [s._id, s.count]));
+        const totalTrips = tripsByStatus.reduce((sum, s) => sum + s.count, 0);
+        const completed = statusMap.completed || 0;
+        const grossRevenue = revenue[0]?.total || 0;
+        return {
+            period,
+            newUsers, newDrivers,
+            totalTrips, tripsByStatus: statusMap,
+            completionRatePercent: totalTrips ? Math.round((completed / totalTrips) * 1000) / 10 : 0,
+            revenue: grossRevenue,
+            paidTransactions: revenue[0]?.count || 0,
+            averageFare: completed ? Math.round(grossRevenue / completed) : 0,
+            topDrivers: topDrivers.map((d) => ({ name: d.userId?.name, plate: d.vehiclePlate, rides: d.totalRides, rating: d.rating, earnings: d.earnings })),
+            vehicleSplit: Object.fromEntries(vehicleSplit.map((v) => [v._id, v.count])),
+        };
+    },
+
+    async get_driver_availability({ date, availableOnly, limit = 20 } = {}) {
+        availableOnly = cleanBool(availableOnly);
+        // Match the whole calendar day — records are stored with a time component.
+        const base = clean(date) ? new Date(`${clean(date)}T00:00:00`) : new Date();
+        if (Number.isNaN(base.getTime())) return { error: 'Invalid date — use YYYY-MM-DD' };
+        const dayStart = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+
+        const filter = {
+            date: { $gte: dayStart, $lt: dayEnd },
+            ...(typeof availableOnly === 'boolean' ? { isAvailable: availableOnly } : {}),
+        };
+        const [count, checkedIn, rows] = await Promise.all([
+            DriverAvailability.countDocuments(filter),
+            DriverAvailability.countDocuments({ ...filter, isCheckedIn: true }),
+            DriverAvailability.find(filter)
+                .limit(clampLimit(limit, 20))
+                .populate({ path: 'driverId', select: 'vehiclePlate userId', populate: { path: 'userId', select: 'name phone' } })
+                .populate({ path: 'backupDriverId', select: 'vehiclePlate userId', populate: { path: 'userId', select: 'name' } }),
+        ]);
+        return {
+            date: dayStart.toISOString().slice(0, 10),
+            count, checkedInCount: checkedIn,
+            drivers: rows.map((r) => ({
+                driver: r.driverId?.userId?.name || null,
+                phone: r.driverId?.userId?.phone || null,
+                plate: r.driverId?.vehiclePlate || null,
+                isAvailable: r.isAvailable, unavailableReason: r.unavailableReason,
+                isCheckedIn: r.isCheckedIn, checkedInAt: r.checkedInAt,
+                routes: (r.assignedSubscriptions || []).length,
+                backupAssigned: r.backupAssigned,
+                backupDriver: r.backupDriverId?.userId?.name || null,
+            })),
+        };
+    },
+
+    async list_reviews({ maxRating, period, limit = 20 } = {}) {
+        const max = Number(clean(maxRating));
+        const filter = {
+            ...(Number.isFinite(max) ? { rating: { $lte: max } } : {}),
+            ...sinceFilter(period),
+        };
+        const [count, reviews] = await Promise.all([
+            Review.countDocuments(filter),
+            Review.find(filter)
+                .sort({ createdAt: -1 })
+                .limit(clampLimit(limit, 20))
+                .populate('fromUser', 'name phone')
+                .populate({ path: 'toDriver', select: 'vehiclePlate userId', populate: { path: 'userId', select: 'name' } })
+                .select('rating comment createdAt fromUser toDriver'),
+        ]);
+        return {
+            count,
+            reviews: reviews.map((r) => ({
+                rating: r.rating, comment: r.comment,
+                from: r.fromUser?.name, fromPhone: r.fromUser?.phone,
+                driver: r.toDriver?.userId?.name || null, driverPlate: r.toDriver?.vehiclePlate || null,
+                createdAt: r.createdAt,
+            })),
+        };
+    },
+
     async platform_stats() {
         const [
-            totalUsers, totalDrivers, onlineDrivers, tripsByStatus,
-            openTickets, pendingWithdrawals, activeEmergencies,
+            totalUsers, totalDrivers, onlineDrivers, pendingDrivers, tripsByStatus,
+            totalTickets, openTickets, pendingWithdrawals, activeEmergencies,
+            pendingDocuments, activeSubscriptions, totalSuppliers, staffCount, revenueToday,
         ] = await Promise.all([
             User.countDocuments({}),
             Driver.countDocuments({}),
             Driver.countDocuments({ isOnline: true }),
+            Driver.countDocuments({ status: 'pending' }),
             Trip.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+            SupportTicket.countDocuments({}),
             SupportTicket.countDocuments({ status: { $in: ['open', 'in_progress'] } }),
             Withdrawal.countDocuments({ status: 'pending' }),
             Emergency.countDocuments({ status: 'active' }),
+            Document.countDocuments({ status: 'pending' }),
+            Subscription.countDocuments({ status: 'active' }),
+            Supplier.countDocuments({}),
+            Admin.countDocuments({ isActive: true }),
+            Transaction.aggregate([
+                { $match: { ...sinceFilter('today'), status: 'completed', type: { $in: ['trip_payment', 'subscription_payment'] } } },
+                { $group: { _id: null, total: { $sum: '$amount' } } },
+            ]),
         ]);
         return {
-            totalUsers, totalDrivers, onlineDrivers,
+            totalUsers, totalDrivers, onlineDrivers, pendingDriverApplications: pendingDrivers,
             tripsByStatus: Object.fromEntries(tripsByStatus.map((s) => [s._id, s.count])),
-            openSupportTickets: openTickets, pendingWithdrawals, activeEmergencies,
+            totalSupportTickets: totalTickets, openSupportTickets: openTickets,
+            pendingWithdrawals, activeEmergencies, pendingDocuments,
+            activeSubscriptions, totalSuppliers, activeStaff: staffCount,
+            revenueToday: revenueToday[0]?.total || 0,
         };
     },
 };

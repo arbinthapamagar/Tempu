@@ -30,14 +30,17 @@ export default function Ai() {
 }
 
 const AGENTIC_SUGGESTIONS = [
-  'What can you do?',
-  'How many unanswered support tickets, and what are they about?',
-  'Who is our least-rated driver?',
-  'Give me the platform stats',
+  'How many support tickets do we have?',
+  'Show me the pending document queue',
+  'How much revenue did we make this month?',
+  'Any API errors today?',
 ]
 
-// ── Agentic: a tool-calling chat over LIVE app data. Gated by the useAgenticAI
-// permission since it can surface personal data. ─────────────────────────────
+// ── Agentic: a tool-calling chat over LIVE app data that can also PREPARE
+// changes (notifications, ticket replies, approvals, payouts, pricing…). Gated
+// by the useAgenticAI permission since it surfaces personal data; each write
+// action additionally re-checks the same permission its admin screen requires,
+// and only runs once the admin confirms the card. ────────────────────────────
 function AgenticSection() {
   const admin = useAuthStore((s) => s.admin)
   const canUse = hasPermission(admin, 'useAgenticAI')
@@ -59,10 +62,11 @@ function AgenticSection() {
       icon={MessageSquare}
       title="Chat"
       emptyTitle="How can Tempu Ai help?"
-      emptyHint="Ask about any user, driver, trip, or platform stat."
+      emptyHint="Ask about anything in the app — or tell it to send a message, reply to a ticket, or approve something."
       suggestions={AGENTIC_SUGGESTIONS}
       placeholder="Message Tempu Ai… or attach an image"
       sendFn={(text, history, image) => knowledgeApi.agenticChat(text, history, image)}
+      actionFn={(token) => knowledgeApi.agenticAction(token)}
       allowImage
       storageKey={`tempu-agentic-chat:${admin?._id || 'anon'}`}
     />

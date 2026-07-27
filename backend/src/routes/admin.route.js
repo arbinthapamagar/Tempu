@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { verifyAdminJwt } from '../middlewares/admin.middleware.js';
 import { upload } from '../middlewares/multer.middleware.js';
 import {
-    ingestDocuments, ingestRawText, getSources, getSourceText, updateSource, removeSource, getKnowledgeImage, searchKnowledge, askKnowledge, chatKnowledge, agenticChat,
+    ingestDocuments, ingestRawText, getSources, getSourceText, updateSource, removeSource, getKnowledgeImage, searchKnowledge, askKnowledge, chatKnowledge, agenticChat, agenticAction,
 } from '../controller/rag.controller.js';
 import { listApiLogs, apiLogStats, getApiLog, clearApiLogs } from '../controller/apiLog.controller.js';
 import { apiError } from '../utils/apiError.js';
@@ -183,14 +183,20 @@ adminRouter.delete('/knowledge/sources/:source', requireKnowledge, removeSource)
 adminRouter.post('/knowledge/ask', askKnowledge);
 adminRouter.post('/knowledge/chat', chatKnowledge);
 
-// Agentic AI data assistant — queries LIVE app data (users, drivers, trips,
-// payments, etc.) via whitelisted tools. Gated separately from the knowledge
-// permission since it reaches personal data (phone numbers, ratings, etc.).
+// Agentic AI assistant — queries LIVE app data (users, drivers, trips, payments,
+// etc.) via whitelisted tools, and prepares changes across the same areas. Gated
+// separately from the knowledge permission since it reaches personal data (phone
+// numbers, ratings, etc.).
 const requireAgenticAI = (req, res, next) => {
     if (req.admin?.role === 'superadmin' || req.admin?.permissions?.useAgenticAI) return next();
     throw new apiError(403, 'Insufficient permissions');
 };
 adminRouter.post('/agentic/chat', requireAgenticAI, agenticChat);
+// Confirm step: runs a write action the agent prepared. useAgenticAI alone is not
+// enough — each action re-checks the SAME permission its equivalent REST endpoint
+// requires (see agenticActions.js), so the assistant can never widen an admin's
+// reach beyond what they could already do by hand.
+adminRouter.post('/agentic/action', requireAgenticAI, agenticAction);
 
 // API Log viewer — shows captured request/response traffic across the whole
 // platform (web, mobile, backend). Superadmin only: it exposes full request and

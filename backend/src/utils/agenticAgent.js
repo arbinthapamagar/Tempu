@@ -1,9 +1,15 @@
-// Agentic AI orchestration — a tool-calling loop restricted to the whitelisted
-// read-only data tools in agenticTools.js. The model can only ever call those
-// named functions; it never sees or writes raw database queries. The underlying
-// model is provider-agnostic (Gemini or local Ollama) via ./llm.js — set with
-// the AI_PROVIDER env var.
+// Agentic AI orchestration — a tool-calling loop restricted to two whitelists:
+// the read-only data tools in agenticTools.js, and the write actions in
+// agenticActions.js. The model can only ever call those named functions; it
+// never sees or writes raw database queries. The underlying model is
+// provider-agnostic (Gemini or local Ollama) via ./llm.js — set with AI_PROVIDER.
+//
+// Reads run immediately. Writes never do: calling an action tool only PREPARES a
+// signed proposal, which the admin panel renders as a confirm card. Nothing is
+// written until the boss clicks Send and the panel calls
+// POST /admin/agentic/action. See agenticActions.js for that contract.
 import { TOOLS, HANDLERS } from './agenticTools.js';
+import { actionToolsFor, isActionTool, proposeAction } from './agenticActions.js';
 import { chatWithTools, chatPlain, friendlyAiError, AI_PROVIDER } from './llm.js';
 
 // Enough round-trips for real multi-step questions (e.g. list tickets → open the
@@ -11,10 +17,12 @@ import { chatWithTools, chatPlain, friendlyAiError, AI_PROVIDER } from './llm.js
 const MAX_STEPS = 8;
 
 const SYSTEM_PROMPT =
-    'You are **Tempu Ai**, the data assistant inside the Tempu admin panel (Tempu is a ' +
+    'You are **Tempu Ai**, the assistant inside the Tempu admin panel (Tempu is a ' +
     'women-first ride-sharing platform in Nepal). You answer questions about live app data ' +
     '— riders, drivers, trips, payments, withdrawals, subscriptions, suppliers, support ' +
-    'tickets, emergencies, and platform stats. The boss can also attach an image with the ' +
+    'tickets, emergencies, documents, notifications, pricing, map settings, API traffic and ' +
+    'platform analytics — and you can also PREPARE changes across those same areas. ' +
+    'The boss can also attach an image with the ' +
     'paperclip button and you can see and describe it (e.g. a screenshot, a document photo, a ' +
     'driver ID). If asked whether you can read documents, be accurate: you can view an ' +
     'attached IMAGE directly in this chat, but reading whole document FILES (PDF/DOCX) happens ' +
@@ -38,11 +46,33 @@ const SYSTEM_PROMPT =
     '- Do NOT add filters the boss did not ask for — omit optional args (e.g. status) unless ' +
     'they named one.\n' +
     '- Be direct; don’t hedge or refuse something you have a tool for. Ask a short clarifying ' +
-    'question only if genuinely ambiguous.\n\n' +
+    'question only if genuinely ambiguous.\n' +
+    '- When the boss asks for "all" of something (all tickets, all pending documents), pass ' +
+    'limit: 50 so they get the whole list, and quote the tool’s exact `count`.\n\n' +
+
+    '## Making changes — you PREPARE, the boss CONFIRMS\n' +
+    'Some of your tools change data: sending notifications, replying to and assigning support ' +
+    'tickets, acknowledging SOS alerts, verifying documents, changing rider/driver statuses, ' +
+    'processing withdrawals, granting driver money, editing pricing, and more.\n' +
+    '- Calling one of those tools does NOT perform the change. It only prepares it. The boss ' +
+    'then sees a confirmation card with Send and Cancel buttons, and nothing happens until ' +
+    'they click Send.\n' +
+    '- So NEVER say a change is done. Do not write "sent", "notified", "approved", "resolved", ' +
+    '"I have updated". Report it as ready: e.g. "Ready to send, boss — confirm below." ' +
+    'ONE short line.\n' +
+    '- Do NOT restate the recipient, title or message in prose — the card already shows every ' +
+    'detail. Repeating it is noise.\n' +
+    '- Prepare each action ONCE per turn. Never call the same action tool twice.\n' +
+    '- If the boss gave you only the message text, write a short sensible title yourself.\n' +
+    '- Look the target up by the name the boss used; the tool resolves it. If the tool comes ' +
+    'back with an error (no such user, already approved, needs a reason), say exactly that in ' +
+    'one line and, if something is missing, ask for it.\n' +
+    '- If the boss asks for a change you have no tool for, or one your permissions do not ' +
+    'cover, say so plainly and point them to the relevant admin screen.\n\n' +
 
     '## Greetings & identity\n' +
     '- For "hi"/"who are you"/"what can you do"/"who built you", reply in ONE short ' +
-    'professional line as Tempu Ai, the Tempu admin data assistant — then ask what the boss ' +
+    'professional line as Tempu Ai, the Tempu admin assistant — then ask what the boss ' +
     'needs. Do NOT dump a capabilities menu or call any tool.\n\n' +
 
     '## Absolute rule\n' +
@@ -50,7 +80,30 @@ const SYSTEM_PROMPT =
     'anything resembling a function/tool call — the tool mechanism is separate and automatic. ' +
     'Write only natural, human-readable Markdown prose.';
 
-async function runTool(name, args = {}) {
+const isKnownTool = (name) => Object.prototype.hasOwnProperty.call(HANDLERS, name) || isActionTool(name);
+
+// Dispatch one tool call. A read tool runs for real; an action tool is only
+// resolved into a signed proposal (collected into `pending`) and the model is
+// told explicitly that nothing has happened yet, so it can't report success.
+async function runTool(name, args = {}, admin, pending) {
+    if (isActionTool(name)) {
+        // The same action proposed twice in one turn would show the boss two
+        // identical cards and risk a double-send. Keep the first.
+        if (pending.some((p) => p.action === name)) {
+            return { proposed: true, note: 'Already prepared and shown to the boss — do not prepare it again.' };
+        }
+        const result = await proposeAction(name, args, admin);
+        if (!result.ok) return { error: result.error };
+        pending.push(result.proposal);
+        return {
+            proposed: true,
+            awaitingConfirmation: true,
+            summary: result.proposal.summary,
+            note: 'NOT done yet. A confirmation card is now shown to the boss with Send/Cancel; '
+                + 'it only happens if they click Send. Tell them it is ready to confirm — never that it is done.',
+        };
+    }
+
     const handler = HANDLERS[name];
     if (!handler) return { error: `Unknown tool: ${name}` };
     try {
@@ -96,7 +149,7 @@ function parseLeakedToolCall(content) {
         if (!/"name"\s*:\s*"/.test(block)) continue;
         try {
             const parsed = JSON.parse(block);
-            if (parsed?.name && HANDLERS[parsed.name]) {
+            if (parsed?.name && isKnownTool(parsed.name)) {
                 return { name: parsed.name, args: parsed.parameters || parsed.arguments || {} };
             }
         } catch {
@@ -111,8 +164,10 @@ function parseLeakedToolCall(content) {
 // understood on the Gemini provider (its OpenAI-compatible endpoint accepts
 // multimodal content alongside tool calling); on Ollama the image is ignored
 // with a note, since the configured local model isn't vision-capable.
-// Returns { reply, toolCalls: [{name, args}] }.
-export async function runAgenticChat(message, history = [], image = null) {
+// `admin` is the authenticated Admin doc: it decides which write actions are
+// offered to the model at all, and signs any proposal to that admin.
+// Returns { reply, toolCalls: [{name, args}], pendingActions: [proposal] }.
+export async function runAgenticChat(message, history = [], image = null, admin = null) {
     let systemPrompt = SYSTEM_PROMPT;
     let userContent = message;
     if (image) {
@@ -142,15 +197,20 @@ export async function runAgenticChat(message, history = [], image = null) {
         { role: 'user', content: userContent },
     ];
 
+    // Only the actions this admin's permissions allow are offered, so the model
+    // can never propose something that would be refused at the confirm step.
+    const tools = [...TOOLS, ...actionToolsFor(admin)];
+
     const toolCalls = [];
+    const pendingActions = [];
     try {
         for (let step = 0; step < MAX_STEPS; step++) {
-            const reply = await chatWithTools(messages, TOOLS);
+            const reply = await chatWithTools(messages, tools);
 
             if (reply.toolCalls?.length) {
                 messages.push({ role: 'assistant', content: reply.content || '', toolCalls: reply.toolCalls });
                 for (const call of reply.toolCalls) {
-                    const result = await runTool(call.name, call.args);
+                    const result = await runTool(call.name, call.args, admin, pendingActions);
                     toolCalls.push({ name: call.name, args: call.args });
                     messages.push({ role: 'tool', toolCallId: call.id, name: call.name, content: JSON.stringify(result) });
                 }
@@ -161,7 +221,7 @@ export async function runAgenticChat(message, history = [], image = null) {
             // tool mechanism. Detect it and self-heal by actually running the tool.
             const leaked = parseLeakedToolCall(reply.content);
             if (leaked) {
-                const result = await runTool(leaked.name, leaked.args);
+                const result = await runTool(leaked.name, leaked.args, admin, pendingActions);
                 const id = `leak_${toolCalls.length}`;
                 toolCalls.push({ name: leaked.name, args: leaked.args });
                 messages.push({ role: 'assistant', content: '', toolCalls: [{ id, name: leaked.name, args: leaked.args }] });
@@ -174,31 +234,35 @@ export async function runAgenticChat(message, history = [], image = null) {
             // real tool data, summarise it instead of bailing.
             const hasUnresolvedToolAttempt = extractJsonObjects(reply.content || '').some((b) => /"name"\s*:\s*"/.test(b));
             if (hasUnresolvedToolAttempt) {
-                if (toolCalls.length) return { reply: await finalizeAnswer(messages), toolCalls };
+                if (toolCalls.length) return { reply: await finalizeAnswer(messages, pendingActions), toolCalls, pendingActions };
                 return {
                     reply: "I don't have a way to look that up yet — could you rephrase your question?",
                     toolCalls,
+                    pendingActions,
                 };
             }
 
-            return { reply: reply.content || 'Sorry, I could not generate a response.', toolCalls };
+            return { reply: reply.content || 'Sorry, I could not generate a response.', toolCalls, pendingActions };
         }
         // Hit the step cap. We almost certainly have tool data by now — force one
         // final tool-free pass so the admin gets an answer built from it, not a
         // "couldn't finish" apology.
-        return { reply: await finalizeAnswer(messages), toolCalls };
+        return { reply: await finalizeAnswer(messages, pendingActions), toolCalls, pendingActions };
     } catch (err) {
         // The AI provider failed (Gemini quota used up, key rejected, Ollama not
         // running, …). Return a clear, human-readable reply as a normal response
         // — the admin sees exactly what went wrong, and the API logger records it
         // like any other reply instead of it vanishing into a 500.
-        return { reply: friendlyAiError(err), toolCalls, error: true };
+        //
+        // Any prepared action is dropped: the boss never saw a card for it, so
+        // offering one now against a failed turn would be confusing.
+        return { reply: friendlyAiError(err), toolCalls, pendingActions: [], error: true };
     }
 }
 
 // One last generation with NO tools available, so the model is forced to write
 // a natural-language answer from the tool results already in the conversation.
-async function finalizeAnswer(messages) {
+async function finalizeAnswer(messages, pendingActions = []) {
     let content = '';
     try {
         ({ content } = await chatPlain([
@@ -208,7 +272,11 @@ async function finalizeAnswer(messages) {
                 content:
                     'Now write the final answer for the admin using ONLY the data already ' +
                     'gathered above. Do not call tools. Reply in warm, skimmable Markdown ' +
-                    'prose — no JSON or curly braces.',
+                    'prose — no JSON or curly braces.' +
+                    (pendingActions.length
+                        ? ' An action is prepared and awaiting the boss’s confirmation — say it is ' +
+                          'ready to confirm below, in one short line. NEVER say it is done, sent, or applied.'
+                        : ''),
             },
         ]));
     } catch (err) {

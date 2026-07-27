@@ -27,4 +27,8 @@ export const knowledgeApi = {
   // base64 data URL, understood when AI_PROVIDER=gemini.
   agenticChat: (message, history, image) =>
     api.post('/admin/agentic/chat', { message, history, ...(image ? { image } : {}) }),
+  // Confirm a write action the agent prepared. Only the signed token from the
+  // proposal is sent — the server holds the action and its arguments, so the
+  // browser can't alter what actually runs.
+  agenticAction: (token) => api.post('/admin/agentic/action', { token }),
 }

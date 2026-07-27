@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { Sparkles, Send, MessageSquare, Plus, Paperclip, X } from '@/components/ui/icons'
 import { cn } from '../../utils/cn'
 import { Markdown } from './Markdown'
+import { ActionCard } from './ActionCard'
 import toast from 'react-hot-toast'
 
 // Shared multi-turn chat panel used by BOTH Tempu Ai (agentic) and Tempu Rag, so
@@ -29,21 +30,36 @@ function loadStoredMessages(storageKey) {
 // Images are dropped before persisting (kept only as a `hadImage` flag) — a
 // full base64 attachment can be 8MB+ and would blow past localStorage's ~5MB
 // per-origin quota after just a couple of turns.
+//
+// Action cards keep their preview so the transcript still reads correctly, but
+// lose their confirmation token: tokens expire server-side after 15 minutes, so
+// a card restored from storage must never look clickable. One still awaiting a
+// decision comes back as 'expired'; a settled one keeps its real outcome.
 function toStorable(messages) {
   return messages.slice(-HISTORY_LIMIT).map((m) => ({
     role: m.role,
     text: m.text,
     ...(m.sources?.length ? { sources: m.sources } : {}),
     ...(m.image ? { hadImage: true } : {}),
+    ...(m.actions?.length
+      ? {
+          actions: m.actions.map(({ token, ...a }) => ({
+            ...a,
+            status: ['done', 'cancelled', 'error'].includes(a.status) ? a.status : 'expired',
+          })),
+        }
+      : {}),
   }))
 }
 
+// `actionFn(token)` confirms a prepared write action. Omit it and action cards
+// are never rendered — the agent's proposals are simply ignored.
 export function ChatPanel({
   icon: Icon = MessageSquare, title, subtitle, emptyTitle, emptyHint,
-  suggestions = [], placeholder, footerNote, sendFn, showSources = false, allowImage = false,
-  storageKey = null,
+  suggestions = [], placeholder, footerNote, sendFn, actionFn = null,
+  showSources = false, allowImage = false, storageKey = null,
 }) {
-  const [messages, setMessages] = useState(() => loadStoredMessages(storageKey)) // { role: 'user' | 'model', text, sources?, image?, hadImage? }
+  const [messages, setMessages] = useState(() => loadStoredMessages(storageKey)) // { role: 'user' | 'model', text, sources?, image?, hadImage?, actions? }
   const [input, setInput] = useState('')
   const [image, setImage] = useState(null) // base64 data URL, attached to the next message
   const scrollRef = useRef(null)
@@ -68,7 +84,14 @@ export function ChatPanel({
     mutationFn: ({ text, history, image: img }) => sendFn(text, history, img),
     onSuccess: (res) => {
       const data = res?.data || {}
-      setMessages((prev) => [...prev, { role: 'model', text: data.reply || data.answer || '…', sources: data.sources || [] }])
+      setMessages((prev) => [...prev, {
+        role: 'model',
+        text: data.reply || data.answer || '…',
+        sources: data.sources || [],
+        // Write actions the agent prepared. Nothing has run yet — each renders
+        // as a card the admin has to confirm.
+        actions: Array.isArray(data.pendingActions) ? data.pendingActions : [],
+      }])
     },
     onError: (e) => {
       toast.error(e?.message || 'Chat failed. Is the AI service running?')
@@ -101,6 +124,36 @@ export function ChatPanel({
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
     send.mutate({ text: trimmed, history, image: sentImage })
   }
+
+  // Action cards are addressed by their position in the transcript, which is
+  // stable because messages are only ever appended.
+  const patchAction = (msgIndex, actionIndex, patch) => {
+    setMessages((prev) => prev.map((m, i) => (
+      i !== msgIndex ? m : { ...m, actions: (m.actions || []).map((a, j) => (j !== actionIndex ? a : { ...a, ...patch })) }
+    )))
+  }
+
+  const confirmAction = async (msgIndex, actionIndex) => {
+    const action = messages[msgIndex]?.actions?.[actionIndex]
+    if (!actionFn || !action?.token || ['sending', 'done'].includes(action.status)) return
+    patchAction(msgIndex, actionIndex, { status: 'sending' })
+    try {
+      const res = await actionFn(action.token)
+      const message = res?.data?.message || res?.message || 'Done.'
+      // Drop the token once it has been spent so the card can't be re-fired.
+      patchAction(msgIndex, actionIndex, { status: 'done', result: message, token: undefined })
+      toast.success(message)
+    } catch (e) {
+      // Keep the token on failure — a transient error is worth a retry, and an
+      // expired or tampered one is rejected again by the server anyway.
+      const message = e?.message || 'That action could not be completed.'
+      patchAction(msgIndex, actionIndex, { status: 'error', result: message })
+      toast.error(message)
+    }
+  }
+
+  const cancelAction = (msgIndex, actionIndex) =>
+    patchAction(msgIndex, actionIndex, { status: 'cancelled', token: undefined })
 
   const newChat = () => {
     setMessages([])
@@ -174,6 +227,14 @@ export function ChatPanel({
                 ) : (
                   <div key={i} className="text-sm text-gray-800">
                     <Markdown>{m.text}</Markdown>
+                    {actionFn && m.actions?.map((a, j) => (
+                      <ActionCard
+                        key={j}
+                        action={a}
+                        onConfirm={() => confirmAction(i, j)}
+                        onCancel={() => cancelAction(i, j)}
+                      />
+                    ))}
                     {showSources && m.sources?.length > 0 && (
                       <p className="mt-2 text-xs text-gray-400">Sources: {m.sources.join(', ')}</p>
                     )}

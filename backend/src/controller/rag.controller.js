@@ -15,6 +15,7 @@ import {
     EMBED_MODEL,
 } from '../utils/rag.js';
 import { runAgenticChat } from '../utils/agenticAgent.js';
+import { executeConfirmedAction } from '../utils/agenticActions.js';
 
 // Knowledge Base (RAG) admin endpoints. Ported from the BOT project's rag/.
 // All routes are mounted under /api/v1/admin/knowledge and gated by
@@ -160,8 +161,29 @@ const chatKnowledge = asyncHandler(async (req, res) => {
 const agenticChat = asyncHandler(async (req, res) => {
     const { message = '', history = [], image = null } = req.body;
     if ((!message || !message.trim()) && !image) throw new apiError(400, 'Message or image is required');
-    const result = await runAgenticChat((message || '').trim(), Array.isArray(history) ? history : [], image);
+    // req.admin decides which write actions the agent may offer, and any prepared
+    // proposal is signed to this admin so only they can confirm it.
+    const result = await runAgenticChat((message || '').trim(), Array.isArray(history) ? history : [], image, req.admin);
     return res.status(200).json(new apiResponse(200, result, 'Agentic reply'));
+});
+
+// Confirm step for a write action the agent prepared. The body carries only the
+// signed token from the proposal — never the action or its arguments — so the
+// browser cannot alter what runs. executeConfirmedAction verifies the signature,
+// the expiry, that the token belongs to this admin, and re-checks the permission
+// before touching anything.
+const agenticAction = asyncHandler(async (req, res) => {
+    const { token } = req.body || {};
+    if (!token) throw new apiError(400, 'A confirmation token is required');
+    let result;
+    try {
+        result = await executeConfirmedAction(token, req.admin);
+    } catch (err) {
+        // A rejected or stale confirmation is the admin's problem to see, not a
+        // server fault — surface the reason as a 400.
+        throw new apiError(400, err.message || 'Could not complete that action');
+    }
+    return res.status(200).json(new apiResponse(200, result, result.message));
 });
 
 export {
@@ -176,4 +198,5 @@ export {
     askKnowledge,
     chatKnowledge,
     agenticChat,
+    agenticAction,
 };
