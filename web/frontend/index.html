@@ -7,16 +7,9 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tempu Admin</title>
-    <script>
-      // Apply the saved theme before paint to avoid a flash of the wrong mode.
-      (function () {
-        try {
-          var m = localStorage.getItem('shakti_theme') || 'system';
-          var dark = m === 'dark' || (m === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-          if (dark) document.documentElement.classList.add('dark');
-        } catch (e) { /* ignore */ }
-      })();
-    </script>
+    <!-- Sets the theme class before paint. External (not inline) so the
+         backend can serve a strict script-src 'self' CSP. -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>
