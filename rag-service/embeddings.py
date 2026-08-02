@@ -5,11 +5,11 @@ path — so the same key that works for chat works here, with no extra SDK
 dependency — and rotates across keys on rejection/quota just like the chat and
 vision paths.
 
-Swapped in for the local Ollama nomic-embed-text embedder (kept commented in
-ingest.py as a free, fully-private fallback) to get Google's higher-quality,
-multilingual embeddings. NOTE: the vector dimension differs (nomic 768 vs
-gemini-embedding-001 3072), so switching embedders requires wiping +
-re-ingesting the Chroma store — the two are not interchangeable in place.
+An alternative to the active local Ollama bge-m3 embedder (see ingest.py), for
+when Google's higher-quality embeddings are worth the network hop and the loss
+of privacy. NOTE: the vector dimension differs (bge-m3 1024 vs
+gemini-embedding-001 3072), so switching embedders requires re-embedding the
+Chroma store (reembed.py) — the two are not interchangeable in place.
 """
 import requests
 from langchain_core.embeddings import Embeddings

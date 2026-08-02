@@ -1,8 +1,8 @@
 """Central config for the Shakti RAG service.
 
 Mirrors the BOT project's rag/ pipeline values (chunk 500/overlap 50, k=4,
-nomic-embed-text + llama3.1:8b via Ollama) but scoped to Shakti with its own
-Chroma store, so support answers are never grounded in unrelated corpora.
+local-Ollama embeddings + llama3.1:8b via Ollama) but scoped to Shakti with its
+own Chroma store, so support answers are never grounded in unrelated corpora.
 """
 import os
 from pathlib import Path
@@ -21,14 +21,18 @@ CHROMA_DIR.mkdir(parents=True, exist_ok=True)
 
 # Ollama (same local server BOT + VIntuna use). No API key needed.
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-EMBED_MODEL = os.environ.get("RAG_EMBED_MODEL", "nomic-embed-text")
+EMBED_MODEL = os.environ.get("RAG_EMBED_MODEL", "bge-m3")
 LLM_MODEL = os.environ.get("RAG_CHAT_MODEL", "llama3.1:8b")
 
-# Embeddings run on the local Ollama nomic-embed-text (768-dim) — free, private,
-# and fast (~20ms/query, no network hop). The Google API embedder
-# (gemini-embedding-001, 3072-dim, higher quality/multilingual) is kept as a
-# commented alternative in ingest.py (see embeddings.py). Switching embedders
-# changes the vector dimension, so the Chroma store must be wiped + re-ingested.
+# Embeddings run on the local Ollama bge-m3 (1024-dim) — free, private, and no
+# network hop. Replaced nomic-embed-text (768-dim) because nomic is English-only
+# in practice: measured Hebrew recall@1 was 0/8 while *scoring higher* than
+# English (it collapses Hebrew into a narrow band, so no threshold could fix it)
+# and the KB is half Hebrew. bge-m3 is trained multilingual, and unlike nomic it
+# needs no "search_query:"/"search_document:" prefixes. The Google API embedder
+# (gemini-embedding-001, 3072-dim) is kept as a commented alternative in
+# ingest.py (see embeddings.py). Switching embedders changes the vector
+# dimension, so the Chroma store must be re-embedded (see reembed.py).
 GEMINI_EMBED_MODEL = os.environ.get("GEMINI_EMBED_MODEL", "gemini-embedding-001")
 # Name surfaced to the admin UI (/health, /sources) as the active embedder.
 ACTIVE_EMBED_MODEL = EMBED_MODEL
@@ -75,10 +79,11 @@ CHUNK_OVERLAP = int(os.environ.get("RAG_CHUNK_OVERLAP", "50"))
 RETRIEVE_K = int(os.environ.get("RAG_RETRIEVE_K", "5"))
 
 # Relevance floor for grounding: a chunk is only used as context / cited as a
-# source when its cosine relevance clears this. nomic-embed gives loosely-related
-# text a ~0.4 baseline, so 0.5 keeps genuine matches while dropping noise (e.g. a
-# greeting no longer "matches" a random document). Tune via RAG_MIN_SCORE if the
-# assistant answers too eagerly (raise it) or too rarely (lower it).
+# source when its cosine relevance clears this. THIS IS EMBEDDER-SPECIFIC — each
+# model has its own score distribution, so it must be re-measured whenever the
+# embedder changes (the .env value is the one in force; see its comment for the
+# current calibration). Tune via RAG_MIN_SCORE if the assistant answers too
+# eagerly (raise it) or too rarely (lower it).
 MIN_SCORE = float(os.environ.get("RAG_MIN_SCORE", "0.5"))
 
 COLLECTION = os.environ.get("RAG_COLLECTION", "shakti")

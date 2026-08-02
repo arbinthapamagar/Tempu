@@ -22,7 +22,7 @@ const INGEST_TIMEOUT_MS = Number(process.env.RAG_INGEST_TIMEOUT_MS) || 600000;
 
 // Kept for the admin UI (displayed next to ingested sources) and for the
 // support relevance gate in supportAi.js.
-export const EMBED_MODEL = process.env.RAG_EMBED_MODEL || 'nomic-embed-text';
+export const EMBED_MODEL = process.env.RAG_EMBED_MODEL || 'bge-m3';
 export const MIN_SCORE = Number(process.env.RAG_MIN_SCORE) || 0.35;
 
 async function call(path, { method = 'POST', json, form, timeoutMs = TIMEOUT_MS } = {}) {

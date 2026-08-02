@@ -7,7 +7,7 @@ from config import RETRIEVE_K
 from ingest import get_vectorstore
 
 # Vocabulary bridge for platform names. Users say "WordPress"/"WP"; the docs are
-# filed under "WooCommerce", and nomic-embed-text has no idea the two are
+# filed under "WooCommerce", and the embedder has no idea the two are
 # related — so "how to install shipos in wordpress" used to rank the WooCommerce
 # install article 7th, behind Wix and Shopify, and the model would answer that it
 # has no WordPress instructions at all.
@@ -15,10 +15,18 @@ from ingest import get_vectorstore
 # Expanding the QUERY is the right place for this. Putting the aliases in the
 # documents instead was tried and made things worse: every WooCommerce article
 # then contained "WordPress", so the install article no longer stood out.
+#
+# The Hebrew alternatives carry no \b: Hebrew prefixes attach directly to the
+# word (בוויקס = "in Wix"), so a word boundary never matches before the alias
+# and the guard silently does nothing — which is what happened to every Hebrew
+# query here until 2026-08-02. Expanding to the LATIN name is correct even for a
+# Hebrew query, because the Hebrew articles themselves write the platform names
+# in Latin (WooCommerce 143, Shopify 90, Wix 71 occurrences; only WordPress also
+# appears transliterated, as וורדפרס).
 PLATFORM_HINTS = (
-    (r"\b(wordpress|wp|woo)\b", "WooCommerce plugin"),
-    (r"\bshopify\b", "Shopify App Store"),
-    (r"\bwix\b", "Wix App Market"),
+    (r"\b(wordpress|wp|woo)\b|ווקומרס|וודקומרס|וורדפרס", "WooCommerce plugin"),
+    (r"\bshopify\b|שופיפי", "Shopify App Store"),
+    (r"\bwix\b|ו{1,2}יקס", "Wix App Market"),
 )
 
 
@@ -47,10 +55,14 @@ def wants_images(query: str) -> bool:
 # Which platform's docs the user is asking about. The illustrated PDFs are filed
 # per platform ("Shipos Documentation (Shopify)-…"), and so are the help-center
 # articles ("shopify-en-02-…"), so matching the source name is enough.
+# Hebrew aliases are listed for the same reason as in PLATFORM_HINTS: without
+# them a Hebrew question naming a platform got no guard at all, so "how do I
+# create a shipment in Shopify" asked in Hebrew was answered with Wix
+# screenshots — the exact mismatch this table exists to prevent.
 PLATFORM_OF_QUERY = (
-    ("shopify", r"\bshopify\b"),
-    ("wix", r"\bwix\b"),
-    ("woocommerce", r"\b(woocommerce|wordpress|wp|woo)\b"),
+    ("shopify", r"\bshopify\b|שופיפי"),
+    ("wix", r"\bwix\b|ו{1,2}יקס"),
+    ("woocommerce", r"\b(woocommerce|wordpress|wp|woo)\b|ווקומרס|וודקומרס|וורדפרס"),
 )
 
 # How many of the k slots may be given to illustrated chunks that text ranking
@@ -59,11 +71,16 @@ PLATFORM_OF_QUERY = (
 IMAGE_RESERVE = 2
 
 # A screenshot only earns a reserved slot if it is properly on topic. MIN_SCORE
-# (0.55) is the floor for "worth grounding on at all", which is too low here: at
-# that level "hello" reaches an illustrated chunk, and answering a greeting with a
-# screenshot of the shipment form is worse than answering it with nothing. Real
-# procedural matches sit at 0.66+, so this only drops the incidental ones.
-ILLUSTRATION_FLOOR = 0.60
+# is the floor for "worth grounding on at all", which is too low here: at that
+# level "hello" reaches an illustrated chunk, and answering a greeting with a
+# screenshot of the shipment form is worse than answering it with nothing.
+#
+# Re-measured for bge-m3 on 2026-08-02 (was 0.60 on nomic, whose procedural band
+# started at 0.66). Best illustrated chunk per query now: real procedural EN
+# 0.644-0.689, real procedural HE 0.564-0.631, greetings 0.492-0.523. 0.55 sits
+# in that gap. Keeping 0.60 would have silently excluded Hebrew procedural
+# queries from screenshots — the language the re-embed was done to support.
+ILLUSTRATION_FLOOR = 0.55
 
 
 def _platform(query: str):

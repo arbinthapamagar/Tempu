@@ -47,7 +47,7 @@ User question ─► embed ─► similarity search ─► relevance gate ─►
 | API service | **FastAPI** | fast, tiny, async |
 | Doc loading + splitting | **LangChain** | PDF/DOCX/MD/TXT loaders out of the box |
 | Vector store | **ChromaDB** | persistent, local, cosine similarity |
-| Embeddings | **Ollama + `nomic-embed-text`** | 100% local, free, ~20ms/query |
+| Embeddings | **Ollama + `bge-m3`** | 100% local, free, and multilingual |
 | Answer generation | **Google Gemini** (or local Ollama) | switchable with one env var |
 | Glue | **Node.js proxy** | rest of the app keeps one clean API |
 
@@ -56,8 +56,12 @@ User question ─► embed ─► similarity search ─► relevance gate ─►
 
 ## Chapter 4 — the decisions I actually had to make
 
-**1. Local embeddings vs cloud embeddings.**
-I tested Google's `gemini-embedding-001` (3072-dim) against local `nomic-embed-text` (768-dim). Gemini scored higher on relevance and was better at Nepali — but nomic was **~10x faster, free, and fully private**. For an internal tool, speed + privacy won. I kept the Gemini embedder in the code as a documented alternative.
+**1. Local embeddings vs cloud embeddings — and why the first local pick was wrong.**
+I tested Google's `gemini-embedding-001` (3072-dim) against local `nomic-embed-text` (768-dim). Gemini scored higher on relevance — but nomic was **~10x faster, free, and fully private**, so for an internal tool speed + privacy won. I kept the Gemini embedder in the code as a documented alternative.
+
+Then I measured retrieval *per language*, and nomic fell apart: on Hebrew queries — half the knowledge base — **recall@1 was 0/8**, while Hebrew *scored higher* than English (0.778 vs 0.739). That combination is the trap. The scores looked healthy, so nothing failed loudly; nomic just squeezes Hebrew into a narrow similarity band where wrong articles score 0.75–0.81 and the right one has no room to stand out. **No relevance threshold can fix that** — the gate was doing its job on numbers that meant nothing. So the answers came back confident and wrong, which is worse than refusing.
+
+The fix kept the local-and-private property and dropped the English-only assumption: **`bge-m3`** (1024-dim), also on Ollama, trained multilingual. The lesson is the one worth keeping: **a benchmark score is not recall, and an average hides the language your users actually type in.**
 
 **2. Provider-switchable chat, locked-local embeddings.**
 The *chat* model switches between Gemini (fast) and local Ollama (private) with one env var — but *embeddings always stay local*. This means I can swap the "brain" **without ever re-processing my documents.** Decoupling those two was the best call I made.
@@ -73,7 +77,7 @@ Free-tier quotas run out, keys get rejected, services go down. So I built **auto
 **Health check** — the service reports its active models:
 
 ```json
-{ "ok": true, "embedModel": "nomic-embed-text", "chatModel": "llama3.1:8b" }
+{ "ok": true, "embedModel": "bge-m3", "chatModel": "llama3.1:8b" }
 ```
 
 **Ingested sources** — documents chunked and stored in the vector DB:
@@ -84,7 +88,7 @@ Free-tier quotas run out, keys get rejected, services go down. So I built **auto
     { "source": "Arbin CV.pdf", "chunks": 17 },
     { "source": "ShipOS Rest API 2026.pdf", "chunks": 42 }
   ],
-  "embedModel": "nomic-embed-text"
+  "embedModel": "bge-m3"
 }
 ```
 

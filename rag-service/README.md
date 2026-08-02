@@ -5,7 +5,7 @@ for Shakti support (the **Tempu Rag** knowledge base), based on the BOT project'
 pipeline:
 
 - **LangChain** loaders + `RecursiveCharacterTextSplitter` (chunk 500 / overlap 50)
-- **Embeddings:** local **Ollama** `nomic-embed-text` (768-dim) — free, private, ~20 ms/query
+- **Embeddings:** local **Ollama** `bge-m3` (1024-dim) — free, private, multilingual
 - **Chat:** provider-switchable — **Google Gemini** *or* local **Ollama** (`AI_PROVIDER`)
 - **Chroma** persistent vector store (its own Shakti-only collection, cosine space)
 - top-k = 5 retrieval, gated by a relevance floor (`RAG_MIN_SCORE`) so weak matches
@@ -15,7 +15,7 @@ The Shakti Node backend calls this over HTTP (`backend/src/utils/rag.js`); the w
 admin and mobile app never call it directly.
 
 > **Key design choice:** embeddings **always** run on local Ollama, even when chat
-> uses Gemini. Switching the chat provider therefore never requires re-ingesting
+> uses Gemini. Switching the chat provider therefore never requires re-embedding
 > the Chroma store. (Only changing the *embedder* would — see "Swapping the
 > embedder" below.)
 
@@ -24,7 +24,7 @@ admin and mobile app never call it directly.
   you run chat locally):
   ```bash
   ollama serve
-  ollama pull nomic-embed-text      # required — embeddings
+  ollama pull bge-m3                # required — embeddings
   ollama pull llama3.1:8b           # only needed when AI_PROVIDER=ollama
   ```
 
@@ -39,11 +39,11 @@ Copy `.env.sample` to `.env` and adjust. Key variables:
 | `GEMINI_MODEL` | `gemini-flash-lite-latest` | Primary Gemini chat model. |
 | `GEMINI_FALLBACK_MODELS` | (chain) | Models tried on a per-model 429/404, each key has its own quota. |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Local Ollama server. |
-| `RAG_EMBED_MODEL` | `nomic-embed-text` | Embedding model (local Ollama). |
+| `RAG_EMBED_MODEL` | `bge-m3` | Embedding model (local Ollama). Changing it means re-embedding the store — `python reembed.py`. |
 | `RAG_CHAT_MODEL` | `llama3.1:8b` | Local chat model (used when `AI_PROVIDER=ollama`). |
 | `RAG_CHUNK_SIZE` / `RAG_CHUNK_OVERLAP` | `500` / `50` | Text splitting. |
 | `RAG_RETRIEVE_K` | `5` | How many chunks to retrieve per query. |
-| `RAG_MIN_SCORE` | `0.63` | Relevance floor — chunks below this are dropped before grounding, so off-topic queries don't cite random docs. Tuned to nomic's score distribution **and to the store's size** — a bigger store needs a higher floor, since more chunks means more chances an off-topic query finds something. Re-calibrated to 0.63 for the ~600-chunk store (was 0.5 at 64 chunks). |
+| `RAG_MIN_SCORE` | `0.5` | Relevance floor — chunks below this are dropped before grounding, so off-topic queries don't cite random docs. Tuned to **the embedder's score distribution** and to the store's size (a bigger store needs a higher floor: more chunks, more chances an off-topic query finds something). Re-measure it whenever either changes, using messy real phrasing rather than polished test queries. |
 | `RAG_COLLECTION` | `shakti` | Chroma collection name. |
 
 ## Run
@@ -129,13 +129,32 @@ with a Bearer token — so `web/frontend/src/components/ai/Markdown.jsx` fetches
 through the authed client and renders an object URL. Deleting or re-ingesting a source
 removes its images too.
 
-## Swapping the embedder (optional)
-A higher-quality Google embedder (`gemini-embedding-001`, 3072-dim, better
-multilingual/Nepali) is included as a **commented alternative** in `ingest.py`
-(`get_vectorstore()`) — see `embeddings.py`. To switch: uncomment the
-`GeminiEmbeddings()` line + its import, set `ACTIVE_EMBED_MODEL` in `config.py`, then
-**wipe `data/chroma` and re-ingest** — the vector dimensions differ (768 vs 3072), so
-the stores are not compatible.
+## Swapping the embedder
+The active embedder is `bge-m3` via local Ollama. It replaced `nomic-embed-text`
+because nomic is English-only in practice: measured Hebrew **recall@1 was 0/8**
+(recall@8 3/8) while *scoring higher* than English (mean top-1 0.778 vs 0.739) — it
+collapses Hebrew into a narrow similarity band, so wrong hits score 0.75–0.81 and **no
+threshold can fix it**. Half this KB is Hebrew (72 EN + 72 HE help-center articles), so
+those queries cited confidently-wrong articles. `bge-m3` is trained multilingual and,
+unlike nomic, needs no `search_query:` / `search_document:` prefixes.
+
+A Google embedder (`gemini-embedding-001`, 3072-dim) remains a **commented
+alternative** in `ingest.py` (`get_vectorstore()`) — see `embeddings.py`. To switch:
+uncomment the `GeminiEmbeddings()` line + its import and set `ACTIVE_EMBED_MODEL` in
+`config.py`.
+
+**Any embedder change requires re-embedding the store** — the vector dimensions differ
+(nomic 768 / bge-m3 1024 / gemini 3072) and a Chroma collection holds one fixed width:
+
+```bash
+python reembed.py --dry-run     # what would be re-embedded
+python reembed.py               # backs up data/chroma, then re-embeds in place
+```
+
+It re-embeds the chunks already in the store rather than re-uploading the sources, which
+preserves the per-source chunk sizes (the help-center articles were ingested at 1500/150,
+not the global 500/50) and the existing vision/OCR image descriptions. Afterwards,
+**re-calibrate `RAG_MIN_SCORE`** — the floor is meaningless across a change of embedder.
 
 ## Files
 ```
@@ -143,6 +162,7 @@ main.py         FastAPI routes (/ingest /search /ask /chat /sources /health)
 config.py       env-driven config: provider, keys, chunk size, k, MIN_SCORE
 ingest.py       load → chunk → embed → store in Chroma
 retriever.py    similarity search with cosine relevance scores
+reembed.py      re-embed the existing store after changing RAG_EMBED_MODEL
 answer.py       grounding + system prompt + Gemini/Ollama generation & failover
 embeddings.py   optional Google embedder (documented alternative)
 vision.py       optional image description (Gemini vision / OCR)
@@ -192,6 +212,6 @@ the text SQLite still holds (no PDF re-parsing or vision calls required):
 ```bash
 python -c "
 import chromadb; c=chromadb.PersistentClient(path='data/chroma'); col=c.get_collection('shakti')
-n=len(col.query(query_embeddings=[[0.01]*768], n_results=10000, include=[])['ids'][0])
+n=len(col.query(query_embeddings=[[0.01]*1024], n_results=10000, include=[])['ids'][0])  # 1024 = bge-m3 width
 print('in vector index:', n, 'of', col.count())"
 ```

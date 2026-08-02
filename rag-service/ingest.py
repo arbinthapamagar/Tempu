@@ -2,6 +2,12 @@
 
 Same pipeline as BOT/rag/ingest.py: LangChain loaders + RecursiveCharacterTextSplitter
 + OllamaEmbeddings + Chroma.
+
+Changing the embedder changes the vector dimension, which an existing Chroma
+collection cannot absorb — use reembed.py to migrate the store in place instead
+of re-uploading every source (re-ingesting would also re-run vision/OCR on the
+illustrated PDFs, producing different image descriptions than the ones the
+answers were tuned against).
 """
 import logging
 from pathlib import Path
@@ -39,13 +45,13 @@ _vs = None
 def get_vectorstore() -> Chroma:
     global _vs
     if _vs is None:
-        # Local Ollama nomic-embed-text — free, private, and fast (~20ms/query, no
-        # network round-trip), which is why it's the active embedder.
+        # Local Ollama bge-m3 (1024-dim) — free, private, no network round-trip,
+        # and genuinely multilingual, which the half-Hebrew KB needs.
         embeddings = OllamaEmbeddings(model=EMBED_MODEL, base_url=OLLAMA_BASE_URL)
         # Google API embeddings (gemini-embedding-001) — higher quality, multilingual.
         # To switch: uncomment the next line (and its import above), set
-        # ACTIVE_EMBED_MODEL=GEMINI_EMBED_MODEL in config, then wipe + re-ingest
-        # Chroma (nomic 768-dim vs gemini 3072-dim — the stores aren't compatible).
+        # ACTIVE_EMBED_MODEL=GEMINI_EMBED_MODEL in config, then re-embed the store
+        # (bge-m3 1024-dim vs gemini 3072-dim — the stores aren't compatible).
         # embeddings = GeminiEmbeddings()
         _vs = Chroma(
             persist_directory=str(CHROMA_DIR),
