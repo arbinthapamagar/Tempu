@@ -39,3 +39,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# built APKs downloaded from EAS (large binaries, never commit)
+/apk
+
+# release signing keystore + password (NEVER commit)
+/credentials
