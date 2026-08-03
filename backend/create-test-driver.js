@@ -2,10 +2,13 @@
 // Idempotent — removes any existing account on the same email/phone first.
 // Run:  node create-test-driver.js
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 import { User } from './src/models/user.model.js';
 import { Driver } from './src/models/driver.model.js';
 
-const URI = 'mongodb://127.0.0.1:27017/shakti';
+dotenv.config();
+
+const URI = `${process.env.MONGODB_URI ?? 'mongodb://127.0.0.1:27017'}/shakti`;
 
 const NAME = 'arbin';
 const EMAIL = 'arbinbabu@gmail.com';

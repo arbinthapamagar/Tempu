@@ -2,6 +2,7 @@
 // Creates ~10 of each entity with valid relationships so every list is populated.
 // Run:  node seed-dummy.js
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -53,7 +54,9 @@ import { SupportReview } from './src/models/supportReview.model.js';
 import { Admin } from './src/models/admin.model.js';
 import { Notification } from './src/models/notification.model.js';
 
-const URI = 'mongodb://127.0.0.1:27017/shakti';
+dotenv.config();
+
+const URI = `${process.env.MONGODB_URI ?? 'mongodb://127.0.0.1:27017'}/shakti`;
 const N = 30;
 
 const pick = (arr, i) => arr[i % arr.length];
