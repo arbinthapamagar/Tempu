@@ -4,12 +4,12 @@ import {
   Alert,
   Image,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import RefreshControl from '../components/RefreshControl';
 import { userApi } from '../api/user.api';
 import { colors } from '../theme/colors';
 import { radius, spacing, type, shadow } from '../theme';

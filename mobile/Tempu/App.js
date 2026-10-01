@@ -14,6 +14,7 @@ import NavDrawer from './components/NavDrawer';
 import { MenuIcon, BellIcon } from './components/Icons';
 import { userApi } from './api/user.api';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import DriverShell from './screens/driver/DriverShell';
 import ContactSupportScreen from './screens/ContactSupportScreen';
 import DriverPendingScreen from './screens/DriverPendingScreen';
@@ -116,6 +117,7 @@ function AppShell() {
   // Support threads) register their own handlers and get first refusal.
   const lastExitPress = useRef(0);
   const confirmExit = () => {
+    if (Platform.OS === 'web') return false; // let the browser leave; no toast to explain a double press
     const now = Date.now();
     if (now - lastExitPress.current < 2000) return false; // second press → exit
     lastExitPress.current = now;
@@ -324,9 +326,11 @@ export default function App() {
   }
 
   return (
-    <AuthProvider>
-      <AppShell />
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 

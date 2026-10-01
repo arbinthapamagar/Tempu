@@ -19,17 +19,18 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
   View,
 } from 'react-native';
+import RefreshControl from '../components/RefreshControl';
 import { useAuth } from '../context/AuthContext';
 import { userApi } from '../api/user.api';
 import { colors } from '../theme/colors';
 import useBackHandler from '../utils/useBackHandler';
+import { sendShortcut } from '../utils/sendShortcut';
 import { type, radius, spacing } from '../theme';
 import { getThemeMode, setThemeMode } from '../theme/themeStore';
 import { reloadApp } from '../theme/reload';
@@ -837,6 +838,7 @@ function SosForm({ onSend, busy, close }) {
           placeholder="What's happening? Anything that helps us respond - leave blank if you can't."
           placeholderTextColor={colors.textFaint}
           multiline
+          onKeyPress={sendShortcut(() => !busy && onSend(note))}
         />
       </View>
       <Pressable

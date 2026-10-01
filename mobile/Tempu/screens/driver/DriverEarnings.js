@@ -4,12 +4,12 @@ import {
   Alert,
   Modal,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import RefreshControl from '../../components/RefreshControl';
 import { bidApi } from '../../api/trip.api';
 import { userApi } from '../../api/user.api';
 import { Button, Chip, FormField, Sheet } from '../../components/ui';

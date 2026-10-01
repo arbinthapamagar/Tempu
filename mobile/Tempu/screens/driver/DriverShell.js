@@ -11,6 +11,7 @@ import DriverEarnings from './DriverEarnings';
 import DriverHome from './DriverHome';
 import useDriverFlow from './useDriverFlow';
 import useBackHandler, { BACK_DEPTH } from '../../utils/useBackHandler';
+import { sendShortcut } from '../../utils/sendShortcut';
 
 const TABS = [
   { id: 'home', label: 'Drive', icon: 'car-sport' },
@@ -134,6 +135,7 @@ function SosModal({ visible, onClose, onConfirm }) {
             multiline
             maxLength={300}
             editable={!sending}
+            onKeyPress={sendShortcut(() => !sending && send())}
           />
 
           <Pressable style={[styles.sosSend, sending && { opacity: 0.7 }]} onPress={send} disabled={sending}>

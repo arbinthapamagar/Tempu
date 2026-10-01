@@ -3,12 +3,12 @@ import { useState } from 'react';
 import {
   Image,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import RefreshControl from '../../components/RefreshControl';
 import { pick as hapticPick } from '../../components/haptics';
 import { useAuth } from '../../context/AuthContext';
 import { colors, STATUS_TOP_PAD } from '../../theme';

@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import RefreshControl from '../components/RefreshControl';
 import { PaymentLogo } from '../components/Brand';
 import { ArrowDownIcon, ArrowUpIcon, CheckIcon } from '../components/Icons';
 import { userApi } from '../api/user.api';

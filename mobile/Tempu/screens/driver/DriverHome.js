@@ -9,7 +9,6 @@ import {
   Modal,
   PanResponder,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Switch,
@@ -17,8 +16,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import RefreshControl from '../../components/RefreshControl';
 import { useAuth } from '../../context/AuthContext';
 import { colors, radius, shadow, spacing, STATUS_TOP_PAD, type } from '../../theme';
+import { sendShortcut } from '../../utils/sendShortcut';
 import { Button } from '../../components/ui';
 import { ACTION_LABEL } from './useDriverFlow';
 
@@ -111,6 +112,7 @@ function BidModal({ trip, onClose, onSubmit }) {
           onChangeText={setMessage}
           placeholder="Message to rider (optional)"
           placeholderTextColor={colors.textFaint}
+          onKeyPress={sendShortcut(() => !submitting && submit())}
         />
         <Button
           label={submitting ? 'Sending…' : 'Send bid'}

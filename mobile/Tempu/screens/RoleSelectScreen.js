@@ -1,6 +1,8 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import {
   Image,
+  Modal,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -10,17 +12,16 @@ import {
 } from 'react-native';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/type';
+import { LANGUAGES, useLanguage } from '../context/LanguageContext';
 
-function RoleCard({ icon, badge, title, desc, cta, onPress }) {
+function RoleCard({ image, badge, title, desc, cta, onPress }) {
   return (
     <Pressable
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={onPress}
     >
       <View style={styles.cardTop}>
-        <View style={styles.iconBox}>
-          <MaterialCommunityIcons name={icon} size={30} color={colors.primary} />
-        </View>
+        <Image source={image} style={styles.vehicle} resizeMode="contain" />
         {badge ? (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{badge}</Text>
@@ -36,16 +37,42 @@ function RoleCard({ icon, badge, title, desc, cta, onPress }) {
   );
 }
 
+function LanguagePicker({ visible, onClose }) {
+  const { lang, setLang, t } = useLanguage();
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.langBackdrop} onPress={onClose}>
+        <Pressable style={styles.langSheet}>
+          <Text style={styles.langTitle}>{t('lang.choose')}</Text>
+          {LANGUAGES.map((l) => (
+            <Pressable
+              key={l.code}
+              style={[styles.langRow, lang === l.code && styles.langRowActive]}
+              onPress={() => { setLang(l.code); onClose(); }}
+            >
+              <Text style={styles.langLabel}>{l.label}</Text>
+              {lang === l.code && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+            </Pressable>
+          ))}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 export default function RoleSelectScreen({ onPassenger, onDriver, onSignIn, onContact }) {
+  const { t } = useLanguage();
+  const [langOpen, setLangOpen] = useState(false);
   return (
     <SafeAreaView style={styles.root}>
       {/* Top bar: wordmark + round action */}
       <View style={styles.header}>
         <Image source={require('../assets/logo-wordmark.png')} style={styles.brand} resizeMode="contain" />
-        <View style={styles.headerBtn}>
+        <Pressable style={styles.headerBtn} onPress={() => setLangOpen(true)} hitSlop={8}>
           <Ionicons name="language" size={20} color={colors.textMuted} />
-        </View>
+        </Pressable>
       </View>
+      <LanguagePicker visible={langOpen} onClose={() => setLangOpen(false)} />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -53,27 +80,25 @@ export default function RoleSelectScreen({ onPassenger, onDriver, onSignIn, onCo
       >
         {/* Hero */}
         <View style={styles.hero}>
-          <Text style={styles.title}>How would you like to use Tempu?</Text>
-          <Text style={styles.subtitle}>
-            Join Nepal's smartest urban transport ecosystem.
-          </Text>
+          <Text style={styles.title}>{t('role.title')}</Text>
+          <Text style={styles.subtitle}>{t('role.subtitle')}</Text>
         </View>
 
         {/* Role cards */}
         <View style={styles.cards}>
           <RoleCard
-            icon="rickshaw"
-            badge="POPULAR"
-            title="I need a ride"
-            desc="Request a safe, fast trip through the city with vetted local drivers."
-            cta="Get Started as Rider"
+            image={require('../assets/ev-scooter.png')}
+            title={t('role.rideTitle')}
+            desc={t('role.rideDesc')}
+            cta={t('role.rideCta')}
             onPress={onPassenger}
           />
           <RoleCard
-            icon="car"
-            title="I want to drive"
-            desc="Earn more on your own schedule. Join our fleet of electric and eco-friendly vehicles."
-            cta="Apply to Drive"
+            image={require('../assets/ev-tuktuk.png')}
+            badge={t('role.popular')}
+            title={t('role.driveTitle')}
+            desc={t('role.driveDesc')}
+            cta={t('role.driveCta')}
             onPress={onDriver}
           />
         </View>
@@ -81,16 +106,16 @@ export default function RoleSelectScreen({ onPassenger, onDriver, onSignIn, onCo
         {/* Footer links */}
         <View style={styles.footer}>
           <View style={styles.signinRow}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+            <Text style={styles.footerText}>{t('role.haveAccount')}</Text>
             <Pressable onPress={onSignIn} hitSlop={8}>
-              <Text style={styles.footerLink}>Sign in</Text>
+              <Text style={styles.footerLink}>{t('role.signIn')}</Text>
             </Pressable>
           </View>
 
           {onContact && (
             <Pressable onPress={onContact} hitSlop={8} style={styles.contactRow}>
               <Ionicons name="headset" size={18} color={colors.textMuted} />
-              <Text style={styles.contactText}>Contact support</Text>
+              <Text style={styles.contactText}>{t('role.contact')}</Text>
             </Pressable>
           )}
         </View>
@@ -117,9 +142,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
+  // logo-wordmark.png is 1266x358 (~3.5:1); keep that ratio or it shrinks.
   brand: {
-    height: 28,
-    width: 74,
+    height: 44,
+    width: 156,
   },
   headerBtn: {
     width: 40,
@@ -169,13 +195,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 16,
   },
-  iconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
+  vehicle: {
+    width: 96,
+    height: 80,
   },
   badge: {
     paddingHorizontal: 12,
@@ -223,6 +245,34 @@ const styles = StyleSheet.create({
   footerText: { fontFamily: fonts.body, color: colors.textMuted, fontSize: 16 },
   footerLink: { fontFamily: fonts.bodyBold, color: colors.primary, fontSize: 16 },
   contactRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  langBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  langSheet: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    gap: 4,
+  },
+  langTitle: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 16,
+    color: colors.primary,
+    padding: 8,
+  },
+  langRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  langRowActive: { backgroundColor: colors.primarySoft },
+  langLabel: { fontFamily: fonts.bodySemibold, fontSize: 16, color: colors.primary },
   contactText: {
     fontFamily: fonts.bodySemibold,
     color: colors.textMuted,
