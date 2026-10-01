@@ -3,13 +3,13 @@ import {
   ActivityIndicator,
   Platform,
   Pressable,
-  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import RefreshControl from '../components/RefreshControl';
 import { VehiclePhoto } from '../components/Brand';
 import { ChevronIcon, ReceiptIcon, StarIcon } from '../components/Icons';
 import { userApi } from '../api/user.api';
@@ -33,7 +33,6 @@ const VEHICLE_LABELS = {
   bike: 'Bike',
   tuktuk: 'Rickshaw',
   tuktuk_delivery: 'Delivery',
-  taxi: 'Taxi',
   comfort: 'Comfort',
 };
 

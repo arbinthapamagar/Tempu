@@ -19,17 +19,18 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
   View,
 } from 'react-native';
+import RefreshControl from '../components/RefreshControl';
 import { useAuth } from '../context/AuthContext';
 import { userApi } from '../api/user.api';
 import { colors } from '../theme/colors';
 import useBackHandler from '../utils/useBackHandler';
+import { sendShortcut } from '../utils/sendShortcut';
 import { type, radius, spacing } from '../theme';
 import { getThemeMode, setThemeMode } from '../theme/themeStore';
 import { reloadApp } from '../theme/reload';
@@ -70,7 +71,7 @@ function formatDateTime(value) {
   });
 }
 
-export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, onSwitchToDriver, onSwitchToPassenger }) {
+export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, onSwitchToDriver, onSwitchToPassenger, initialModal, onInitialModalShown }) {
   const { user, logout, refreshUser } = useAuth();
 
   const [driverProfile, setDriverProfile] = useState(null);
@@ -106,6 +107,13 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
   const [addresses, setAddresses] = useState([]);
   const [tfaEnabled, setTfaEnabled] = useState(false);
   const [modal, setModal] = useState(null);
+  // Opened straight into a form from elsewhere (Home's "Add new place").
+  useEffect(() => {
+    if (!initialModal) return;
+    setModal({ type: initialModal });
+    onInitialModalShown?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialModal]);
   const closeModal = () => setModal(null);
   const [helpView, setHelpView] = useState(null); // null | 'support'
   const [sosBusy, setSosBusy] = useState(false);
@@ -205,8 +213,9 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
 
   const updateAddress = async (id, data) => {
     try {
-      await userApi.updateSavedAddress(id, data);
-      setAddresses((prev) => prev.map((a) => (a._id === id ? { ...a, ...data } : a)));
+      const res = await userApi.updateSavedAddress(id, data);
+      setAddresses(res.data || []); // the server returns the whole updated list
+      refreshUser?.();
     } catch (err) {
       Alert.alert('Error', err.message || 'Could not update address.');
     }
@@ -214,9 +223,12 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
   const addAddress = async (label, address, coordinates) => {
     try {
       const res = await userApi.addSavedAddress({ label, address, coordinates });
-      setAddresses((prev) => [...prev, res.data]);
+      setAddresses(res.data || []); // the server returns the whole updated list
+      refreshUser?.(); // Home's Saved Places reads user.savedAddresses
+      return true;
     } catch (err) {
       Alert.alert('Error', err.message || 'Could not add address.');
+      return false;
     }
   };
   const removeAddress = async (id) => {
@@ -837,6 +849,7 @@ function SosForm({ onSend, busy, close }) {
           placeholder="What's happening? Anything that helps us respond - leave blank if you can't."
           placeholderTextColor={colors.textFaint}
           multiline
+          onKeyPress={sendShortcut(() => !busy && onSend(note))}
         />
       </View>
       <Pressable
@@ -860,7 +873,7 @@ function EditProfileForm({ profile, setProfile, close }) {
     <>
       <ModalHeader title="Edit profile" close={close} />
       <FormField label="Full name" value={name} onChangeText={setName} />
-      <FormField label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+      <FormField label="Phone" value={phone} onChangeText={(v) => setPhone(v.replace(/\D/g, ''))} keyboardType="phone-pad" />
       <FormField label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" />
       <PrimaryButton
         label={saving ? 'Saving…' : 'Save changes'}
@@ -944,8 +957,21 @@ function SetOnMapButton({ onPress }) {
   );
 }
 
+// The map picker hands back { address, coords }; a typed address has no point
+// yet, so look it up (the backend needs one to save the place).
+async function pointFor(address, picked) {
+  if (picked) return picked;
+  try {
+    const [hit] = await Location.geocodeAsync(address);
+    return hit ? { latitude: hit.latitude, longitude: hit.longitude } : null;
+  } catch {
+    return null;
+  }
+}
+
 function EditAddressForm({ address, updateAddress, removeAddress, close }) {
   const [value, setValue] = useState(address.address || '');
+  const [coords, setCoords] = useState(null);
   const [picker, setPicker] = useState(false);
   const [saving, setSaving] = useState(false);
   return (
@@ -956,8 +982,13 @@ function EditAddressForm({ address, updateAddress, removeAddress, close }) {
       <PrimaryButton
         label={saving ? 'Saving…' : 'Save'}
         onPress={async () => {
+          if (!value.trim()) return;
           setSaving(true);
-          await updateAddress(address._id, { address: value });
+          const data = { address: value.trim() };
+          // Only move the pin if they picked one or changed the text.
+          const point = coords || (value.trim() !== address.address ? await pointFor(value.trim(), null) : null);
+          if (point) data.coordinates = point;
+          await updateAddress(address._id, data);
           setSaving(false);
           close();
         }}
@@ -975,7 +1006,7 @@ function EditAddressForm({ address, updateAddress, removeAddress, close }) {
         visible={picker}
         title={`Pin ${address.label}`}
         onCancel={() => setPicker(false)}
-        onConfirm={(addr) => { setValue(addr); setPicker(false); }}
+        onConfirm={({ address: picked, coords: c }) => { setValue(picked); setCoords(c); setPicker(false); }}
       />
     </>
   );
@@ -984,29 +1015,40 @@ function EditAddressForm({ address, updateAddress, removeAddress, close }) {
 function AddAddressForm({ addAddress, close }) {
   const [label, setLabel] = useState('');
   const [addr, setAddr] = useState('');
+  const [coords, setCoords] = useState(null);
+  const [error, setError] = useState('');
   const [picker, setPicker] = useState(false);
   const [saving, setSaving] = useState(false);
   return (
     <>
       <ModalHeader title="Add a place" close={close} />
       <FormField label="Label (e.g. Gym)" value={label} onChangeText={setLabel} />
-      <FormField label="Address" value={addr} onChangeText={setAddr} />
+      <FormField label="Address" value={addr} onChangeText={(v) => { setAddr(v); setCoords(null); }} />
       <SetOnMapButton onPress={() => setPicker(true)} />
+      {!!error && <Text style={styles.formError}>{error}</Text>}
       <PrimaryButton
         label={saving ? 'Adding…' : 'Add place'}
         onPress={async () => {
-          if (!label.trim() || !addr.trim()) return;
+          setError('');
+          if (!label.trim() || !addr.trim()) { setError('Enter a label and an address.'); return; }
           setSaving(true);
-          await addAddress(label.trim().toLowerCase(), addr.trim());
+          const point = await pointFor(addr.trim(), coords);
+          if (!point) {
+            setSaving(false);
+            setError("Couldn't find that address. Use \"Set on map\" to drop a pin.");
+            return;
+          }
+          const ok = await addAddress(label.trim().toLowerCase(), addr.trim(), point);
           setSaving(false);
-          close();
+          if (ok) close();
+          else setError('Could not save this place. Please try again.');
         }}
       />
       <MapPicker
         visible={picker}
         title="Pin location"
         onCancel={() => setPicker(false)}
-        onConfirm={(a) => { setAddr(a); setPicker(false); }}
+        onConfirm={({ address: picked, coords: c }) => { setAddr(picked); setCoords(c); setPicker(false); }}
       />
     </>
   );

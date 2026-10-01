@@ -18,6 +18,7 @@ import {
     getPricing, updatePricing,
     getEmergencies, getEmergencyById, updateEmergency, updateEmergencyPriority, assignEmergency, addEmergencyNote,
     getAllDocuments, verifyDocument, rejectDocument, updateDocument, deleteDocument, seedTestDocument,
+    getDocumentsByDriver, verifyAllDriverDocuments,
     getTrips, getTripByIdAdmin, getTripBids, cancelTripAdmin,
     getTransactions, getTransactionById, getTransactionSummary, exportTransactions,
     getSubscriptions, getSubscriptionById, updateSubscriptionStatus, assignDriverToSubscription,
@@ -110,6 +111,8 @@ adminRouter.post('/emergencies/:id/notes', addEmergencyNote);
 
 // Documents
 adminRouter.get('/documents', getAllDocuments);
+adminRouter.get('/documents/by-driver', getDocumentsByDriver);
+adminRouter.patch('/documents/driver/:driverId/verify-all', verifyAllDriverDocuments);
 adminRouter.post('/documents/seed-test', seedTestDocument); // DEV/TEST only
 adminRouter.put('/documents/:id/verify', verifyDocument);
 adminRouter.patch('/documents/:id/verify', verifyDocument);

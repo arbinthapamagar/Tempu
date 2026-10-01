@@ -86,7 +86,7 @@ export const NEARBY_DRIVERS = [
     name: 'Ramesh Shrestha',
     rating: 4.92,
     totalRides: 1280,
-    vehicleType: 'taxi',
+    vehicleType: 'comfort',
     vehiclePlate: 'BA 2 PA 4521',
     vehicleModel: 'Suzuki Alto',
     vehicleColor: 'White',
@@ -98,7 +98,7 @@ export const NEARBY_DRIVERS = [
     name: 'Sujan Maharjan',
     rating: 4.97,
     totalRides: 932,
-    vehicleType: 'taxi',
+    vehicleType: 'comfort',
     vehiclePlate: 'BA 14 PA 992',
     vehicleModel: 'Toyota Vitz',
     vehicleColor: 'Black',
@@ -158,7 +158,7 @@ export const BIDS = [
 export const TRIPS = [
   {
     _id: 't1',
-    vehicleType: 'taxi',
+    vehicleType: 'comfort',
     pickup: { address: 'Baluwatar, Kathmandu' },
     dropoff: { address: 'Tribhuvan Airport' },
     offeredPrice: 380,

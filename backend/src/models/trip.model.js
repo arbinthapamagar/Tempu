@@ -15,7 +15,7 @@ const tripSchema = new mongoose.Schema(
 
         vehicleType: {
             type: String,
-            enum: ['tuktuk', 'tuktuk_delivery', 'scooter', 'bike', 'taxi', 'comfort'],
+            enum: ['tuktuk', 'tuktuk_delivery', 'scooter', 'bike', 'comfort'],
             required: true,
         },
         tripType: {

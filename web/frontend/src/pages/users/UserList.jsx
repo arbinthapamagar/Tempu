@@ -384,7 +384,8 @@ export default function UserList() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 shrink-0">
+                {/* sm:pr-10 keeps the buttons clear of the modal's floating close (×) */}
+                <div className="flex flex-wrap gap-2 shrink-0 sm:pr-10">
                   <Button size="sm" variant="secondary" icon={Bell}
                     onClick={() => setNotify({ recipients: [{ id: settingsRow._id, label: labelOf(settingsRow) }] })}>
                     Notify

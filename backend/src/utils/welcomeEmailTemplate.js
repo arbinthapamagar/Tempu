@@ -20,7 +20,7 @@ const welcomeUserTemplate = ({ name }) =>
     accent: '#f97316',
     content: welcomeBody({
       heading: `Welcome aboard, ${name}! 🎉`,
-      lead: 'Your Tempu account is verified and ready to go. Book a tuktuk, scooter or taxi in seconds and travel across the city with ease.',
+      lead: 'Your Tempu account is verified and ready to go. Book a tuktuk or scooter in seconds and travel across the city with ease.',
       bullets: [
         'Book rides and deliveries anytime',
         'Track your driver live on the map',

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { BackHandler } from 'react-native';
+import { BackHandler, Platform } from 'react-native';
 
 // Android hardware-back plumbing for our hand-rolled (non react-navigation)
 // screen switching. Each handler returns true when it consumed the press
@@ -29,6 +29,34 @@ function dispatch() {
   return false;
 }
 
+// The web build has no hardware back button, so the same handlers are fed from
+// the browser instead: its Back button / gesture / Alt+← (via a guard history
+// entry, re-pushed every time we consume a press) and the Backspace key when no
+// text field has focus. Without this, Back left the whole app in one step.
+function subscribeWeb() {
+  const pushGuard = () => window.history.pushState({ tempuBack: true }, '');
+  pushGuard();
+  const onPop = () => {
+    if (dispatch()) pushGuard();
+    else window.history.back(); // nothing left to close — really leave
+  };
+  const onKey = (e) => {
+    if (e.key !== 'Backspace' || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+    const el = document.activeElement;
+    if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+    e.preventDefault();
+    dispatch();
+  };
+  window.addEventListener('popstate', onPop);
+  window.addEventListener('keydown', onKey);
+  return {
+    remove() {
+      window.removeEventListener('popstate', onPop);
+      window.removeEventListener('keydown', onKey);
+    },
+  };
+}
+
 export default function useBackHandler(handler, { depth = BACK_DEPTH.screen, enabled = true } = {}) {
   // Kept in a ref so a new closure every render doesn't re-subscribe.
   const fnRef = useRef(handler);
@@ -39,7 +67,9 @@ export default function useBackHandler(handler, { depth = BACK_DEPTH.screen, ena
     const entry = { id: nextId++, depth, fn: () => fnRef.current?.() };
     handlers.push(entry);
     if (!subscription) {
-      subscription = BackHandler.addEventListener('hardwareBackPress', dispatch);
+      subscription = Platform.OS === 'web'
+        ? subscribeWeb()
+        : BackHandler.addEventListener('hardwareBackPress', dispatch);
     }
     return () => {
       const i = handlers.indexOf(entry);

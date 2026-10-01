@@ -3,6 +3,7 @@ import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './ui';
 import { colors, radius, spacing, type } from '../theme';
+import { sendShortcut } from '../utils/sendShortcut';
 
 // Dynamic headline under the stars, keyed by the selected score.
 const SUBTITLE = {
@@ -88,6 +89,7 @@ export default function RatingCard({ agent, busy, onSubmit }) {
         placeholderTextColor={colors.textFaint}
         style={styles.note}
         multiline
+        onKeyPress={sendShortcut(submit)}
       />
 
       <Button

@@ -4,7 +4,8 @@
 //
 // `npx expo start --web` is a convenience for checking layout, navigation and
 // flows in a browser. It is NOT a shipping web target: the modules listed here
-// are native-only and are swapped for placeholders on web (see web-shims/).
+// are native-only and are swapped for web stand-ins (see web-shims/; maps are
+// drawn with Leaflet).
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 
@@ -12,6 +13,7 @@ const config = getDefaultConfig(__dirname);
 
 const WEB_SHIMS = {
   'react-native-maps': path.resolve(__dirname, 'web-shims/react-native-maps.js'),
+  'expo-location': path.resolve(__dirname, 'web-shims/expo-location.js'),
 };
 
 const upstreamResolve = config.resolver.resolveRequest;

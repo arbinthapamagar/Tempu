@@ -5,10 +5,9 @@ export const VEHICLE_META = {
   tuktuk: { label: 'Rickshaw', short: 'Rickshaw' },
   scooter: { label: 'Scooter', short: 'Scooter' },
   bike: { label: 'Bike', short: 'Bike' },
-  taxi: { label: 'Taxi', short: 'Taxi' },
   comfort: { label: 'Comfort', short: 'Comfort' },
 }
-export const VEHICLE_KEYS = ['tuktuk', 'scooter', 'bike', 'taxi', 'comfort']
+export const VEHICLE_KEYS = ['tuktuk', 'scooter', 'bike', 'comfort']
 
 const AVG_SPEED_KMH = 20
 const PETROL_CO2_PER_KM = 0.12 // kg CO2 per km for an equivalent petrol vehicle

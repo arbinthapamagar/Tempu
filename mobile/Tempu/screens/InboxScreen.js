@@ -4,13 +4,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import RefreshControl from '../components/RefreshControl';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { CallIcon } from '../components/Icons';
 import { userApi } from '../api/user.api';

@@ -3,7 +3,6 @@ import { Text, View } from 'react-native';
 import { colors } from '../theme/colors';
 
 export const VEHICLE_META = {
-  taxi: { name: 'taxi', color: '#f5b400', lib: 'mci' },
   comfort: { name: 'car-sport', color: '#1e3a5f', lib: 'mci' },
   bike: { name: 'motorbike', color: '#e0464a', lib: 'mci' },
   scooter: { name: 'scooter', color: '#3aa6a0', lib: 'mci' },
@@ -15,7 +14,7 @@ export function VehicleIcon({ type, size = 36, color }) {
   if (type === 'tuktuk_delivery') {
     return <DeliveryArt size={size} />;
   }
-  const meta = VEHICLE_META[type] || VEHICLE_META.taxi;
+  const meta = VEHICLE_META[type] || VEHICLE_META.tuktuk;
   return (
     <MaterialCommunityIcons
       name={meta.name}
@@ -214,7 +213,6 @@ export function PaymentChip({ id, size = 44 }) {
 
 // Tile-style vehicle: large colored rounded square with the vehicle icon on top
 export const VEHICLE_TILE_BG = {
-  taxi: '#fff4d6',
   comfort: '#dbe6f4',
   bike: '#fde0e1',
   scooter: '#d6efee',

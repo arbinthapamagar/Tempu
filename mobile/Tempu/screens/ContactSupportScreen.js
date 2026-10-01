@@ -10,6 +10,7 @@ import RatingCard from '../components/RatingCard';
 import { Button, FormField, ScreenHeader } from '../components/ui';
 import { colors, radius, spacing, type } from '../theme';
 import { fonts } from '../theme/type';
+import { sendShortcut } from '../utils/sendShortcut';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const STORE_KEY = 'guest_support_chat'; // { id, token }
@@ -238,6 +239,7 @@ export default function ContactSupportScreen({ onBack }) {
                 placeholderTextColor={colors.textFaint}
                 style={styles.replyInput}
                 multiline
+                onKeyPress={sendShortcut(() => !busy && sendReply())}
               />
               <Pressable onPress={sendReply} disabled={busy || !reply.trim()} style={[styles.sendBtn, (busy || !reply.trim()) && { opacity: 0.5 }]}>
                 <Ionicons name="send" size={18} color="#fff" />
@@ -292,6 +294,7 @@ export default function ContactSupportScreen({ onBack }) {
             value={message}
             onChangeText={setMessage}
             multiline
+            onKeyPress={sendShortcut(() => canStart && startChat())}
             placeholder="How can we help?"
             placeholderTextColor={colors.textFaint}
             style={styles.textarea}

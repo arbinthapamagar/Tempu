@@ -1,4 +1,5 @@
 import { api, request } from './client';
+import { appendFile } from './formFile';
 
 export const userApi = {
   // Profile
@@ -11,7 +12,7 @@ export const userApi = {
     const { accessToken } = tokenStore.get();
     const { BASE_URL } = await import('./client');
     const form = new FormData();
-    form.append('avatar', { uri, name: 'avatar.jpg', type: 'image/jpeg' });
+    await appendFile(form, 'avatar', { uri, name: 'avatar.jpg', type: 'image/jpeg' });
     const res = await fetch(`${BASE_URL}/users/profile/avatar`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -76,7 +77,7 @@ export const userApi = {
     const { BASE_URL } = await import('./client');
     const form = new FormData();
     if (message) form.append('message', message);
-    form.append('attachment', { uri: file.uri, name: file.name, type: file.type });
+    await appendFile(form, 'attachment', { uri: file.uri, name: file.name, type: file.type });
     const res = await fetch(`${BASE_URL}/users/support/${id}/messages`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -111,12 +112,15 @@ export const userApi = {
   registerAsDriver: (data) => api.post('/users/driver/register', data),
   getMyDriverProfile: () => api.get('/users/driver'),
   updateDriverProfile: (data) => api.put('/users/driver', data),
-  uploadDriverDocument: async (type, uri) => {
+  // `file` = { uri, name, mimeType } — a photo or a PDF.
+  uploadDriverDocument: async (type, file) => {
     const { tokenStore } = await import('./tokenStore');
     const { accessToken } = tokenStore.get();
     const { BASE_URL } = await import('./client');
     const form = new FormData();
-    form.append('document', { uri, name: 'document.jpg', type: 'image/jpeg' });
+    const mimeType = file.mimeType || 'image/jpeg';
+    const name = file.name || (mimeType === 'application/pdf' ? 'document.pdf' : 'document.jpg');
+    await appendFile(form, 'document', { uri: file.uri, name, type: mimeType });
     form.append('type', type);
     const res = await fetch(`${BASE_URL}/users/driver/documents`, {
       method: 'POST',

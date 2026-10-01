@@ -6,7 +6,6 @@ import { userApi } from '../../api/user.api';
 const VEHICLE_TYPES = [
   { id: 'tuktuk', name: 'Rickshaw', note: 'Up to 3 passengers', baseFare: 80, eta: 3 },
   { id: 'scooter', name: 'Scooter', note: 'Quick & affordable', baseFare: 60, eta: 4 },
-  { id: 'taxi', name: 'Taxi', note: 'Comfortable car', baseFare: 150, eta: 5 },
   { id: 'tuktuk_delivery', name: 'Delivery', note: 'Package delivery', baseFare: 100, eta: 4 },
 ];
 

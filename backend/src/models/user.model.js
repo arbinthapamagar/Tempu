@@ -112,9 +112,13 @@ const userSchema = new mongoose.Schema(
 
     savedAddresses: [
       {
-        label: { 
-          type: String, 
-          enum: ["home", "work", "other"] 
+        // Free text ("home", "work", "gym", …). Home/work get their own icons
+        // in the app; anything else shows a generic pin.
+        label: {
+          type: String,
+          trim: true,
+          lowercase: true,
+          maxlength: 40,
         },
         address: { 
           type: String 

@@ -52,7 +52,7 @@ const RIDERS = [
 ];
 
 const DRIVERS = [
-  { name: 'Ramesh Tamang', phone: '9710000005', email: 'ramesh.tamang@example.com', vehicleType: 'taxi', vehiclePlate: 'BA-2-CHA-1456', vehicleModel: 'Suzuki Alto', vehicleColor: 'White', status: 'approved', isVerified: true, rating: 4.7, totalRides: 312, earnings: 184500 },
+  { name: 'Ramesh Tamang', phone: '9710000005', email: 'ramesh.tamang@example.com', vehicleType: 'comfort', vehiclePlate: 'BA-2-CHA-1456', vehicleModel: 'Suzuki Alto', vehicleColor: 'White', status: 'approved', isVerified: true, rating: 4.7, totalRides: 312, earnings: 184500 },
   { name: 'Krishna Bhandari', phone: '9710000006', email: 'krishna.bhandari@example.com', vehicleType: 'bike', vehiclePlate: 'BA-24-PA-7781', vehicleModel: 'Honda CB Shine', vehicleColor: 'Black', status: 'approved', isVerified: true, rating: 4.5, totalRides: 1043, earnings: 421300 },
   { name: 'Dipak Lama', phone: '9710000007', email: 'dipak.lama@example.com', vehicleType: 'scooter', vehiclePlate: 'BA-99-PA-2210', vehicleModel: 'Honda Dio', vehicleColor: 'Red', status: 'pending', isVerified: false, rating: 0, totalRides: 0, earnings: 0 },
   { name: 'Sunita Rai', phone: '9710000008', email: 'sunita.rai@example.com', vehicleType: 'comfort', vehiclePlate: 'BA-5-CHA-8830', vehicleModel: 'Hyundai i20', vehicleColor: 'Silver', status: 'approved', isVerified: true, rating: 4.9, totalRides: 76, earnings: 58200 },

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { DOCUMENT_TYPES } from '../constants/documentTypes.js';
 
 const documentSchema = new mongoose.Schema(
     {
@@ -10,16 +11,7 @@ const documentSchema = new mongoose.Schema(
 
         type: {
             type: String,
-            enum: [
-                'citizenship',
-                'driving_license',
-                'police_clearance', // compulsory ✅
-                'vehicle_registration',
-                'insurance',
-                'bluebook',
-                'profile_photo',
-                'vehicle_photo',
-            ],
+            enum: DOCUMENT_TYPES,
             required: true,
         },
 
@@ -27,6 +19,10 @@ const documentSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        // What was uploaded, so the admin can tell a PDF scan from a photo
+        // without guessing from the URL.
+        mimeType: { type: String, default: null },
+        fileName: { type: String, default: null },
 
         status: {
             type: String,

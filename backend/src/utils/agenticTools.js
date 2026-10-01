@@ -506,7 +506,7 @@ export const TOOLS = [
                 type: 'object',
                 properties: {
                     status: { type: 'string', enum: ['pending', 'approved', 'rejected', 'suspended'] },
-                    vehicleType: { type: 'string', enum: ['tuktuk', 'tuktuk_delivery', 'scooter', 'bike', 'taxi', 'comfort'] },
+                    vehicleType: { type: 'string', enum: ['tuktuk', 'tuktuk_delivery', 'scooter', 'bike', 'comfort'] },
                     isOnline: { type: 'boolean', description: 'true = only drivers currently online' },
                     city: { type: 'string' },
                     limit: { type: 'integer' },

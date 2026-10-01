@@ -18,7 +18,7 @@ import { Link } from 'react-router-dom'
 
 const VEHICLE_COLORS = {
   bike: '#6366f1', car: '#10b981', tuktuk: '#f59e0b', ev: '#3b82f6',
-  scooter: '#8b5cf6', comfort: '#ec4899', taxi: '#10b981', tuktuk_delivery: '#3b82f6',
+  scooter: '#8b5cf6', comfort: '#ec4899', tuktuk_delivery: '#3b82f6',
 }
 
 const STATUS_COLORS = {

@@ -410,7 +410,8 @@ export default function DriverList() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 shrink-0">
+                  {/* sm:pr-10 keeps the buttons clear of the modal's floating close (×) */}
+                  <div className="flex flex-wrap gap-2 shrink-0 sm:pr-10">
                     <Button size="sm" variant="secondary" icon={Bell}
                       onClick={() => setNotify({ recipients: [{ id: settingsRow._id, label: labelOf(settingsRow) }] })}>
                       Notify
@@ -555,7 +556,6 @@ const VEHICLE_EDIT_OPTIONS = [
   { value: 'scooter', label: 'Scooter' },
   { value: 'tuktuk', label: 'Tuk-tuk' },
   { value: 'tuktuk_delivery', label: 'Tuk-tuk (delivery)' },
-  { value: 'taxi', label: 'Taxi' },
   { value: 'comfort', label: 'Comfort' },
 ]
 

@@ -5,14 +5,16 @@ import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, Image, KeyboardAvoidingView, Linking, Modal, Platform, Pressable,
-  RefreshControl, ScrollView, StyleSheet, Text, TextInput, View,
+  ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
+import RefreshControl from '../components/RefreshControl';
 import { userApi } from '../api/user.api';
 import RatingCard from '../components/RatingCard';
 import { Button, Chip, FormField, ScreenHeader } from '../components/ui';
 import CallScreen from './CallScreen';
 import { colors, radius, spacing, type } from '../theme';
 import useBackHandler from '../utils/useBackHandler';
+import { sendShortcut } from '../utils/sendShortcut';
 
 const CATEGORIES = [
   { key: 'trip_issue', label: 'Trip issue' },
@@ -317,6 +319,7 @@ export default function SupportScreen({ onBack, role }) {
           <Text style={styles.fieldLabel}>Message</Text>
           <TextInput
             value={message} onChangeText={setMessage} multiline
+            onKeyPress={sendShortcut(() => !busy && submitNew())}
             placeholder="Describe what happened…" placeholderTextColor={colors.textFaint}
             style={styles.textarea}
           />
@@ -459,6 +462,10 @@ export default function SupportScreen({ onBack, role }) {
                     value={reply} onChangeText={setReply} placeholder="Type a reply…"
                     placeholderTextColor={colors.textFaint} style={styles.replyInput}
                     editable={!recording}
+                    onKeyPress={sendShortcut(() => {
+                      if (busy || recording) return;
+                      if (pending) sendPending(); else sendReply();
+                    })}
                   />
                   {canVoice && !pending && (
                     <Pressable onPress={toggleRecording} disabled={busy} style={[styles.iconBtn, recording && styles.iconBtnActive]} hitSlop={6}>

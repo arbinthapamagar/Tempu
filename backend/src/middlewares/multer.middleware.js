@@ -1,6 +1,7 @@
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
+import { DOCUMENT_MAX_BYTES, DOCUMENT_MIME } from '../constants/documentTypes.js';
 
 const TEMP_DIR = './public/temp';
 
@@ -22,3 +23,15 @@ const storage = multer.diskStorage({
 });
 
 export const upload = multer({ storage });
+
+// Driver documents: photos or PDF scans only, up to 10 MB.
+export const uploadDocument = multer({
+  storage,
+  limits: { fileSize: DOCUMENT_MAX_BYTES },
+  fileFilter: (req, file, cb) => {
+    if (DOCUMENT_MIME.test(file.mimetype)) return cb(null, true);
+    const err = new Error('Upload a photo (JPG, PNG) or a PDF file');
+    err.statusCode = 400;
+    cb(err);
+  },
+});
