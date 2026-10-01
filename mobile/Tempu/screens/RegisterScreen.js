@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -81,7 +82,7 @@ export default function RegisterScreen({ onGoToLogin, onRegistered }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.brand}>Tempu</Text>
+          <Image source={require('../assets/logo-wordmark.png')} style={styles.brand} resizeMode="contain" />
           <Text style={styles.title}>Create your account</Text>
           <Text style={styles.subtitle}>
             It only takes a minute. Your phone number will be used to sign in.
@@ -237,11 +238,10 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: { marginBottom: 24 },
+  // logo-wordmark.png is 1266x358 (~3.5:1), same size as the other auth screens.
   brand: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 2,
+    height: 44,
+    width: 156,
     marginBottom: 20,
   },
   title: {

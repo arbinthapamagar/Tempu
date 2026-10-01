@@ -954,8 +954,12 @@ const deleteDriver = asyncHandler(async (req, res) => {
     const driver = await Driver.findByIdAndDelete(req.params.id);
     if (!driver) throw new apiError(404, 'Driver not found');
 
-    // The person reverts to a plain passenger once their driver profile is removed.
-    await User.findByIdAndUpdate(driver.userId, { role: 'passenger', driverProfile: null });
+    // The person reverts to a plain passenger once their driver profile is removed,
+    // and their uploaded documents go with the profile.
+    await Promise.all([
+        User.findByIdAndUpdate(driver.userId, { role: 'passenger', driverProfile: null }),
+        Document.deleteMany({ driverId: driver._id }),
+    ]);
 
     return res.status(200).json(new apiResponse(200, { _id: driver._id }, 'Driver deleted'));
 });
@@ -1417,6 +1421,73 @@ const getAllDocuments = asyncHandler(async (req, res) => {
     return res.status(200).json(
         new apiResponse(200, documents, 'Documents fetched', { total, page: parseInt(page), limit: limitNum, pages: Math.ceil(total / limitNum) })
     );
+});
+
+// Documents grouped per driver — one entry per driver holding ALL their
+// documents, which is how a reviewer actually works through an application.
+// ?status=pending|approved|rejected keeps drivers with at least one document in
+// that state (each entry still lists every document, so nothing is hidden).
+const getDocumentsByDriver = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.verifyDocuments) throw new apiError(403, 'Insufficient permissions');
+    const { status } = req.query;
+
+    const docs = await Document.find({})
+        .sort({ createdAt: 1 })
+        .populate({
+            path: 'driverId',
+            select: 'vehicleType vehiclePlate vehicleModel vehicleColor licenseNumber licenseExpiry status userId createdAt',
+            populate: { path: 'userId', select: 'name phone email avatarUrl' },
+        })
+        .lean();
+
+    const groups = new Map();
+    for (const d of docs) {
+        if (!d.driverId) continue; // driver deleted, orphaned document
+        const key = String(d.driverId._id);
+        if (!groups.has(key)) {
+            groups.set(key, {
+                driver: d.driverId,
+                documents: [],
+                counts: { pending: 0, approved: 0, rejected: 0 },
+                lastSubmittedAt: null,
+            });
+        }
+        const g = groups.get(key);
+        const { driverId, ...doc } = d;
+        g.documents.push(doc);
+        g.counts[doc.status] = (g.counts[doc.status] || 0) + 1;
+        if (!g.lastSubmittedAt || doc.updatedAt > g.lastSubmittedAt) g.lastSubmittedAt = doc.updatedAt;
+    }
+
+    let list = [...groups.values()];
+    if (status) list = list.filter((g) => g.counts[status] > 0);
+    list.sort((a, b) => new Date(b.lastSubmittedAt) - new Date(a.lastSubmittedAt));
+
+    return res.status(200).json(new apiResponse(200, list, 'Documents fetched'));
+});
+
+// Approve every pending document of one driver in a single action.
+const verifyAllDriverDocuments = asyncHandler(async (req, res) => {
+    if (!req.admin.permissions.verifyDocuments) throw new apiError(403, 'Insufficient permissions');
+    const driver = await Driver.findById(req.params.driverId).select('userId');
+    if (!driver) throw new apiError(404, 'Driver not found');
+
+    const result = await Document.updateMany(
+        { driverId: driver._id, status: 'pending' },
+        { status: 'approved', verifiedBy: req.admin._id, verifiedAt: new Date(), rejectionReason: null }
+    );
+
+    if (result.modifiedCount > 0) {
+        await Notification.create({
+            userId: driver.userId,
+            title: 'Documents Approved',
+            body: `${result.modifiedCount} of your documents ${result.modifiedCount === 1 ? 'has' : 'have'} been approved`,
+            type: 'document_verified',
+            refId: driver._id,
+        });
+    }
+
+    return res.status(200).json(new apiResponse(200, { approved: result.modifiedCount }, 'Documents approved'));
 });
 
 const verifyDocument = asyncHandler(async (req, res) => {
@@ -2419,6 +2490,7 @@ const seedTestDocument = asyncHandler(async (req, res) => {
 });
 
 export {
+    getDocumentsByDriver, verifyAllDriverDocuments,
     login, logout, refreshAdminToken, getMe, updateMyProfile, uploadMyAvatar, deleteMyAvatar,
     createAdmin, listAdmins, updateAdminPermissions, toggleAdminStatus, deleteAdmin,
     getDashboardStats, getDashboardRecentTrips, getNavCounts, markNavSeen,

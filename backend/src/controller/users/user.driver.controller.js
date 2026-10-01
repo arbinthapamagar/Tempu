@@ -2,6 +2,7 @@ import { User } from '../../models/user.model.js';
 import { Driver } from '../../models/driver.model.js';
 import { Subscription } from '../../models/subscription.model.js';
 import { Document } from '../../models/doeument.model.js';
+import { DOCUMENT_TYPES } from '../../constants/documentTypes.js';
 import { Trip } from '../../models/trip.model.js';
 import { Withdrawal } from '../../models/withdrawal.model.js';
 import { Transaction } from '../../models/transaction.model.js';
@@ -107,8 +108,7 @@ const uploadDriverDocument = asyncHandler(async (req, res) => {
     if (!type) throw new apiError(400, 'Document type is required');
     if (!localFilePath) throw new apiError(400, 'Document file is required');
 
-    const validTypes = ['citizenship', 'driving_license', 'police_clearance', 'vehicle_registration', 'vehicle_plate_back', 'insurance', 'bluebook', 'profile_photo', 'vehicle_photo'];
-    if (!validTypes.includes(type)) throw new apiError(400, `Document type must be one of: ${validTypes.join(', ')}`);
+    if (!DOCUMENT_TYPES.includes(type)) throw new apiError(400, `Document type must be one of: ${DOCUMENT_TYPES.join(', ')}`);
 
     const result = await uploadOnCloudinary(localFilePath);
     if (!result?.secure_url) throw new apiError(500, 'Failed to upload document');
@@ -117,6 +117,8 @@ const uploadDriverDocument = asyncHandler(async (req, res) => {
         { driverId: driver._id, type },
         {
             fileUrl: result.secure_url,
+            mimeType: req.file.mimetype || null,
+            fileName: req.file.originalname || null,
             status: 'pending',
             rejectionReason: null,
             verifiedBy: null,

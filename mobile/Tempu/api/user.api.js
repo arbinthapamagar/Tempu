@@ -112,12 +112,15 @@ export const userApi = {
   registerAsDriver: (data) => api.post('/users/driver/register', data),
   getMyDriverProfile: () => api.get('/users/driver'),
   updateDriverProfile: (data) => api.put('/users/driver', data),
-  uploadDriverDocument: async (type, uri) => {
+  // `file` = { uri, name, mimeType } — a photo or a PDF.
+  uploadDriverDocument: async (type, file) => {
     const { tokenStore } = await import('./tokenStore');
     const { accessToken } = tokenStore.get();
     const { BASE_URL } = await import('./client');
     const form = new FormData();
-    await appendFile(form, 'document', { uri, name: 'document.jpg', type: 'image/jpeg' });
+    const mimeType = file.mimeType || 'image/jpeg';
+    const name = file.name || (mimeType === 'application/pdf' ? 'document.pdf' : 'document.jpg');
+    await appendFile(form, 'document', { uri: file.uri, name, type: mimeType });
     form.append('type', type);
     const res = await fetch(`${BASE_URL}/users/driver/documents`, {
       method: 'POST',

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { verifyUserJwt } from '../middlewares/auth.middleware.js';
-import { upload } from '../middlewares/multer.middleware.js';
+import { upload, uploadDocument } from '../middlewares/multer.middleware.js';
 import { getProfile, updateProfile, uploadAvatar, deleteAvatar, changePassword, updateFcmToken } from '../controller/users/user.profile.controller.js';
 import { updateLocation, getSavedAddresses, addSavedAddress, updateSavedAddress, deleteSavedAddress } from '../controller/users/user.location.controller.js';
 import { getWallet, getTransactions, topUpWallet } from '../controller/users/user.wallet.controller.js';
@@ -90,7 +90,7 @@ userRouter.get('/emergency', getMyEmergencies);
 userRouter.post('/driver/register', registerAsDriver);
 userRouter.get('/driver', getMyDriverProfile);
 userRouter.put('/driver', updateDriverProfile);
-userRouter.post('/driver/documents', upload.single('document'), uploadDriverDocument);
+userRouter.post('/driver/documents', uploadDocument.single('document'), uploadDriverDocument);
 userRouter.put('/driver/go-online', goOnline);
 userRouter.put('/driver/go-offline', goOffline);
 userRouter.put('/driver/location', updateDriverLocation);
