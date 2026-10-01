@@ -11,7 +11,7 @@ const driverSchema = new mongoose.Schema(
 
         vehicleType: {
             type: String,
-            enum: ['bike', 'scooter', 'tuktuk', 'tuktuk_delivery', 'taxi', 'comfort'],
+            enum: ['bike', 'scooter', 'tuktuk', 'tuktuk_delivery', 'comfort'],
             required: true,
         },
 

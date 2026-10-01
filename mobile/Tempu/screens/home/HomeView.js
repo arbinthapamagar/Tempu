@@ -20,7 +20,6 @@ const SERVICES = [
   { id: 'rickshaw', label: 'Tempu', img: require('../../assets/ev-tuktuk.png'), bigLabel: true },
   { id: 'scooter', label: 'Scooter', img: require('../../assets/ev-scooter.png'), bigLabel: true },
   { id: 'delivery', label: 'Delivery', img: require('../../assets/ev-delivery.png'), bigLabel: true },
-  { id: 'taxi', label: 'Taxi', img: require('../../assets/ev-car.png'), bigLabel: true },
   { id: 'subscribe', label: 'Subscribe', img: require('../../assets/subscription.png'), bigLabel: true },
 ];
 
@@ -50,7 +49,7 @@ function ServiceIcon({ icon, lib, color, img, cover }) {
   return <Ionicons name={icon} size={28} color={color} />;
 }
 
-export default function HomeView({ onTapSearch, onPickSaved, onSubscribe }) {
+export default function HomeView({ onTapSearch, onPickSaved, onSubscribe, onAddPlace }) {
   const { user } = useAuth();
   const savedAddresses = user?.savedAddresses || [];
   const [refreshing, setRefreshing] = useState(false);
@@ -181,7 +180,7 @@ export default function HomeView({ onTapSearch, onPickSaved, onSubscribe }) {
           ))}
 
           {/* Add new */}
-          <Pressable style={styles.addRow} onPress={onTapSearch}>
+          <Pressable style={styles.addRow} onPress={onAddPlace || onTapSearch}>
             <View style={styles.addIcon}>
               <Ionicons name="add" size={20} color={colors.textMuted} />
             </View>

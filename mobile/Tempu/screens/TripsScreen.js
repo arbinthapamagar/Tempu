@@ -33,7 +33,6 @@ const VEHICLE_LABELS = {
   bike: 'Bike',
   tuktuk: 'Rickshaw',
   tuktuk_delivery: 'Delivery',
-  taxi: 'Taxi',
   comfort: 'Comfort',
 };
 

@@ -14,6 +14,7 @@ import { bidApi } from '../../api/trip.api';
 import { userApi } from '../../api/user.api';
 import { Button, Chip, FormField, Sheet } from '../../components/ui';
 import { colors, radius, shadow, spacing, STATUS_TOP_PAD, type } from '../../theme';
+import { formatDateInput } from '../../utils/dateInput';
 
 function money(n) {
   return `NPR ${Number(n || 0).toLocaleString()}`;
@@ -245,10 +246,10 @@ export default function DriverEarnings() {
           <View style={styles.customRange}>
             <View style={styles.customFields}>
               <View style={{ flex: 1 }}>
-                <FormField label="From" value={customFrom} onChangeText={setCustomFrom} placeholder="YYYY-MM-DD" />
+                <FormField label="From" value={customFrom} onChangeText={(t) => setCustomFrom(formatDateInput(t))} placeholder="YYYY-MM-DD" keyboardType="number-pad" />
               </View>
               <View style={{ flex: 1 }}>
-                <FormField label="To" value={customTo} onChangeText={setCustomTo} placeholder="YYYY-MM-DD" />
+                <FormField label="To" value={customTo} onChangeText={(t) => setCustomTo(formatDateInput(t))} placeholder="YYYY-MM-DD" keyboardType="number-pad" />
               </View>
             </View>
             <Button label="Apply" size="sm" onPress={() => loadBreakdown('custom', customFrom, customTo)} />

@@ -257,7 +257,6 @@ const OFFLINE_IMAGES = {
   tuktuk_delivery: require('../../assets/ev-delivery.png'), // loader
   scooter: require('../../assets/ev-scooter.png'),
   bike: require('../../assets/ev-scooter.png'),           // two-wheeler → scooter image
-  taxi: require('../../assets/ev-car.png'),
   comfort: require('../../assets/ev-car.png'),
 };
 const DEFAULT_OFFLINE_IMAGE = require('../../assets/ev-tuktuk.png');
@@ -267,7 +266,6 @@ const VEHICLE_LABELS = {
   scooter: 'Scooter',
   tuktuk: 'Tuk-tuk',
   tuktuk_delivery: 'Tuk-tuk (Delivery)',
-  taxi: 'Taxi',
   comfort: 'Comfort',
 };
 

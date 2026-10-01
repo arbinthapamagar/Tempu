@@ -19,7 +19,6 @@ const FARE_STEP = 20;
 const VEHICLE_ICON = {
   tuktuk: 'rickshaw',
   scooter: 'moped',
-  taxi: 'taxi',
   tuktuk_delivery: 'package-variant-closed',
 };
 

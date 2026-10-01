@@ -15,7 +15,6 @@ const VEHICLE_OPTIONS = [
   { value: 'tuktuk_delivery', label: 'Tuktuk Delivery' },
   { value: 'scooter', label: 'Scooter' },
   { value: 'bike', label: 'Bike' },
-  { value: 'taxi', label: 'Taxi' },
   { value: 'comfort', label: 'Comfort' },
 ]
 

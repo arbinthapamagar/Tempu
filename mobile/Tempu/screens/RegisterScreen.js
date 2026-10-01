@@ -106,10 +106,12 @@ export default function RegisterScreen({ onGoToLogin, onRegistered }) {
             <Text style={styles.label}>Phone number</Text>
             <TextInput
               value={phone}
-              onChangeText={setPhone}
+              onChangeText={(v) => setPhone(v.replace(/\D/g, ''))} // digits only
               placeholder="98XXXXXXXX"
               placeholderTextColor={colors.textFaint}
               keyboardType="phone-pad"
+              inputMode="numeric"
+              maxLength={10}
               style={styles.input}
               editable={!submitting}
             />

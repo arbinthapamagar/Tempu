@@ -7,7 +7,7 @@ import mongoose from 'mongoose';
 
 // Booking vehicle types - these match the trip/driver `vehicleType` enum so the
 // pricing config maps 1:1 to what riders actually book.
-export const VEHICLE_TYPES = ['tuktuk', 'scooter', 'bike', 'taxi', 'comfort'];
+export const VEHICLE_TYPES = ['tuktuk', 'scooter', 'bike', 'comfort'];
 
 export const PREMIUM_LABELS = [
   'Normal', 'Light Rain', 'Heavy Rain', 'Peak Hour', 'Festival', 'Strike', 'Bandh',
@@ -163,7 +163,6 @@ export function defaultPricing() {
       tuktuk: { efficiency: 12, maintenancePerKm: 2, baseFare: 30 },
       scooter: { efficiency: 35, maintenancePerKm: 1, baseFare: 20 },
       bike: { efficiency: 40, maintenancePerKm: 1, baseFare: 15 },
-      taxi: { efficiency: 7, maintenancePerKm: 3, baseFare: 60 },
       comfort: { efficiency: 6, maintenancePerKm: 4, baseFare: 90 },
     },
     cities: Object.entries(CITY_LANDMARKS).map(([name, landmarks]) => ({

@@ -11,7 +11,6 @@ import { colors } from '../theme/colors';
 //   assets/payments/khalti.png
 //   assets/payments/wallet.png
 //   assets/payments/cash.png
-//   assets/vehicles/taxi.png
 //   assets/vehicles/comfort.png
 //   assets/vehicles/bike.png
 //   assets/vehicles/scooter.png
@@ -29,7 +28,6 @@ const PAYMENT_IMAGES = {
 };
 
 const VEHICLE_IMAGES = {
-  taxi: null, // require('../assets/vehicles/taxi.png')
   comfort: null, // require('../assets/vehicles/comfort.png')
   bike: null, // require('../assets/vehicles/bike.png')
   scooter: require('../assets/vehicles/scooter.jpg'),

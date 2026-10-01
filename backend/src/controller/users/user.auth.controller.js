@@ -44,8 +44,21 @@ const userRegister = asyncHandler(async (req, res) => {
     if (password.length < 8) throw new apiError(400, 'Password must be at least 8 characters');
     if (confirmPassword && password !== confirmPassword) throw new apiError(400, 'Passwords do not match');
 
-    const existingUser = await User.findOne({ phone: phone.trim() });
-    if (existingUser) throw new apiError(409, 'User already exists with this phone number');
+    // Phone and email are both unique. A sign-up that never got past the OTP
+    // step still holds them, so an abandoned attempt (or a typo in the phone)
+    // used to lock that email out with a raw duplicate-key error. Unverified
+    // leftovers are cleared and replaced; only a verified account blocks.
+    const normalizedEmail = email?.trim().toLowerCase() || null;
+    const clashes = await User.find({
+        $or: [{ phone: phone.trim() }, ...(normalizedEmail ? [{ email: normalizedEmail }] : [])],
+    }).select('phone email isPhoneVerified');
+    const verified = clashes.find((u) => u.isPhoneVerified);
+    if (verified) {
+        throw new apiError(409, verified.phone === phone.trim()
+            ? 'An account with this phone number already exists. Please sign in.'
+            : 'An account with this email already exists. Please sign in.');
+    }
+    if (clashes.length) await User.deleteMany({ _id: { $in: clashes.map((u) => u._id) }, isPhoneVerified: false });
 
     const otpCode = generateOtp();
     const otpExpiry = otpExpireTime();
@@ -54,7 +67,7 @@ const userRegister = asyncHandler(async (req, res) => {
         name: name.trim(),
         password,
         phone: phone.trim(),
-        email: email?.trim().toLowerCase() || null,
+        email: normalizedEmail,
         dateOfBirth: dateOfBirth || null,
         gender,
         otp: { code: otpCode, expiresAt: otpExpiry, attempts: 0 },

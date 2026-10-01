@@ -95,7 +95,8 @@ export default function LoginScreen({ onGoToRegister, onContact }) {
               </View>
               <TextInput
                 value={phone}
-                onChangeText={setPhone}
+                onChangeText={(v) => setPhone(v.replace(/\D/g, ''))} // digits only; keyboardType alone doesn't stop typed letters on web
+                inputMode="numeric"
                 onFocus={() => setFocused('phone')}
                 onBlur={() => setFocused(null)}
                 placeholder="98XXXXXXXX"

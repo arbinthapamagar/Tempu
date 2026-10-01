@@ -15,22 +15,12 @@ import { welcomeDriverTemplate } from '../../utils/welcomeEmailTemplate.js';
 
 
 const registerAsDriver = asyncHandler(async (req, res) => {
-    const existing = await Driver.findOne({ userId: req.user._id });
-    if (existing) throw new apiError(400, 'Already registered as a driver');
-
     const { vehicleType, vehiclePlate, vehicleModel, vehicleColor, vehicleYear, licenseNumber, licenseExpiry } = req.body;
     if (!vehicleType || !vehiclePlate || !licenseNumber || !licenseExpiry) {
         throw new apiError(400, 'vehicleType, vehiclePlate, licenseNumber, and licenseExpiry are required');
     }
 
-    const plateExists = await Driver.findOne({ vehiclePlate: vehiclePlate.trim().toUpperCase() });
-    if (plateExists) throw new apiError(409, 'Vehicle plate already registered');
-
-    const licenseExists = await Driver.findOne({ licenseNumber: licenseNumber.trim() });
-    if (licenseExists) throw new apiError(409, 'License number already registered');
-
-    const driver = await Driver.create({
-        userId: req.user._id,
+    const fields = {
         vehicleType,
         vehiclePlate: vehiclePlate.trim().toUpperCase(),
         vehicleModel: vehicleModel || null,
@@ -38,7 +28,32 @@ const registerAsDriver = asyncHandler(async (req, res) => {
         vehicleYear: vehicleYear ? parseInt(vehicleYear) : null,
         licenseNumber: licenseNumber.trim(),
         licenseExpiry: new Date(licenseExpiry),
-    });
+    };
+
+    // The same person re-submitting step 1 (they went back, or a document
+    // upload failed and they retried) must not be locked out by their own
+    // earlier application: update it while it is still under review.
+    const existing = await Driver.findOne({ userId: req.user._id });
+    if (existing && !['pending', 'rejected'].includes(existing.status)) {
+        throw new apiError(400, 'You are already registered as a driver');
+    }
+
+    // Plate / licence belonging to SOMEONE ELSE is a real conflict.
+    const notMine = existing ? { _id: { $ne: existing._id } } : {};
+    if (await Driver.findOne({ vehiclePlate: fields.vehiclePlate, ...notMine })) {
+        throw new apiError(409, 'This vehicle plate is already registered to another driver');
+    }
+    if (await Driver.findOne({ licenseNumber: fields.licenseNumber, ...notMine })) {
+        throw new apiError(409, 'This license number is already registered to another driver');
+    }
+
+    if (existing) {
+        Object.assign(existing, fields, { status: 'pending' });
+        await existing.save();
+        return res.status(200).json(new apiResponse(200, existing, 'Driver application updated. Pending admin approval.'));
+    }
+
+    const driver = await Driver.create({ userId: req.user._id, ...fields });
 
     await User.findByIdAndUpdate(req.user._id, { driverProfile: driver._id, role: 'driver' });
 

@@ -1,6 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import {
+  Image,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -14,11 +15,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { userApi } from '../api/user.api';
 import { colors } from '../theme/colors';
+import { describeDateInput, formatDateInput, parseDateInput } from '../utils/dateInput';
 
 const VEHICLE_TYPES = [
   { id: 'tuktuk', label: 'Rickshaw', emoji: '🛺' },
   { id: 'scooter', label: 'Scooter', emoji: '🛵' },
-  { id: 'taxi', label: 'Taxi', emoji: '🚕' },
   { id: 'tuktuk_delivery', label: 'Delivery', emoji: '📦' },
 ];
 
@@ -31,40 +32,57 @@ const DOCS = [
   { type: 'citizenship', label: 'Citizenship', hint: 'Citizenship card or equivalent ID', required: false },
 ];
 
+// One document. Tap to upload; once uploaded it says so, and offers a preview
+// (collapsed by default so the list stays short) and a way to replace the file.
 function DocUploadRow({ doc, uri, onPick, uploading }) {
   const uploaded = !!uri;
+  const [showPreview, setShowPreview] = useState(false);
   return (
-    <Pressable
-      style={[styles.docRow, uploaded && styles.docRowDone]}
-      onPress={onPick}
-      disabled={uploading}
-    >
-      <View style={[styles.docIcon, uploaded && styles.docIconDone]}>
-        {uploading ? (
-          <ActivityIndicator size="small" color={uploaded ? '#fff' : colors.primary} />
-        ) : (
-          <Ionicons
-            name={uploaded ? 'checkmark' : 'camera-outline'}
-            size={18}
-            color={uploaded ? '#fff' : colors.primary}
-          />
-        )}
-      </View>
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text style={styles.docLabel}>{doc.label}</Text>
-          {doc.required && <Text style={styles.docRequired}>Required</Text>}
+    <View style={[styles.docRow, styles.docCard, uploaded && styles.docRowDone]}>
+      <Pressable style={styles.docMain} onPress={onPick} disabled={uploading}>
+        <View style={[styles.docIcon, uploaded && styles.docIconDone]}>
+          {uploading ? (
+            <ActivityIndicator size="small" color={uploaded ? '#fff' : colors.primary} />
+          ) : (
+            <Ionicons
+              name={uploaded ? 'checkmark' : 'camera-outline'}
+              size={18}
+              color={uploaded ? '#fff' : colors.primary}
+            />
+          )}
         </View>
-        <Text style={styles.docHint} numberOfLines={1}>
-          {uploaded ? 'Uploaded' : doc.hint}
-        </Text>
-      </View>
-      <Ionicons
-        name={uploaded ? 'checkmark-circle' : 'cloud-upload-outline'}
-        size={20}
-        color={uploaded ? colors.primary : colors.textFaint}
-      />
-    </Pressable>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.docLabel}>{doc.label}</Text>
+            {doc.required && !uploaded && <Text style={styles.docRequired}>Required</Text>}
+          </View>
+          <Text style={[styles.docHint, uploaded && styles.docHintDone]} numberOfLines={1}>
+            {uploading ? 'Uploading…' : uploaded ? 'Uploaded' : doc.hint}
+          </Text>
+        </View>
+        <Ionicons
+          name={uploaded ? 'checkmark-circle' : 'cloud-upload-outline'}
+          size={20}
+          color={uploaded ? colors.primary : colors.textFaint}
+        />
+      </Pressable>
+
+      {uploaded && !uploading && (
+        <>
+          <View style={styles.docActions}>
+            <Pressable style={styles.docAction} onPress={() => setShowPreview((v) => !v)} hitSlop={6}>
+              <Ionicons name={showPreview ? 'eye-off-outline' : 'eye-outline'} size={16} color={colors.primary} />
+              <Text style={styles.docActionText}>{showPreview ? 'Hide preview' : 'Preview'}</Text>
+            </Pressable>
+            <Pressable style={styles.docAction} onPress={onPick} hitSlop={6}>
+              <Ionicons name="refresh" size={16} color={colors.primary} />
+              <Text style={styles.docActionText}>Replace</Text>
+            </Pressable>
+          </View>
+          {showPreview && <Image source={{ uri }} style={styles.docPreview} resizeMode="contain" />}
+        </>
+      )}
+    </View>
   );
 }
 
@@ -88,12 +106,22 @@ export default function DriverVehicleScreen({ onSuccess, onBack }) {
   const [uploadError, setUploadError] = useState('');
   const [finishing, setFinishing] = useState(false);
 
+  const licenseExpired = (() => {
+    const expiry = parseDateInput(licenseExpiry);
+    if (!expiry) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return expiry < today;
+  })();
+
   const validateStep1 = () => {
     if (!vehicleType) return 'Please select your vehicle type.';
     if (!vehiclePlate.trim()) return 'Vehicle plate number is required.';
     if (!licenseNumber.trim()) return 'License number is required.';
     if (!licenseExpiry.trim()) return 'License expiry date is required (YYYY-MM-DD).';
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(licenseExpiry.trim())) return 'Date format should be YYYY-MM-DD (e.g. 2027-06-30).';
+    if (!parseDateInput(licenseExpiry)) return 'Enter a real date as YYYY-MM-DD (e.g. 2027-06-30).';
+    // An expired licence is a warning, not a block: the admin reviews every
+    // application anyway (see licenseExpired below).
     return '';
   };
 
@@ -273,13 +301,28 @@ export default function DriverVehicleScreen({ onSuccess, onBack }) {
               <Text style={styles.label}>License expiry date</Text>
               <TextInput
                 value={licenseExpiry}
-                onChangeText={setLicenseExpiry}
+                onChangeText={(t) => { setLicenseExpiry(formatDateInput(t)); setError(''); }}
                 placeholder="YYYY-MM-DD (e.g. 2027-06-30)"
                 placeholderTextColor={colors.textFaint}
                 style={styles.input}
-                keyboardType="numbers-and-punctuation"
+                keyboardType="number-pad"
+                inputMode="numeric"
+                maxLength={10}
                 editable={!submitting}
               />
+              {describeDateInput(licenseExpiry) ? (
+                <Text style={styles.dateHint}>
+                  {licenseExpired ? 'Expired' : 'Expires'} {describeDateInput(licenseExpiry)}
+                </Text>
+              ) : null}
+              {licenseExpired && (
+                <View style={styles.warnBox}>
+                  <Ionicons name="warning-outline" size={16} color="#b45309" />
+                  <Text style={styles.warnText}>
+                    This date is in the past. You can continue, but our team may ask you to renew your licence before approval.
+                  </Text>
+                </View>
+              )}
             </View>
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -349,6 +392,20 @@ export default function DriverVehicleScreen({ onSuccess, onBack }) {
 }
 
 const styles = StyleSheet.create({
+  docCard: { flexDirection: 'column', alignItems: 'stretch' },
+  docMain: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  docHintDone: { color: colors.primary, fontWeight: '600' },
+  docActions: { flexDirection: 'row', gap: 20, marginTop: 10, paddingLeft: 48 },
+  docAction: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  docActionText: { color: colors.primary, fontSize: 13, fontWeight: '600' },
+  docPreview: { marginTop: 10, width: '100%', height: 180, borderRadius: 12, backgroundColor: colors.surfaceMuted || '#f2f2f2' },
+  dateHint: { marginTop: 6, fontSize: 13, color: colors.textMuted },
+  warnBox: {
+    flexDirection: 'row', gap: 8, alignItems: 'flex-start',
+    marginTop: 8, padding: 10, borderRadius: 12,
+    backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#fde68a',
+  },
+  warnText: { flex: 1, fontSize: 13, lineHeight: 18, color: '#92400e' },
   flex: { flex: 1, backgroundColor: colors.background },
   scroll: {
     flexGrow: 1,

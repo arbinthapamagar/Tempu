@@ -10,17 +10,31 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [tempToken, setTempToken] = useState(null);
 
-  // On mount, try to restore session from stored tokens
+  // On mount, try to restore session from stored tokens. Only a real rejection
+  // of the session clears them; if the backend is just unreachable (restarting,
+  // offline) keep them and retry a few times, so a reload at the wrong moment
+  // doesn't sign the user out.
   useEffect(() => {
     (async () => {
       try {
         const { accessToken } = await tokenStore.load();
-        if (accessToken) {
-          const res = await userApi.getProfile();
-          setUser(res.data);
+        if (!accessToken) return;
+        for (let attempt = 0; ; attempt++) {
+          try {
+            const res = await userApi.getProfile();
+            setUser(res.data);
+            return;
+          } catch (err) {
+            if (!err?.network) {
+              await tokenStore.clear();
+              return;
+            }
+            if (attempt >= 4) return; // still unreachable: keep tokens for next launch
+            await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+          }
         }
       } catch {
-        await tokenStore.clear();
+        // storage unavailable — stay signed out
       } finally {
         setLoading(false);
       }

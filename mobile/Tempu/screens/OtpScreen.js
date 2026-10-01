@@ -99,9 +99,9 @@ export default function OtpScreen({ phone, onSuccess, onBack }) {
 
         <View style={styles.header}>
           <Image source={require('../assets/logo-wordmark.png')} style={styles.brand} resizeMode="contain" />
-          <Text style={styles.title}>Verify your number</Text>
+          <Text style={styles.title}>Verify your account</Text>
           <Text style={styles.subtitle}>
-            Enter the 6-digit code sent{phone ? ` to ${phone}` : ''}.
+            Enter the 6-digit code we sent by SMS{phone ? ` to ${phone}` : ''} and to your email.
           </Text>
         </View>
 
@@ -183,9 +183,10 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   header: { marginBottom: 40 },
+  // logo-wordmark.png is 1266x358 (~3.5:1); same size as the role-select header.
   brand: {
-    height: 13,
-    width: 34,
+    height: 44,
+    width: 156,
     marginBottom: 20,
   },
   title: {
@@ -207,6 +208,12 @@ const styles = StyleSheet.create({
   },
   box: {
     flex: 1,
+    // On web each box is an <input>, which has a ~150px intrinsic width that
+    // flex won't shrink below without these — six of them overflowed the screen.
+    flexBasis: 0,
+    minWidth: 0,
+    width: 0,
+    maxWidth: 56,
     aspectRatio: 1,
     borderWidth: 1.5,
     borderColor: colors.border,

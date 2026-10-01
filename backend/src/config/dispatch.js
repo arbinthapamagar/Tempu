@@ -11,7 +11,6 @@ export const DISPATCH_TIERS = {
     scooter: [100, 500, 1000],
     bike: [100, 500, 1000], // scooter-class
     tuktuk: [200, 900, 1500], // Tempu
-    taxi: [200, 900, 1500], // car
     comfort: [200, 900, 1500], // car
     tuktuk_delivery: [200, 900, 2000], // delivery
 };
@@ -60,7 +59,6 @@ export const VEHICLE_COMPATIBILITY = {
     bike: ['bike', 'scooter'],
     tuktuk: ['tuktuk', 'tuktuk_delivery'],
     tuktuk_delivery: ['tuktuk_delivery', 'tuktuk'],
-    taxi: ['taxi'],
     comfort: ['comfort'],
 };
 

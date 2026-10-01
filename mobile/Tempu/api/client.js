@@ -29,15 +29,29 @@ async function doRefresh() {
   const { refreshToken } = tokenStore.get();
   if (!refreshToken) throw new Error('No refresh token');
   // Via rawFetch so the refresh call gets the same timeout as everything else.
-  const res = await rawFetch('POST', '/auth/refresh-token', { refreshToken }, {
-    'Content-Type': 'application/json',
-    'X-Client': 'mobile',
-  });
+  let res;
+  try {
+    res = await rawFetch('POST', '/auth/refresh-token', { refreshToken }, {
+      'Content-Type': 'application/json',
+      'X-Client': 'mobile',
+    });
+  } catch {
+    throw networkError();
+  }
   const json = await res.json();
   if (!res.ok) throw new Error(json.message || 'Token refresh failed');
   const { accessToken, refreshToken: newRefresh } = json.data;
   await tokenStore.set(accessToken, newRefresh);
   return accessToken;
+}
+
+// Thrown when the backend can't be reached at all (down, restarting, offline),
+// as opposed to answering with an error. Callers use `err.network` to tell
+// "try again later" apart from "your session is no longer valid".
+function networkError() {
+  const err = new Error('App is down. Please try again later.');
+  err.network = true;
+  return err;
 }
 
 async function rawFetch(method, path, body, headers) {
@@ -71,8 +85,8 @@ export async function request(method, path, body, opts = {}) {
   let res;
   try {
     res = await rawFetch(method, path, body, headers);
-  } catch (networkErr) {
-    throw new Error('App is down. Please try again later.');
+  } catch {
+    throw networkError();
   }
 
   if (res.status === 401 && !skipAuth && !tempToken) {
@@ -84,7 +98,7 @@ export async function request(method, path, body, opts = {}) {
       try {
         res = await rawFetch(method, path, body, headers);
       } catch {
-        throw new Error('App is down. Please try again later.');
+        throw networkError();
       }
     } else {
       isRefreshing = true;
@@ -102,7 +116,7 @@ export async function request(method, path, body, opts = {}) {
       try {
         res = await rawFetch(method, path, body, headers);
       } catch {
-        throw new Error('App is down. Please try again later.');
+        throw networkError();
       }
     }
   }

@@ -20,7 +20,7 @@ import SearchSheet from './SearchSheet';
 import useRideFlow, { VEHICLE_TYPES } from './useRideFlow';
 import useBackHandler from '../../utils/useBackHandler';
 
-export default function HomeScreen({ onOpenSubscription }) {
+export default function HomeScreen({ onOpenSubscription, onAddPlace }) {
   const flow = useRideFlow();
   const {
     step,
@@ -84,6 +84,7 @@ export default function HomeScreen({ onOpenSubscription }) {
         onTapSearch={() => setStep('search')}
         onPickSaved={goToOptions}
         onSubscribe={onOpenSubscription}
+        onAddPlace={onAddPlace}
       />
     );
   }

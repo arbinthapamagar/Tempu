@@ -15,6 +15,7 @@ import { MenuIcon, BellIcon } from './components/Icons';
 import { userApi } from './api/user.api';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import DriverShell from './screens/driver/DriverShell';
 import ContactSupportScreen from './screens/ContactSupportScreen';
 import DriverPendingScreen from './screens/DriverPendingScreen';
@@ -56,6 +57,7 @@ function AppShell() {
   const [pendingPhone, setPendingPhone] = useState('');
   const [tab, setTab] = useState('home');
   const [subInitialTab, setSubInitialTab] = useState('active'); // which subscription tab to open on
+  const [accountModal, setAccountModal] = useState(null); // e.g. 'add-address' when Home's "Add new place" sends us to Account
   const [menuOpen, setMenuOpen] = useState(false);
   const [overlay, setOverlay] = useState(null);
   const [mode, setModeState] = useState('passenger'); // 'passenger' | 'driver'
@@ -106,10 +108,12 @@ function AppShell() {
     }
   }, [user, role, authScreen]);
 
-  // Reset to home tab on passenger login
+  // Reset to home tab on passenger login. Keyed on the user's id, not the
+  // object: refreshUser() (e.g. after saving a place) hands back a new object
+  // for the same person and must not yank them off the screen they're on.
   useEffect(() => {
     if (user && role === 'passenger') setTab('home');
-  }, [user, role]);
+  }, [user?._id, role]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Android hardware back. Walk back through our own screens instead of letting
   // the OS drop the user straight out of the app; only a second press on a root
@@ -274,6 +278,7 @@ function AppShell() {
             {tab === 'home' && (
               <HomeScreen
                 onOpenSubscription={() => { setSubInitialTab('browse'); setTab('subscribe'); }}
+                onAddPlace={() => { setAccountModal('add-address'); setTab('account'); }}
               />
             )}
             {tab === 'trips' && <TripsScreen />}
@@ -283,6 +288,8 @@ function AppShell() {
             {tab === 'account' && (
               <ProfileScreen
                 onBack={() => setTab('home')}
+                initialModal={accountModal}
+                onInitialModalShown={() => setAccountModal(null)}
                 onSignOut={signOut}
                 onOpenSubscription={() => { setSubInitialTab('active'); setTab('subscribe'); }}
                 onSwitchToDriver={() => setMode('driver')}
@@ -326,11 +333,13 @@ export default function App() {
   }
 
   return (
-    <LanguageProvider>
-      <AuthProvider>
-        <AppShell />
-      </AuthProvider>
-    </LanguageProvider>
+    <ErrorBoundary>
+      <LanguageProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </LanguageProvider>
+    </ErrorBoundary>
   );
 }
 

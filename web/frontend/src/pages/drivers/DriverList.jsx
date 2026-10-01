@@ -555,7 +555,6 @@ const VEHICLE_EDIT_OPTIONS = [
   { value: 'scooter', label: 'Scooter' },
   { value: 'tuktuk', label: 'Tuk-tuk' },
   { value: 'tuktuk_delivery', label: 'Tuk-tuk (delivery)' },
-  { value: 'taxi', label: 'Taxi' },
   { value: 'comfort', label: 'Comfort' },
 ]
 

@@ -67,7 +67,7 @@ const near = (i) => [85.30 + i * 0.004, 27.70 + i * 0.004];
 
 const FIRST = ['Aarav', 'Sita', 'Bibek', 'Puja', 'Ramesh', 'Anita', 'Kiran', 'Sunita', 'Nabin', 'Gita', 'Hari', 'Maya'];
 const LAST = ['Shrestha', 'Gurung', 'Thapa', 'Karki', 'Tamang', 'Rai', 'Magar', 'Adhikari', 'Bhandari', 'Poudel'];
-const VEHICLES = ['bike', 'scooter', 'tuktuk', 'taxi', 'comfort'];
+const VEHICLES = ['bike', 'scooter', 'tuktuk', 'comfort'];
 const CITIES = ['kathmandu', 'pokhara', 'lalitpur', 'bhaktapur', 'birgunj', 'butwal', 'other'];
 const name = (i) => `${pick(FIRST, i)} ${pick(LAST, i * 3 + 1)}`;
 

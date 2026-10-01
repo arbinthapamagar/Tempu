@@ -593,7 +593,7 @@ const getAnalyticsVehicleDistribution = asyncHandler(async (req, res) => {
     const total = data.reduce((sum, item) => sum + item.count, 0);
 
     const VEHICLE_COLORS = {
-        bike: '#6366f1', tuktuk: '#f59e0b', taxi: '#10b981',
+        bike: '#6366f1', tuktuk: '#f59e0b',
         scooter: '#8b5cf6', comfort: '#ec4899', tuktuk_delivery: '#3b82f6',
     };
 
@@ -927,7 +927,7 @@ const updateDriver = asyncHandler(async (req, res) => {
 
     // Editable vehicle fields from the admin settings popup.
     const allowed = ['vehicleType', 'vehiclePlate', 'vehicleModel', 'vehicleColor', 'vehicleYear', 'vehicleCapacity'];
-    const vehicleTypes = ['bike', 'scooter', 'tuktuk', 'tuktuk_delivery', 'taxi', 'comfort'];
+    const vehicleTypes = ['bike', 'scooter', 'tuktuk', 'tuktuk_delivery', 'comfort'];
 
     const update = {};
     for (const key of allowed) {
@@ -2388,7 +2388,7 @@ const seedTestDocument = asyncHandler(async (req, res) => {
         const suffix = Date.now().toString().slice(-6);
         driver = await Driver.create({
             userId: user._id,
-            vehicleType: 'taxi',
+            vehicleType: 'tuktuk',
             vehiclePlate: `BA-${suffix}`,
             licenseNumber: `LIC-${suffix}`,
             licenseExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),

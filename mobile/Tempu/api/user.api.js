@@ -1,4 +1,5 @@
 import { api, request } from './client';
+import { appendFile } from './formFile';
 
 export const userApi = {
   // Profile
@@ -11,7 +12,7 @@ export const userApi = {
     const { accessToken } = tokenStore.get();
     const { BASE_URL } = await import('./client');
     const form = new FormData();
-    form.append('avatar', { uri, name: 'avatar.jpg', type: 'image/jpeg' });
+    await appendFile(form, 'avatar', { uri, name: 'avatar.jpg', type: 'image/jpeg' });
     const res = await fetch(`${BASE_URL}/users/profile/avatar`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -76,7 +77,7 @@ export const userApi = {
     const { BASE_URL } = await import('./client');
     const form = new FormData();
     if (message) form.append('message', message);
-    form.append('attachment', { uri: file.uri, name: file.name, type: file.type });
+    await appendFile(form, 'attachment', { uri: file.uri, name: file.name, type: file.type });
     const res = await fetch(`${BASE_URL}/users/support/${id}/messages`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -116,7 +117,7 @@ export const userApi = {
     const { accessToken } = tokenStore.get();
     const { BASE_URL } = await import('./client');
     const form = new FormData();
-    form.append('document', { uri, name: 'document.jpg', type: 'image/jpeg' });
+    await appendFile(form, 'document', { uri, name: 'document.jpg', type: 'image/jpeg' });
     form.append('type', type);
     const res = await fetch(`${BASE_URL}/users/driver/documents`, {
       method: 'POST',
