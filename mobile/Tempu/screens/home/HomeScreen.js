@@ -204,6 +204,7 @@ export default function HomeScreen({ onOpenSubscription, onAddPlace }) {
             bids={bids}
             onAccept={acceptBid}
             onCancel={goBack}
+            timeoutSeconds={flow.biddingSeconds}
           />
         )}
 

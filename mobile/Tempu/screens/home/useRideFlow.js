@@ -3,6 +3,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { bidApi, tripApi } from '../../api/trip.api';
 import { userApi } from '../../api/user.api';
 
+// The backend widens the driver search for 3 minutes (config/dispatch.js).
+const BIDDING_WINDOW_S = 180;
+
 const VEHICLE_TYPES = [
   { id: 'tuktuk', name: 'Tempu', note: 'Up to 3 passengers', baseFare: 80, eta: 3 },
   { id: 'scooter', name: 'Scooter', note: 'Quick & affordable', baseFare: 60, eta: 4 },
@@ -54,6 +57,10 @@ export default function useRideFlow() {
   const [creatingTrip, setCreatingTrip] = useState(false);
   const [tripError, setTripError] = useState('');
   const [biddingTimedOut, setBiddingTimedOut] = useState(false);
+  // Seconds left in the bidding window — less than the full window when a
+  // trip is resumed after the app was closed.
+  const [biddingSeconds, setBiddingSeconds] = useState(BIDDING_WINDOW_S);
+  const restoredRef = useRef(false); // a resumed trip wins over the GPS prefill
   const pollRef = useRef(null);
   const timeoutRef = useRef(null);
   const tripStatusPollRef = useRef(null);
@@ -88,7 +95,7 @@ export default function useRideFlow() {
     (async () => {
       try {
         const pos = await resolveCurrentPosition();
-        if (!cancelled && pos) {
+        if (!cancelled && pos && !restoredRef.current) {
           pickupRef.current = pos.address || '';
           setPickup(pos.address || '');
           setPickupCoords(pos.coords);
@@ -162,7 +169,7 @@ export default function useRideFlow() {
         return;
       }
       expire();
-    }, 3 * 60 * 1000);
+    }, biddingSeconds * 1000);
 
     return () => {
       clearInterval(pollRef.current);
@@ -170,7 +177,64 @@ export default function useRideFlow() {
       pollRef.current = null;
       timeoutRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, tripId]);
+
+  // Resume the rider's trip after the app was closed mid-booking or mid-ride.
+  // Without this the trip kept running server-side, invisible and
+  // uncancellable, and every new booking was refused as "already active".
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let t;
+      try {
+        t = (await userApi.getActiveTrip())?.data;
+      } catch {
+        return; // offline — nothing to resume yet
+      }
+      if (cancelled || !t?._id) return;
+
+      const toLatLng = (loc) => {
+        const c = loc?.coordinates;
+        return Array.isArray(c) && c.length === 2 ? { lat: c[1], lng: c[0] } : null;
+      };
+
+      if (t.status === 'pending') {
+        const ageS = (Date.now() - new Date(t.createdAt).getTime()) / 1000;
+        const left = Math.floor(BIDDING_WINDOW_S - ageS);
+        if (left < 5) {
+          // The search window is over; close it so the rider can book again.
+          tripApi.cancel(t._id).catch(() => {});
+          return;
+        }
+        setBiddingSeconds(left);
+      }
+
+      restoredRef.current = true;
+      pickupRef.current = t.pickup?.address || '';
+      destRef.current = t.dropoff?.address || '';
+      setPickup(pickupRef.current);
+      setDestination(destRef.current);
+      setPickupCoords(toLatLng(t.pickup?.location));
+      setDestCoords(toLatLng(t.dropoff?.location));
+      if (t.vehicleType) setVehicleId(t.vehicleType);
+      if (t.offeredPrice != null) setOfferedPrice(String(t.offeredPrice));
+      if (t.paymentMethod) setPayment(t.paymentMethod);
+      setTripId(t._id);
+
+      if (t.status === 'pending') {
+        setStep('bidding');
+      } else {
+        // Accepted / arriving / started: rebuild the accepted-bid view from
+        // the trip (it carries the populated driver and the agreed fare).
+        setActiveTrip(t);
+        setAcceptedBid({ _id: t.acceptedBidId || `trip-${t._id}`, amount: t.finalPrice ?? t.offeredPrice, driverId: t.driverId });
+        setTripStatus(t.status);
+        setStep('active');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (step === 'bidding') {
@@ -285,6 +349,7 @@ export default function useRideFlow() {
         paymentMethod: payment,
       });
 
+      setBiddingSeconds(BIDDING_WINDOW_S);
       setTripId(res.data._id);
       setStep('bidding');
     } catch (err) {
@@ -342,6 +407,7 @@ export default function useRideFlow() {
     creatingTrip,
     tripError,
     biddingTimedOut,
+    biddingSeconds,
     goBack,
     reset,
     cancelActive,

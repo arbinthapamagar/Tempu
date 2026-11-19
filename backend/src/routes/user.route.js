@@ -6,7 +6,7 @@ import { updateLocation, getSavedAddresses, addSavedAddress, updateSavedAddress,
 import { getWallet, getTransactions } from '../controller/users/user.wallet.controller.js';
 import { getPaymentMethods, initiateTopup, getTopupStatus } from '../controller/users/user.payment.controller.js';
 import { getNotifications, markAsRead, markAllAsRead, deleteNotification } from '../controller/users/user.notification.controller.js';
-import { getTripHistory, getTripById, getFareQuote } from '../controller/users/user.trip.controller.js';
+import { getTripHistory, getTripById, getFareQuote, getActiveTrip } from '../controller/users/user.trip.controller.js';
 import { createReview, getMyReviews, driverCreateReview } from '../controller/users/user.review.controller.js';
 import {
     getMySubscriptions, createSubscription, getSubscriptionById,
@@ -64,6 +64,7 @@ userRouter.get('/geo/autocomplete', geoAutocomplete);
 userRouter.get('/geo/place', geoPlaceDetails);
 userRouter.get('/geo/directions', geoDirections);
 userRouter.get('/trips', getTripHistory);
+userRouter.get('/trips/active', getActiveTrip); // before /trips/:id
 userRouter.get('/trips/:id', getTripById);
 
 // Reviews

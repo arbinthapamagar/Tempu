@@ -34,9 +34,13 @@ const getTripHistory = asyncHandler(async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const filter = { userId: req.user._id };
-    if (status) filter.status = status;
+    // status may be a single value or a comma list (e.g. "cancelled,expired").
+    if (status) {
+        const list = String(status).split(',').map((s) => s.trim()).filter(Boolean);
+        filter.status = list.length > 1 ? { $in: list } : list[0];
+    }
 
-    const [trips, total] = await Promise.all([
+    const [trips, total, byStatus] = await Promise.all([
         Trip.find(filter)
             .sort({ createdAt: -1 })
             .skip(skip)
@@ -47,11 +51,19 @@ const getTripHistory = asyncHandler(async (req, res) => {
                 populate: { path: 'userId', select: 'name avatarUrl' },
             }),
         Trip.countDocuments(filter),
+        // Totals per status across ALL of the rider's trips, so filter chips
+        // show real counts rather than counts of the loaded page.
+        Trip.aggregate([
+            { $match: { userId: req.user._id } },
+            { $group: { _id: '$status', n: { $sum: 1 } } },
+        ]),
     ]);
+    const counts = Object.fromEntries(byStatus.map((r) => [r._id, r.n]));
 
     return res.status(200).json(
         new apiResponse(200, {
             trips,
+            counts,
             pagination: { total, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(total / limit) },
         }, 'Trip history fetched')
     );
@@ -68,4 +80,18 @@ const getTripById = asyncHandler(async (req, res) => {
     return res.status(200).json(new apiResponse(200, trip, 'Trip fetched'));
 });
 
-export { getTripHistory, getTripById, getFareQuote };
+// The rider's trip that is still in play (posted, accepted, driver on the way
+// or in progress), so the app can resume it after being closed. Null if none.
+const ACTIVE_STATUSES = ['pending', 'accepted', 'arriving', 'started'];
+const getActiveTrip = asyncHandler(async (req, res) => {
+    const trip = await Trip.findOne({ userId: req.user._id, status: { $in: ACTIVE_STATUSES } })
+        .sort({ createdAt: -1 })
+        .populate({
+            path: 'driverId',
+            select: 'vehicleType vehiclePlate vehicleModel vehicleColor rating currentLocation userId',
+            populate: { path: 'userId', select: 'name phone avatarUrl' },
+        });
+    return res.status(200).json(new apiResponse(200, trip || null, trip ? 'Active trip' : 'No active trip'));
+});
+
+export { getTripHistory, getTripById, getFareQuote, getActiveTrip };

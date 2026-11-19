@@ -42,6 +42,8 @@ export const userApi = {
   getTripHistory: (page = 1) =>
     api.get(`/users/trips?page=${page}&limit=20`),
   getTripById: (id) => api.get(`/users/trips/${id}`),
+  // The rider's trip still in play (pending/accepted/arriving/started) or null.
+  getActiveTrip: () => api.get('/users/trips/active'),
 
   // Reviews
   createReview: (data) => api.post('/users/reviews', data),
