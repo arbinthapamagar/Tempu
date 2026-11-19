@@ -21,7 +21,7 @@ import { colors } from '../theme/colors';
 // file exists.
 
 const PAYMENT_IMAGES = {
-  esewa: require('../assets/payments/esewa.gif'),
+  esewa: require('../assets/payments/esewa.png'),
   khalti: require('../assets/payments/khalti.png'),
   phonepe: null, // require('../assets/payments/phonepe.png')
   cash: null, // require('../assets/payments/cash.png')
@@ -72,13 +72,26 @@ function ImageWithFallback({ source, size, fallback, radius, plain }) {
   );
 }
 
+// Official wordmarks are wide (eSewa ~3.6:1, Khalti ~2.4:1). Squeezing them
+// into a square tile made them unreadable, so render at the logo's own
+// aspect ratio: `size` is the height budget, width follows the image.
 export function PaymentLogo({ id, size = 44 }) {
+  const [failed, setFailed] = useState(false);
+  const source = PAYMENT_IMAGES[id];
+  if (!source || failed) return <PaymentChip id={id} size={size} />;
+  const meta = Image.resolveAssetSource?.(source);
+  const aspect = meta?.width && meta?.height ? meta.width / meta.height : 1;
+  const height = Math.round(size * 0.62);
   return (
-    <ImageWithFallback
-      source={PAYMENT_IMAGES[id]}
-      size={size}
-      fallback={<PaymentChip id={id} size={size} />}
-    />
+    // Fixed-width slot so labels beside different logos still line up.
+    <View style={{ width: Math.round(height * 3.6), height: size, justifyContent: 'center' }}>
+      <Image
+        source={source}
+        onError={() => setFailed(true)}
+        style={{ width: Math.round(height * Math.min(aspect, 3.6)), height }}
+        resizeMode="contain"
+      />
+    </View>
   );
 }
 
