@@ -9,6 +9,7 @@ import { sendEmail } from '../../config/sendEmail.js';
 import { sendSms } from '../../config/sendSms.js';
 import { generateOtp, otpExpireTime } from '../../utils/generateOtp.js';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 
 const cookieOptions = {
     httpOnly: true,
@@ -223,7 +224,14 @@ const forgotPassword = asyncHandler(async (req, res) => {
     if (!phone) throw new apiError(400, 'Phone number is required');
 
     const user = await User.findOne({ phone: phone.trim() });
-    if (!user) throw new apiError(404, 'User not found');
+    // Answer an unknown number exactly like a known one, so this endpoint
+    // can't be used to find out which phone numbers have accounts. The
+    // decoy token points at no user; resetPassword then fails the same way
+    // a wrong code does. No OTP is sent.
+    if (!user) {
+        const decoy = jwt.sign({ _id: new mongoose.Types.ObjectId().toString(), purpose: 'reset' }, process.env.TEMP_TOKEN_SECRET, { expiresIn: '10m' });
+        return res.status(200).json(new apiResponse(200, { tempToken: decoy }, 'OTP sent for password reset'));
+    }
 
     const otpCode = generateOtp();
     const otpExpiry = otpExpireTime();
@@ -264,7 +272,7 @@ const resetPassword = asyncHandler(async (req, res) => {
     if (decoded.purpose !== 'reset') throw new apiError(401, 'Invalid token purpose');
 
     const user = await User.findById(decoded._id);
-    if (!user) throw new apiError(404, 'User not found');
+    if (!user) throw new apiError(400, 'Invalid OTP'); // decoy token from an unknown number
     if (!user.otp?.code) throw new apiError(400, 'OTP not requested');
     if (user.otp.expiresAt < new Date()) throw new apiError(400, 'OTP expired');
 
