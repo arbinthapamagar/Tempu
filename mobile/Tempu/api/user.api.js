@@ -39,8 +39,10 @@ export const userApi = {
   deleteNotification: (id) => api.del(`/users/notifications/${id}`),
 
   // Trips
-  getTripHistory: (page = 1) =>
-    api.get(`/users/trips?page=${page}&limit=20`),
+  // status: a single status or a comma list; omit for all trips. The
+  // response carries per-status totals in data.counts.
+  getTripHistory: (page = 1, { limit = 20, status } = {}) =>
+    api.get(`/users/trips?page=${page}&limit=${limit}${status ? `&status=${encodeURIComponent(status)}` : ''}`),
   getTripById: (id) => api.get(`/users/trips/${id}`),
   // The rider's trip still in play (pending/accepted/arriving/started) or null.
   getActiveTrip: () => api.get('/users/trips/active'),

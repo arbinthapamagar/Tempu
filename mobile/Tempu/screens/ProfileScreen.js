@@ -111,6 +111,7 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
   const [tfaEnabled, setTfaEnabled] = useState(false);
   const [modal, setModal] = useState(null);
   const [walletOpen, setWalletOpen] = useState(false);
+  const [riderTrips, setRiderTrips] = useState(null);
   const [walletRefresh, setWalletRefresh] = useState(0); // bump → Wallet reloads
   // Opened straight into a form from elsewhere (Home's "Add new place").
   useEffect(() => {
@@ -170,6 +171,11 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
     await Promise.all([
       userApi.getSavedAddresses().then((res) => {
         setAddresses(res.data || []);
+      }).catch(() => {}),
+
+      // Riders' trip count (the stat tile hard-coded 0 for non-drivers).
+      userApi.getTripHistory(1, { limit: 1 }).then((res) => {
+        setRiderTrips(res.data?.pagination?.total ?? 0);
       }).catch(() => {}),
 
       userApi.getMyDriverProfile().then((res) => {
@@ -391,7 +397,7 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
           />
           <Stat
             icon={<Ionicons name="navigate" size={16} color={colors.primary} />}
-            value={isDriver ? String(driverProfile?.totalRides ?? 0) : '0'}
+            value={isDriver ? String(driverProfile?.totalRides ?? 0) : riderTrips == null ? '-' : String(riderTrips)}
             label="Trips"
           />
           <Stat

@@ -37,6 +37,23 @@ const VEHICLE_LABELS = {
   comfort: 'Comfort',
 };
 
+// What a trip's status means to the rider, and how it is coloured:
+// ok = done, bad = didn't happen, live = still in progress.
+function statusInfo(t) {
+  switch (t.status) {
+    case 'completed': return { label: 'Completed', tone: 'ok' };
+    case 'cancelled':
+      if (t.cancelledBy === 'system') return { label: 'No driver found', tone: 'bad' };
+      if (t.cancelledBy === 'driver') return { label: 'Driver cancelled', tone: 'bad' };
+      return { label: 'Cancelled', tone: 'bad' };
+    case 'pending': return { label: 'Finding a driver', tone: 'live' };
+    case 'accepted': return { label: 'Driver assigned', tone: 'live' };
+    case 'arriving': return { label: 'Driver on the way', tone: 'live' };
+    case 'started': return { label: 'On the trip', tone: 'live' };
+    default: return { label: t.status || '-', tone: 'live' };
+  }
+}
+
 function formatDateTime(value) {
   if (!value) return '-';
   const d = new Date(value);
@@ -55,32 +72,62 @@ export default function TripsScreen() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
   const [openId, setOpenId] = useState(null);
+  // Paging + server totals: the list used to be page 1 only (20 trips) and
+  // the chip counts were counts of that page.
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [counts, setCounts] = useState({});
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const statusParam = filter === 'all' ? undefined : filter;
 
   const loadTrips = useCallback(async () => {
     try {
       setError('');
-      const res = await userApi.getTripHistory();
-      setTrips(res.data?.trips || res.data || []);
+      const res = await userApi.getTripHistory(1, { status: statusParam });
+      setTrips(res.data?.trips || []);
+      setTotal(res.data?.pagination?.total ?? 0);
+      setCounts(res.data?.counts || {});
+      setPage(1);
     } catch (err) {
       setError(err.message || 'Could not load trips.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [statusParam]);
 
   useEffect(() => { loadTrips(); }, [loadTrips]);
+
+  const loadMore = async () => {
+    if (loadingMore || trips.length >= total) return;
+    setLoadingMore(true);
+    try {
+      const res = await userApi.getTripHistory(page + 1, { status: statusParam });
+      const more = res.data?.trips || [];
+      setTrips((prev) => {
+        const seen = new Set(prev.map((t) => t._id));
+        return [...prev, ...more.filter((t) => !seen.has(t._id))];
+      });
+      setPage(page + 1);
+      setTotal(res.data?.pagination?.total ?? total);
+    } catch {
+      // keep the button so they can retry
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
     loadTrips();
   };
 
-  const filtered = trips.filter((t) => filter === 'all' || t.status === filter);
+  const filtered = trips;
 
   const countBy = (id) => {
-    if (id === 'all') return trips.length;
-    return trips.filter((t) => t.status === id).length;
+    if (id === 'all') return Object.values(counts).reduce((a, b) => a + b, 0);
+    return counts[id] || 0;
   };
 
   if (loading) {
@@ -97,7 +144,7 @@ export default function TripsScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>History</Text>
           <Text style={styles.headerSubtitle}>
-            {filtered.length} {filtered.length === 1 ? 'trip' : 'trips'} · your past rides
+            {total} {total === 1 ? 'trip' : 'trips'}
           </Text>
         </View>
       </View>
@@ -142,17 +189,21 @@ export default function TripsScreen() {
             <View style={styles.emptyIcon}>
               <ReceiptIcon size={22} color={colors.textFaint} />
             </View>
-            <Text style={styles.emptyTitle}>No trips yet</Text>
+            <Text style={styles.emptyTitle}>
+              {filter === 'all' ? 'No trips yet' : `No ${filter} trips`}
+            </Text>
             <Text style={styles.emptySub}>Your ride history will appear here.</Text>
           </View>
         ) : (
-          filtered.map((t) => {
+          <View style={styles.listBox}>
+          {filtered.map((t, idx) => {
             const open = openId === t._id;
-            const isCancelled = t.status === 'cancelled';
+            const info = statusInfo(t);
+            const tone = info.tone;
             return (
               <Pressable
                 key={t._id}
-                style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+                style={({ pressed }) => [styles.card, idx === filtered.length - 1 && styles.cardLast, pressed && styles.cardPressed]}
                 onPress={() => setOpenId(open ? null : t._id)}
               >
                 <View style={styles.cardTop}>
@@ -163,41 +214,18 @@ export default function TripsScreen() {
                     <Text style={styles.cardTitleSmall} numberOfLines={1}>
                       {t.dropoff?.address || '-'}
                     </Text>
-                    <View style={styles.compactMetaRow}>
-                      <View
-                        style={[
-                          styles.statusDotSmall,
-                          isCancelled ? styles.statusDotCancelled : styles.statusDotOk,
-                        ]}
-                      />
-                      <Text style={styles.compactMeta} numberOfLines={1}>
-                        {formatDateTime(t.createdAt)} · {VEHICLE_LABELS[t.vehicleType]}
+                    <Text style={styles.compactMeta} numberOfLines={1}>
+                      {formatDateTime(t.createdAt)} ·{' '}
+                      <Text style={tone === 'bad' ? styles.toneBad : tone === 'live' ? styles.toneLive : styles.toneOk}>
+                        {info.label}
                       </Text>
-                    </View>
+                    </Text>
                   </View>
                   <View style={styles.cardRightCompact}>
                     <Text style={styles.cardPriceSmall}>
                       Rs {t.finalPrice ?? t.offeredPrice}
                     </Text>
-                    <View style={styles.rightBottomRow}>
-                      <View
-                        style={[
-                          styles.typePill,
-                          isCancelled ? styles.typePillCancelled : styles.typePillOk,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.typePillText,
-                            isCancelled ? styles.typePillTextCancelled : styles.typePillTextOk,
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {VEHICLE_LABELS[t.vehicleType] || t.vehicleType}
-                        </Text>
-                      </View>
-                      <ChevronIcon dir={open ? 'up' : 'down'} size={14} />
-                    </View>
+                    <ChevronIcon dir={open ? 'up' : 'down'} size={14} />
                   </View>
                 </View>
 
@@ -215,32 +243,12 @@ export default function TripsScreen() {
                         {t.dropoff?.address || '-'}
                       </Text>
                     </View>
-                    <View
-                      style={[
-                        styles.statusPill,
-                        isCancelled ? styles.statusCancelled : styles.statusOk,
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.statusDot,
-                          isCancelled ? styles.statusDotCancelled : styles.statusDotOk,
-                        ]}
-                      />
-                      <Text
-                        style={[
-                          styles.statusText,
-                          isCancelled ? styles.statusTextCancelled : styles.statusTextOk,
-                        ]}
-                      >
-                        {t.status}
-                      </Text>
-                    </View>
                   </View>
                 )}
 
                 {open && (
                   <View style={styles.cardDetails}>
+                    <DetailRow label="Vehicle" value={VEHICLE_LABELS[t.vehicleType] || t.vehicleType} />
                     <DetailRow label="Payment" value={`${PAYMENT_LABELS[t.paymentMethod] || t.paymentMethod} · ${t.paymentStatus}`} />
                     {t.driverId && (
                       <DetailRow
@@ -248,18 +256,20 @@ export default function TripsScreen() {
                         value={`${t.driverId.userId?.name || 'Driver'} · ${t.driverId.vehiclePlate || ''}`}
                       />
                     )}
-                    {t.status === 'completed' && (
-                      <Pressable style={styles.ghostBtn}>
-                        <ReceiptIcon size={14} color={colors.text} />
-                        <Text style={styles.ghostBtnText}>Get receipt</Text>
-                      </Pressable>
-                    )}
                   </View>
                 )}
               </Pressable>
             );
-          })
+          })}
+          </View>
         )}
+        {!error && trips.length < total ? (
+          <Pressable style={styles.loadMore} onPress={loadMore} disabled={loadingMore}>
+            {loadingMore
+              ? <ActivityIndicator color={colors.primary} />
+              : <Text style={styles.loadMoreText}>Load more</Text>}
+          </Pressable>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -307,7 +317,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: 999,
+    borderRadius: 8,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.border,
@@ -346,23 +356,30 @@ const styles = StyleSheet.create({
   emptyTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.bodyBold, letterSpacing: -0.2 },
   emptySub: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.body, marginTop: 4, textAlign: 'center' },
 
-  card: {
+  // One bordered list, rows split by dividers (was a rounded card per trip).
+  listBox: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 24,
-    padding: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
     marginBottom: 12,
   },
+  card: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  cardLast: { borderBottomWidth: 0 },
+  toneOk: { color: colors.success, fontFamily: fonts.bodySemibold },
+  toneBad: { color: colors.danger, fontFamily: fonts.bodySemibold },
+  toneLive: { color: colors.warn, fontFamily: fonts.bodySemibold },
   cardPressed: { opacity: 0.85, backgroundColor: colors.surfaceMuted },
-  cardTop: { flexDirection: 'row', gap: 14, alignItems: 'center' },
+  cardTop: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   cardIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.border,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -370,9 +387,9 @@ const styles = StyleSheet.create({
   cardTitleSmall: { color: colors.text, fontSize: 15, fontFamily: fonts.bodyBold, letterSpacing: -0.2 },
   compactMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5 },
   statusDotSmall: { width: 6, height: 6, borderRadius: 3 },
-  compactMeta: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, flex: 1 },
-  cardRightCompact: { alignItems: 'flex-end', gap: 6 },
-  cardPriceSmall: { color: colors.primary, fontSize: 16, fontFamily: fonts.bodyBold, letterSpacing: -0.3 },
+  compactMeta: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 3 },
+  cardRightCompact: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardPriceSmall: { color: colors.text, fontSize: 15, fontFamily: fonts.bodyBold },
   rightBottomRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   typePill: {
     paddingHorizontal: 9,
@@ -382,6 +399,8 @@ const styles = StyleSheet.create({
   },
   typePillOk: { backgroundColor: colors.primarySoft },
   typePillCancelled: { backgroundColor: colors.dangerSoft },
+  typePillLive: { backgroundColor: colors.warnSoft },
+  typePillTextLive: { color: colors.warn },
   typePillText: { fontSize: 11, fontFamily: fonts.bodyBold, letterSpacing: -0.1 },
   typePillTextOk: { color: colors.primary },
   typePillTextCancelled: { color: colors.danger },
@@ -399,6 +418,7 @@ const styles = StyleSheet.create({
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusDotOk: { backgroundColor: colors.primary },
   statusDotCancelled: { backgroundColor: colors.danger },
+  statusDotLive: { backgroundColor: colors.warn },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -411,6 +431,18 @@ const styles = StyleSheet.create({
   },
   statusOk: { backgroundColor: colors.primarySoft },
   statusCancelled: { backgroundColor: colors.dangerSoft },
+  statusLive: { backgroundColor: colors.warnSoft },
+  statusTextLive: { color: colors.warn },
+  loadMore: {
+    marginTop: 4,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+  },
+  loadMoreText: { color: colors.text, fontSize: 14, fontFamily: fonts.bodyBold },
   statusText: { fontSize: 11, fontFamily: fonts.bodyBold, textTransform: 'capitalize' },
   statusTextOk: { color: colors.primaryDark },
   statusTextCancelled: { color: colors.danger },
