@@ -37,9 +37,22 @@ const callbackBase = (req) =>
 // Crediting
 // ---------------------------------------------------------------------------
 
+// Failures we decided ourselves, without the gateway saying so (a browser hit
+// the public failure/cancel URL, or nobody came back within an hour). The
+// gateway stays the source of truth: if it later reports the payment as
+// complete, the money is still credited.
+const SOFT_FAIL = /cancelled by user|^Expired:/;
+const isSoftFailed = (txn) => txn.status === 'failed' && SOFT_FAIL.test(txn.failureReason || '');
+
 async function completeTopup(txn, gatewayData) {
+    // pending → completed, or a soft failure → completed when the gateway
+    // confirms payment after all. 'completed' is never matched, so a second
+    // call can't credit twice.
     const updated = await Transaction.findOneAndUpdate(
-        { _id: txn._id, status: 'pending' },
+        {
+            _id: txn._id,
+            $or: [{ status: 'pending' }, { status: 'failed', failureReason: SOFT_FAIL }],
+        },
         { $set: { status: 'completed', gatewayData } },
         { returnDocument: 'after' },
     );
@@ -64,7 +77,7 @@ async function failTopup(txn, reason, gatewayData = null) {
 // Ask the gateway what actually happened and settle the transaction.
 const ESEWA_GIVE_UP_MS = 15 * 60 * 1000;
 async function reconcile(txn) {
-    if (txn.status !== 'pending') return txn;
+    if (txn.status !== 'pending' && !isSoftFailed(txn)) return txn;
     try {
         if (txn.method === 'esewa') {
             const s = await esewaStatus({ amount: txn.amount, transactionUuid: txn.orderRef });
@@ -105,6 +118,18 @@ async function reconcileStaleTopups({ olderThanMs = 15 * 60 * 1000, limit = 50 }
         method: { $in: Object.keys(PROVIDERS) },
         createdAt: { $lt: new Date(Date.now() - olderThanMs) },
     }).limit(limit);
+    // Soft failures from the last few hours get re-checked too: the public
+    // failure URL can be hit by anyone who knows the id, and a slow gateway can
+    // confirm after our one-hour cutoff. Paid after all → credited.
+    const softFailed = await Transaction.find({
+        type: 'wallet_topup',
+        status: 'failed',
+        failureReason: SOFT_FAIL,
+        method: { $in: Object.keys(PROVIDERS) },
+        createdAt: { $lt: new Date(Date.now() - olderThanMs), $gt: new Date(Date.now() - 3 * 60 * 60 * 1000) },
+    }).limit(limit);
+    for (const txn of softFailed) await reconcile(txn);
+
     for (const txn of stale) {
         const settled = await reconcile(txn);
         // Still pending an hour later (gateway never heard of it): close it.

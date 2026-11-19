@@ -11,7 +11,8 @@ import { PaymentLogo } from './Brand';
 // and when the user comes back it asks the backend for the result — the
 // backend confirms with the gateway before any money is added.
 
-const PENDING_KEY = 'tempu_pending_topup';
+// One slot per target, so a driver top-up never overwrites a pending wallet one.
+const pendingKey = (target) => `tempu_pending_topup:${target}`;
 const POLL_EVERY_MS = 2500;
 const POLL_TRIES = 12; // ~30s after returning to the app
 
@@ -41,17 +42,22 @@ export function useGatewayTopup(target, onSettled) {
   const [starting, setStarting] = useState(false);
   const [checking, setChecking] = useState(false);
   const pendingRef = useRef(null); // { id, target }
+  const checkingRef = useRef(false); // one poll loop at a time
   const settledRef = useRef(onSettled);
   settledRef.current = onSettled;
 
   const clearPending = useCallback(async () => {
     pendingRef.current = null;
-    try { await AsyncStorage.removeItem(PENDING_KEY); } catch { /* ignore */ }
-  }, []);
+    try { await AsyncStorage.removeItem(pendingKey(target)); } catch { /* ignore */ }
+  }, [target]);
 
   const check = useCallback(async () => {
     const p = pendingRef.current;
     if (!p || p.target !== target) return;
+    // Coming back from the browser fires AppState 'active' while a loop may
+    // already be running; a second loop would alert and settle twice.
+    if (checkingRef.current) return;
+    checkingRef.current = true;
     setChecking(true);
     try {
       for (let i = 0; i < POLL_TRIES; i++) {
@@ -82,6 +88,7 @@ export function useGatewayTopup(target, onSettled) {
       }
       // Still pending: keep it stored; we'll check again next time.
     } finally {
+      checkingRef.current = false;
       setChecking(false);
     }
   }, [target, clearPending]);
@@ -92,7 +99,7 @@ export function useGatewayTopup(target, onSettled) {
     let alive = true;
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(PENDING_KEY);
+        const raw = await AsyncStorage.getItem(pendingKey(target));
         const p = raw ? JSON.parse(raw) : null;
         if (alive && p?.target === target) { pendingRef.current = p; check(); }
       } catch { /* ignore */ }
@@ -112,7 +119,7 @@ export function useGatewayTopup(target, onSettled) {
       if (!transactionId || !paymentUrl) throw new Error('Could not start the payment.');
       const p = { id: transactionId, target };
       pendingRef.current = p;
-      try { await AsyncStorage.setItem(PENDING_KEY, JSON.stringify(p)); } catch { /* ignore */ }
+      try { await AsyncStorage.setItem(pendingKey(target), JSON.stringify(p)); } catch { /* ignore */ }
       await Linking.openURL(paymentUrl);
       return true;
     } catch (e) {
