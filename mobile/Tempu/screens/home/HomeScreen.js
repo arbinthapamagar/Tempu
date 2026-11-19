@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -49,7 +50,15 @@ export default function HomeScreen({ onOpenSubscription, onAddPlace }) {
     creatingTrip,
     tripError,
     tripId,
+    activeTrip,
+    cancelActive,
   } = flow;
+
+  const onCancelActive = () => {
+    cancelActive().catch((err) =>
+      Alert.alert('Could not cancel', err?.message || 'Please try again.'),
+    );
+  };
 
   const [mapTarget, setMapTarget] = useState('dest');
 
@@ -63,7 +72,7 @@ export default function HomeScreen({ onOpenSubscription, onAddPlace }) {
   });
 
   const goToOptions = (dest, coords = null) => {
-    setDestination(dest);
+    setDestination(dest); // drops coords if the address changed
     if (coords) setDestCoords(coords);
     const rickshaw = VEHICLE_TYPES.find((v) => v.id === 'tuktuk');
     if (rickshaw) {
@@ -92,6 +101,9 @@ export default function HomeScreen({ onOpenSubscription, onAddPlace }) {
   const vehicle = VEHICLE_TYPES.find((v) => v.id === vehicleId);
 
   // Extract driver info from the accepted bid's populated driverId field
+  // The live trip (polled) has the populated driver incl. phone + location;
+  // the bid snapshot is the fallback until the first poll lands.
+  const liveDriver = activeTrip?.driverId && typeof activeTrip.driverId === 'object' ? activeTrip.driverId : null;
   const acceptedDriver = acceptedBid?.driverId
     ? {
         name: acceptedBid.driverId.userId?.name || 'Driver',
@@ -101,13 +113,14 @@ export default function HomeScreen({ onOpenSubscription, onAddPlace }) {
         vehiclePlate: acceptedBid.driverId.vehiclePlate || '',
         rating: acceptedBid.driverId.rating ?? 0,
         eta: 5,
-        phone: acceptedBid.driverId.userId?.phone,
+        phone: liveDriver?.userId?.phone || acceptedBid.driverId.userId?.phone,
       }
     : null;
 
   // Driver's live position from the accepted bid (GeoJSON [lng, lat]), if the
   // populated driver carries one — shown as a moving car pin during the trip.
   const driverLoc =
+    liveDriver?.currentLocation?.coordinates ||
     acceptedBid?.driverId?.currentLocation?.coordinates ||
     acceptedBid?.driverId?.location?.coordinates;
   const driverCoords = Array.isArray(driverLoc) && driverLoc.length === 2
@@ -199,7 +212,7 @@ export default function HomeScreen({ onOpenSubscription, onAddPlace }) {
             payment={payment}
             tripStatus={tripStatus}
             onComplete={reset}
-            onCancel={reset}
+            onCancel={onCancelActive}
           />
         )}
       </KeyboardAvoidingView>

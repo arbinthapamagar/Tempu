@@ -52,29 +52,41 @@ export default function useDriverFlow(initialOnline = false) {
     }
     let cancelled = false;
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setError('Location permission is required to go online.');
-        return;
-      }
-      const first = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      if (cancelled) return;
-      const c = { lat: first.coords.latitude, lng: first.coords.longitude };
-      coordsRef.current = c;
-      setCoords(c);
-      userApi.updateDriverLocation(c).catch(() => {});
-
-      watchRef.current = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.Balanced, distanceInterval: 30, timeInterval: 8000 },
-        (loc) => {
-          const next = { lat: loc.coords.latitude, lng: loc.coords.longitude };
-          coordsRef.current = next;
-          setCoords(next);
-          userApi.updateDriverLocation(next).catch(() => {});
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (cancelled) return;
+        if (status !== 'granted') {
+          setError('Location permission is required to go online.');
+          return;
         }
-      );
+        const first = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        if (cancelled) return;
+        const c = { lat: first.coords.latitude, lng: first.coords.longitude };
+        coordsRef.current = c;
+        setCoords(c);
+        userApi.updateDriverLocation(c).catch(() => {});
+
+        const sub = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.Balanced, distanceInterval: 30, timeInterval: 8000 },
+          (loc) => {
+            const next = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+            coordsRef.current = next;
+            setCoords(next);
+            userApi.updateDriverLocation(next).catch(() => {});
+          }
+        );
+        // Went offline / unmounted while the watcher was starting: cleanup
+        // already ran, so stop it here or it keeps pushing location.
+        if (cancelled) {
+          sub.remove();
+          return;
+        }
+        watchRef.current = sub;
+      } catch {
+        if (!cancelled) setError('Could not get your location. Turn on location services.');
+      }
     })();
     return () => {
       cancelled = true;
@@ -108,8 +120,8 @@ export default function useDriverFlow(initialOnline = false) {
     let stop = false;
     const poll = async () => {
       const c = coordsRef.current;
-      if (!c) return;
       try {
+        if (!c) return; // no GPS fix yet; finally still clears the spinner
         const res = await userApi.getNearbyTrips({ longitude: c.lng, latitude: c.lat });
         if (!stop) {
           setNearbyTrips(res.data || []);
@@ -128,7 +140,10 @@ export default function useDriverFlow(initialOnline = false) {
       stop = true;
       clearInterval(id);
     };
-  }, [online, activeTripId, coords]);
+    // Only restart when the first GPS fix arrives, not on every fix (that
+    // rebuilt the interval and flashed the spinner each time).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [online, activeTripId, !!coords]);
 
   // Detect an accepted bid → promote it to the active trip
   useEffect(() => {
@@ -206,7 +221,12 @@ export default function useDriverFlow(initialOnline = false) {
     setAdvancing(true);
     try {
       const res = await tripApi.updateStatus(activeTrip._id, next);
-      setActiveTrip(res.data);
+      // The PUT response isn't populated: merge so rider name / phone stay.
+      setActiveTrip((prev) => ({
+        ...prev,
+        ...res.data,
+        userId: prev?.userId && typeof prev.userId === 'object' ? prev.userId : res.data?.userId,
+      }));
     } catch (err) {
       setError(err.message || 'Could not update trip.');
       throw err;

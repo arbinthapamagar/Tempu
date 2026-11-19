@@ -192,8 +192,9 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
       .catch(() => {});
     userApi.getNotifications(1)
       .then((r) => {
+        // Prefer the server's total; page 1 alone undercounts past 30.
         const items = r.data?.notifications || r.data || [];
-        setUnread(items.filter((n) => !n.isRead).length);
+        setUnread(r.data?.unreadCount ?? items.filter((n) => !n.isRead).length);
       })
       .catch(() => {});
     userApi.getMyDriverProfile()
@@ -224,6 +225,11 @@ export default function DriverShell({ initialOnline, onSwitchToPassenger, onSign
 
   // While driving an active trip, lock the tabs to the Drive screen.
   const drivingLocked = !!flow.activeTrip && flow.activeTrip.status !== 'completed';
+  // The tab bar only *highlights* Drive while locked; also switch the body,
+  // or a driver who was on Earnings when the rider accepted is stuck there.
+  useEffect(() => {
+    if (drivingLocked) setTab('home');
+  }, [drivingLocked]);
 
   // Hardware back inside driver mode: close what's on top, then fall back to
   // the Drive tab. Unhandled presses bubble to AppShell's exit confirmation.

@@ -57,6 +57,30 @@ export default function useRideFlow() {
   const pollRef = useRef(null);
   const timeoutRef = useRef(null);
   const tripStatusPollRef = useRef(null);
+  // Live trip (populated driver with phone + currentLocation) from the status
+  // poll — the accepted-bid snapshot carries neither.
+  const [activeTrip, setActiveTrip] = useState(null);
+  // Bid acceptance in flight: the 3-min expiry must not cancel underneath it.
+  const acceptingRef = useRef(false);
+  const expiredDuringAcceptRef = useRef(false);
+  const expireRef = useRef(null);
+
+  // Coordinates belong to the address they were picked with. Changing the
+  // address text (typing, a saved place) drops them so a trip is never
+  // created with one place's name and another place's coordinates; the
+  // request then geocodes the new text instead.
+  const pickupRef = useRef('');
+  const destRef = useRef('');
+  const setPickupText = useCallback((text) => {
+    if (text !== pickupRef.current) setPickupCoords(null);
+    pickupRef.current = text;
+    setPickup(text);
+  }, []);
+  const setDestinationText = useCallback((text) => {
+    if (text !== destRef.current) setDestCoords(null);
+    destRef.current = text;
+    setDestination(text);
+  }, []);
 
   // Pre-fill pickup from GPS on mount
   useEffect(() => {
@@ -65,6 +89,7 @@ export default function useRideFlow() {
       try {
         const pos = await resolveCurrentPosition();
         if (!cancelled && pos) {
+          pickupRef.current = pos.address || '';
           setPickup(pos.address || '');
           setPickupCoords(pos.coords);
         }
@@ -122,12 +147,21 @@ export default function useRideFlow() {
     // request is exhausted: stop polling, cancel the trip server-side, and stay
     // on the bidding step so BiddingSheet shows "No drivers found" (its own
     // countdown hits 0 at the same time). The rider taps back to try again.
-    timeoutRef.current = setTimeout(() => {
+    const expire = () => {
       clearInterval(pollRef.current);
       setBiddingTimedOut(true);
       if (tripId) tripApi.cancel(tripId).catch(() => {});
       setTripId(null);
       setBids([]);
+    };
+    expireRef.current = expire;
+    timeoutRef.current = setTimeout(() => {
+      // An accept is in flight: let it finish; acceptBid expires on failure.
+      if (acceptingRef.current) {
+        expiredDuringAcceptRef.current = true;
+        return;
+      }
+      expire();
     }, 3 * 60 * 1000);
 
     return () => {
@@ -152,6 +186,7 @@ export default function useRideFlow() {
     const poll = async () => {
       try {
         const res = await tripApi.getById(tripId);
+        if (res.data) setActiveTrip(res.data);
         const status = res.data?.status;
         if (status) setTripStatus(status);
         if (status === 'cancelled') {
@@ -171,6 +206,7 @@ export default function useRideFlow() {
 
   const reset = useCallback(() => {
     setStep('home');
+    destRef.current = '';
     setDestination('');
     setDestCoords(null);
     setVehicleId('tuktuk');
@@ -178,6 +214,7 @@ export default function useRideFlow() {
     setAcceptedBid(null);
     setTripStatus('arriving');
     setTripId(null);
+    setActiveTrip(null);
     setBids([]);
     setTripError('');
     setBiddingTimedOut(false);
@@ -198,6 +235,14 @@ export default function useRideFlow() {
       setStep('options');
     } else if (step === 'active') reset();
   }, [step, tripId, reset]);
+
+  // Rider cancels an accepted / arriving trip. Must reach the server, or the
+  // driver keeps heading to the pickup and the rider's next booking is
+  // rejected as "already have an active trip". Throws so the UI can tell.
+  const cancelActive = useCallback(async () => {
+    if (tripId) await tripApi.cancel(tripId);
+    reset();
+  }, [tripId, reset]);
 
   const requestRide = useCallback(async () => {
     if (!destination.trim()) return;
@@ -250,13 +295,22 @@ export default function useRideFlow() {
   }, [destination, offeredPrice, pickup, pickupCoords, destCoords, vehicleId, payment]);
 
   const acceptBid = useCallback(async (bid) => {
+    if (acceptingRef.current) return; // double tap
+    acceptingRef.current = true;
+    expiredDuringAcceptRef.current = false;
     try {
       await bidApi.accept(bid._id);
+      clearTimeout(timeoutRef.current);
+      clearInterval(pollRef.current);
       setAcceptedBid(bid);
       setStep('active');
-      setTripStatus('arriving');
+      setTripStatus('accepted');
     } catch (err) {
       setTripError(err.message || 'Failed to accept bid.');
+      if (expiredDuringAcceptRef.current) expireRef.current?.();
+    } finally {
+      acceptingRef.current = false;
+      expiredDuringAcceptRef.current = false;
     }
   }, []);
 
@@ -264,11 +318,11 @@ export default function useRideFlow() {
     step,
     setStep,
     pickup,
-    setPickup,
+    setPickup: setPickupText,
     pickupCoords,
     setPickupCoords,
     destination,
-    setDestination,
+    setDestination: setDestinationText,
     destCoords,
     setDestCoords,
     vehicleId,
@@ -278,6 +332,7 @@ export default function useRideFlow() {
     payment,
     setPayment,
     acceptedBid,
+    activeTrip,
     tripStatus,
     setTripStatus,
     locating,
@@ -289,6 +344,7 @@ export default function useRideFlow() {
     biddingTimedOut,
     goBack,
     reset,
+    cancelActive,
     requestRide,
     acceptBid,
   };

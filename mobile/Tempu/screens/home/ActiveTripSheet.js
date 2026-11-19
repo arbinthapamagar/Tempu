@@ -14,6 +14,7 @@ import { colors, radius, shadow, spacing, type } from '../../theme';
 import { PAYMENT_METHODS } from './constants';
 
 const STATUS_LABEL = {
+  accepted: 'Driver on the way',
   arriving: 'Driver on the way',
   started: 'On the trip',
   completed: 'Trip complete',
@@ -87,7 +88,7 @@ export default function ActiveTripSheet({
             <View style={styles.etaPill}>
               <Ionicons name="time-outline" size={13} color={colors.primary} />
               <Text style={styles.etaPillText}>
-                {tripStatus === 'arriving'
+                {tripStatus === 'arriving' || tripStatus === 'accepted'
                   ? `Arriving in ${driver.eta} min`
                   : tripStatus === 'started'
                   ? 'On the trip'

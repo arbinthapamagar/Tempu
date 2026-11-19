@@ -38,6 +38,8 @@ function CallScreen({ ticketId }, ref) {
   const localStreamRef = useRef(null);
   const pendingCandidates = useRef([]);
   const isCallerRef = useRef(false);
+  const statusRef = useRef('idle'); // read by the unmount cleanup
+  statusRef.current = status;
 
   const startRing = () => { Vibration.vibrate([0, 1000, 1500], true); };
   const stopRing = () => { Vibration.cancel(); };
@@ -59,7 +61,15 @@ function CallScreen({ ticketId }, ref) {
     });
     pc.addEventListener('track', (e) => { if (e.streams?.[0]) setRemoteUrl(e.streams[0].toURL()); });
     pc.addEventListener('connectionstatechange', () => {
-      if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) endLocal();
+      // 'disconnected' is often a transient blip that ICE recovers from —
+      // only give up on 'failed', and tell the other side so it doesn't
+      // stay "connected" to nobody.
+      if (pc.connectionState === 'failed') {
+        socketRef.current?.emit('call:end', { room: ticketId });
+        endLocal();
+      } else if (pc.connectionState === 'closed') {
+        endLocal();
+      }
     });
     pcRef.current = pc;
     return pc;
@@ -145,7 +155,15 @@ function CallScreen({ ticketId }, ref) {
   const acceptCall = async () => {
     isCallerRef.current = false;
     stopRing();
-    await getMedia(media);
+    try {
+      await getMedia(media);
+    } catch (e) {
+      // e.g. camera/mic permission denied — reject so the caller stops ringing.
+      socketRef.current?.emit('call:reject', { room: ticketId });
+      endLocal();
+      Alert.alert('Could not answer', e?.message || 'Allow camera & microphone access and try again.');
+      return;
+    }
     socketRef.current?.emit('call:accept', { room: ticketId });
     setStatus('connected');
   };
@@ -166,8 +184,12 @@ function CallScreen({ ticketId }, ref) {
 
   useEffect(() => {
     if (!ticketId || !webrtcAvailable) return undefined;
-    const { accessToken } = tokenStore.get();
-    const socket = io(SOCKET_URL, { auth: { token: accessToken, role: 'user' }, transports: ['websocket'] });
+    // auth as a callback: re-read on every (re)connect so a refreshed access
+    // token is used instead of the one captured at mount.
+    const socket = io(SOCKET_URL, {
+      auth: (cb) => cb({ token: tokenStore.get().accessToken, role: 'user' }),
+      transports: ['websocket'],
+    });
     socketRef.current = socket;
 
     socket.on('connect', () => socket.emit('call:join', { room: ticketId }));
@@ -175,9 +197,21 @@ function CallScreen({ ticketId }, ref) {
     socket.on('call:accepted', () => { stopRing(); if (isCallerRef.current) createOffer(); });
     socket.on('call:rejected', () => endLocal());
     socket.on('call:ended', () => endLocal());
-    socket.on('call:signal', ({ data }) => handleSignal(data));
+    socket.on('call:signal', ({ data }) => {
+      handleSignal(data).catch(() => {
+        socket.emit('call:end', { room: ticketId });
+        endLocal();
+      });
+    });
 
-    return () => { socket.emit('call:leave', { room: ticketId }); socket.disconnect(); };
+    return () => {
+      // Leaving the thread mid-call / while ringing: hang up properly —
+      // release camera + mic, stop the vibration, and tell the agent.
+      if (statusRef.current !== 'idle') socket.emit('call:end', { room: ticketId });
+      endLocal();
+      socket.emit('call:leave', { room: ticketId });
+      socket.disconnect();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId]);
 

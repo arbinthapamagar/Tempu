@@ -34,19 +34,31 @@ export default function Map({ step, pickupCoords, destCoords, driverCoords }) {
   // Track the user's live location; center on them until a destination is set.
   useEffect(() => {
     let sub;
+    let cancelled = false;
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
-      const first = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const c = { latitude: first.coords.latitude, longitude: first.coords.longitude };
-      setCoords(c);
-      if (!destCoords) mapRef.current?.animateToRegion({ ...c, ...ZOOMED }, 800);
-      sub = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.Balanced, distanceInterval: 10, timeInterval: 4000 },
-        (loc) => setCoords({ latitude: loc.coords.latitude, longitude: loc.coords.longitude }),
-      );
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted' || cancelled) return;
+        const first = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        if (cancelled) return;
+        const c = { latitude: first.coords.latitude, longitude: first.coords.longitude };
+        setCoords(c);
+        if (!destCoords) mapRef.current?.animateToRegion({ ...c, ...ZOOMED }, 800);
+        const s = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.Balanced, distanceInterval: 10, timeInterval: 4000 },
+          (loc) => setCoords({ latitude: loc.coords.latitude, longitude: loc.coords.longitude }),
+        );
+        // Unmounted while the watcher was starting — don't leak it.
+        if (cancelled) s.remove();
+        else sub = s;
+      } catch {
+        // location services off — map just won't follow the user
+      }
     })();
-    return () => sub?.remove?.();
+    return () => {
+      cancelled = true;
+      sub?.remove?.();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
