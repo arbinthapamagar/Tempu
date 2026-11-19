@@ -211,6 +211,7 @@ export default function HomeScreen({ onOpenSubscription, onAddPlace }) {
         {step === 'active' && acceptedBid && acceptedDriver && (
           <ActiveTripSheet
             driver={acceptedDriver}
+            pickup={pickup}
             bid={acceptedBid}
             destination={destination}
             payment={payment}

@@ -37,6 +37,7 @@ function DetailRow({ label, value, bold, last }) {
 
 export default function ActiveTripSheet({
   driver,
+  pickup,
   bid,
   destination,
   payment,
@@ -139,7 +140,7 @@ export default function ActiveTripSheet({
               <View style={styles.journeyStop}>
                 <Text style={styles.journeyLabel}>Pickup</Text>
                 <Text style={styles.journeyValue} numberOfLines={1}>
-                  Current location
+                  {pickup || 'Current location'}
                 </Text>
               </View>
               <View style={styles.journeyStopLast}>
