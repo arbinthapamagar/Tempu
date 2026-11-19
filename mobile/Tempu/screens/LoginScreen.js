@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -16,7 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/type';
 
-export default function LoginScreen({ onGoToRegister, onContact }) {
+export default function LoginScreen({ onGoToRegister, onContact, onForgot }) {
   const { login } = useAuth();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -116,13 +115,7 @@ export default function LoginScreen({ onGoToRegister, onContact }) {
               <Text style={styles.label}>PASSWORD</Text>
               <Pressable
                 hitSlop={8}
-                onPress={() =>
-                  Alert.alert(
-                    'Forgot Password',
-                    'Enter your registered phone number. An OTP will be sent to your email.',
-                    [{ text: 'OK' }],
-                  )
-                }
+                onPress={() => onForgot?.(phone.trim())}
               >
                 <Text style={styles.forgot}>Forgot password?</Text>
               </Pressable>

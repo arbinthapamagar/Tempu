@@ -23,6 +23,7 @@ import DriverVehicleScreen from './screens/DriverVehicleScreen';
 import HomeScreen from './screens/home';
 import InboxScreen from './screens/InboxScreen';
 import LoginScreen from './screens/LoginScreen';
+import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import OtpScreen from './screens/OtpScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import RegisterScreen from './screens/RegisterScreen';
@@ -54,6 +55,7 @@ const TAB_TITLES = {
 function AppShell() {
   const { user, loading } = useAuth();
   const [authScreen, setAuthScreen] = useState('role-select');
+  const [forgotPhone, setForgotPhone] = useState(''); // carried from Login
   const [role, setRole] = useState('passenger'); // 'passenger' | 'driver'
   const [pendingPhone, setPendingPhone] = useState('');
   const [tab, setTab] = useState('home');
@@ -144,6 +146,7 @@ function AppShell() {
   useBackHandler(() => {
     if (!user) {
       if (authScreen === 'otp') { setAuthScreen('register'); return true; }
+      if (authScreen === 'forgot') { setAuthScreen('login'); return true; }
       if (authScreen !== 'role-select') { setAuthScreen('role-select'); return true; }
       return confirmExit();
     }
@@ -205,6 +208,15 @@ function AppShell() {
           <LoginScreen
             onGoToRegister={() => setAuthScreen('role-select')}
             onContact={() => setAuthScreen('contact')}
+            onForgot={(phone) => { setForgotPhone(phone || ''); setAuthScreen('forgot'); }}
+          />
+        )}
+
+        {authScreen === 'forgot' && (
+          <ForgotPasswordScreen
+            initialPhone={forgotPhone}
+            onBack={() => setAuthScreen('login')}
+            onDone={() => setAuthScreen('login')}
           />
         )}
 
