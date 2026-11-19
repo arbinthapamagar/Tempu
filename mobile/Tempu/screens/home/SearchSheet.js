@@ -358,7 +358,6 @@ const styles = StyleSheet.create({
 
   sectionLabel: {
     fontSize: 11, fontFamily: fonts.bodyBold, color: colors.textMuted,
-    textTransform: 'uppercase', letterSpacing: 0.8,
     marginTop: 16, marginBottom: 4,
   },
 

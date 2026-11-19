@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   bubble: { borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm, maxWidth: '85%' },
   bubbleMine: { backgroundColor: colors.primary, alignSelf: 'flex-end' },
   bubbleAdmin: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignSelf: 'flex-start' },
-  bubbleSender: { ...type.micro, color: colors.textMuted, marginBottom: 2, fontFamily: fonts.mono },
+  bubbleSender: { ...type.micro, color: colors.textMuted, marginBottom: 2 },
   bubbleText: { ...type.body, color: colors.text },
 
   reopenBar: {

@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   },
   sosSend: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    alignSelf: 'stretch', height: 52, borderRadius: radius.pill, backgroundColor: colors.danger,
+    alignSelf: 'stretch', height: 52, borderRadius: radius.md, backgroundColor: colors.danger,
     marginTop: spacing.lg,
   },
   sosSendText: { color: '#fff', ...type.bodyBold, fontSize: 16 },

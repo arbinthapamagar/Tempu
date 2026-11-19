@@ -1,6 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect } from 'react';
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,10 +17,11 @@ import { fonts } from '../../theme/type';
 const MIN_FARE = 50;
 const FARE_STEP = 20;
 
-const VEHICLE_ICON = {
-  tuktuk: 'rickshaw',
-  scooter: 'moped',
-  tuktuk_delivery: 'package-variant-closed',
+// Same photos as the Home service cards, so a ride looks the same everywhere.
+const VEHICLE_PHOTO = {
+  tuktuk: require('../../assets/ev-tuktuk.png'),
+  scooter: require('../../assets/ev-scooter.png'),
+  tuktuk_delivery: require('../../assets/ev-delivery.png'),
 };
 
 export default function OptionsSheet({
@@ -99,7 +101,7 @@ export default function OptionsSheet({
             const current = Number(offeredPrice) || r.baseFare;
             const bump = (delta) =>
               setOfferedPrice(String(Math.max(floor, current + delta)));
-            const iconName = VEHICLE_ICON[r.id] || 'car';
+            const photo = VEHICLE_PHOTO[r.id];
             return (
               <View
                 key={r.id}
@@ -109,14 +111,12 @@ export default function OptionsSheet({
                   onPress={() => selectVehicle(r.id, r.baseFare)}
                   style={styles.rideRow}
                 >
-                  <View
-                    style={[styles.rideArt, selected && styles.rideArtSelected]}
-                  >
-                    <MaterialCommunityIcons
-                      name={iconName}
-                      size={30}
-                      color={selected ? '#ffffff' : colors.primary}
-                    />
+                  <View style={styles.rideArt}>
+                    {photo ? (
+                      <Image source={photo} style={styles.ridePhoto} resizeMode="contain" />
+                    ) : (
+                      <MaterialCommunityIcons name="car" size={30} color={colors.primary} />
+                    )}
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.rideName, selected && styles.textOnDark]}>
@@ -137,7 +137,7 @@ export default function OptionsSheet({
                       <Text
                         style={[styles.recommended, selected && styles.recommendedOnDark]}
                       >
-                        RECOMMENDED
+                        Suggested
                       </Text>
                     )}
                   </View>
@@ -149,7 +149,7 @@ export default function OptionsSheet({
                       <Ionicons name="remove" size={20} color="#ffffff" />
                     </Pressable>
                     <View style={styles.fareCenter}>
-                      <Text style={styles.fareLabel}>YOUR OFFER</Text>
+                      <Text style={styles.fareLabel}>Your offer</Text>
                       <Text style={styles.fareValue}>Rs {current}</Text>
                     </View>
                     <Pressable style={styles.fareBtn} onPress={() => bump(FARE_STEP)} hitSlop={4}>
@@ -166,7 +166,7 @@ export default function OptionsSheet({
         <View style={styles.payBar}>
           <View style={styles.payLeft}>
             <Ionicons name="wallet-outline" size={20} color={colors.textMuted} />
-            <Text style={styles.payText}>Cash Payment</Text>
+            <Text style={styles.payText}>Pay in cash</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
         </View>
@@ -195,9 +195,8 @@ export default function OptionsSheet({
         <Text style={styles.ctaText}>
           {loading
             ? 'Creating trip…'
-            : `Request ${vehicle?.name} · Rs ${priceNum || suggested}`}
+            : `Request ${vehicle?.name} for Rs ${priceNum || suggested}`}
         </Text>
-        {!loading && <Ionicons name="arrow-forward" size={20} color="#ffffff" />}
       </Pressable>
     </Sheet>
   );
@@ -214,7 +213,7 @@ const styles = StyleSheet.create({
   avgChip: {
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: 6,
     backgroundColor: colors.surfaceMuted,
   },
   avgChipText: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted },
@@ -226,7 +225,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: colors.surfaceMuted,
-    borderRadius: 999,
+    borderRadius: 12,
   },
   routeText: { flex: 1, fontFamily: fonts.body, fontSize: 13, color: colors.text },
   routeTextMissing: { color: colors.danger, fontStyle: 'italic' },
@@ -241,7 +240,7 @@ const styles = StyleSheet.create({
   rideList: { gap: 12, marginTop: 20 },
   rideCard: {
     backgroundColor: colors.surfaceMuted,
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
@@ -249,11 +248,6 @@ const styles = StyleSheet.create({
   rideCardSelected: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 14,
-    elevation: 6,
   },
   rideRow: {
     flexDirection: 'row',
@@ -262,22 +256,21 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   rideArt: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
+    width: 64,
+    height: 52,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rideArtSelected: { backgroundColor: 'rgba(255,255,255,0.1)' },
+  ridePhoto: { width: 58, height: 46 },
   rideName: { fontFamily: fonts.bodyBold, fontSize: 18, color: colors.text },
   rideNote: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted, marginTop: 2 },
   rideRight: { alignItems: 'flex-end' },
-  ridePrice: { fontFamily: fonts.monoSemibold, fontSize: 20, color: colors.text },
+  ridePrice: { fontFamily: fonts.bodyBold, fontSize: 18, color: colors.text },
   recommended: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 0.4,
+    fontFamily: fonts.bodySemibold,
+    fontSize: 12,
     color: colors.textMuted,
     marginTop: 2,
   },
@@ -308,13 +301,12 @@ const styles = StyleSheet.create({
   },
   fareCenter: { alignItems: 'center' },
   fareLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 0.6,
+    fontFamily: fonts.bodySemibold,
+    fontSize: 12,
     color: 'rgba(255,255,255,0.7)',
   },
   fareValue: {
-    fontFamily: fonts.monoSemibold,
+    fontFamily: fonts.bodyBold,
     fontSize: 22,
     color: '#ffffff',
     marginTop: 2,
@@ -344,14 +336,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     height: 60,
-    borderRadius: 999,
+    borderRadius: 12,
     backgroundColor: colors.primary,
     marginTop: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 20,
-    elevation: 5,
   },
   ctaPressed: { backgroundColor: colors.primaryDark, transform: [{ scale: 0.98 }] },
   ctaDisabled: { opacity: 0.5 },

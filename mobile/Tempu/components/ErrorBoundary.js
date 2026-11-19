@@ -37,6 +37,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '700', color: '#000000' },
   box: { maxHeight: 200, backgroundColor: '#f4f4f4', borderRadius: 12, padding: 12 },
   msg: { fontFamily: 'monospace', fontSize: 12, color: '#b00020' },
-  btn: { backgroundColor: '#000000', borderRadius: 999, paddingVertical: 14, alignItems: 'center' },
+  btn: { backgroundColor: '#000000', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   btnText: { color: '#ffffff', fontWeight: '700', fontSize: 16 },
 });

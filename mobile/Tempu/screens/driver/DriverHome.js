@@ -138,7 +138,7 @@ function ActiveTrip({ trip, advancing, onAdvance, onFinish }) {
     <ScrollView contentContainerStyle={styles.activeWrap}>
       <View style={styles.statusPill}>
         <Text style={styles.statusPillText}>
-          {completed ? 'TRIP COMPLETED' : trip.status.toUpperCase()}
+          {completed ? 'Trip completed' : trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}
         </Text>
       </View>
 
@@ -378,13 +378,6 @@ export default function DriverHome({ flow, vehicleType, subscriptionDriver }) {
             ) : (
               <View style={styles.carImg} />
             )}
-            {subscriptionDriver && (
-              <Image
-                source={require('../../assets/subscription.png')}
-                style={styles.subImg}
-                resizeMode="contain"
-              />
-            )}
             <Text style={styles.emptyTitle}>You're offline</Text>
             <Text style={styles.emptySub}>
               Go online to start receiving nearby ride requests.
@@ -455,7 +448,7 @@ const styles = StyleSheet.create({
   hi: { ...type.bodyBold, color: colors.text, textAlign: 'center' },
   vehiclePill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: colors.primarySoft, borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft, borderRadius: 6,
     paddingHorizontal: 10, paddingVertical: 3,
   },
   vehicleText: { ...type.caption, color: colors.primary, fontFamily: fonts.bodyBold, textTransform: 'capitalize' },
@@ -567,7 +560,7 @@ const styles = StyleSheet.create({
   activeWrap: { padding: spacing.xl, paddingBottom: spacing.xxl },
   statusPill: {
     alignSelf: 'flex-start', backgroundColor: colors.primarySoft,
-    paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.pill,
+    paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: 6,
     marginBottom: spacing.lg,
   },
   statusPillText: { ...type.caption, color: colors.primaryDark, fontFamily: fonts.bodyBold, letterSpacing: 0.5 },

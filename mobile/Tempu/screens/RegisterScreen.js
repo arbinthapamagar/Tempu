@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   genderChip: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: colors.primary,
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
   },

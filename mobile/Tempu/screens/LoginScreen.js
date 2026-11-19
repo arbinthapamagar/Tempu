@@ -74,7 +74,7 @@ export default function LoginScreen({ onGoToRegister, onContact, onForgot }) {
         <View style={styles.hero}>
           <Text style={styles.welcome}>Welcome back</Text>
           <Text style={styles.subtitle}>
-            Enter your details to access your account and start your journey.
+            Log in with your phone number and password.
           </Text>
         </View>
 
@@ -82,7 +82,7 @@ export default function LoginScreen({ onGoToRegister, onContact, onForgot }) {
         <View style={styles.form}>
           {/* Phone */}
           <View style={styles.field}>
-            <Text style={styles.label}>PHONE NUMBER</Text>
+            <Text style={styles.label}>Phone number</Text>
             <View
               style={[
                 styles.inputBox,
@@ -112,7 +112,7 @@ export default function LoginScreen({ onGoToRegister, onContact, onForgot }) {
           {/* Password */}
           <View style={styles.field}>
             <View style={styles.labelRow}>
-              <Text style={styles.label}>PASSWORD</Text>
+              <Text style={styles.label}>Password</Text>
               <Pressable
                 hitSlop={8}
                 onPress={() => onForgot?.(phone.trim())}
@@ -131,7 +131,7 @@ export default function LoginScreen({ onGoToRegister, onContact, onForgot }) {
                 onChangeText={setPassword}
                 onFocus={() => setFocused('password')}
                 onBlur={() => setFocused(null)}
-                placeholder="••••••••"
+                placeholder="Your password"
                 placeholderTextColor={colors.textFaint}
                 secureTextEntry={!showPassword}
                 style={[styles.input, { paddingLeft: 0 }]}
@@ -167,13 +167,6 @@ export default function LoginScreen({ onGoToRegister, onContact, onForgot }) {
               {submitting ? 'Logging in…' : 'Log in'}
             </Text>
           </Pressable>
-
-          {/* OR divider */}
-          <View style={styles.divider}>
-            <View style={styles.line} />
-            <Text style={styles.orText}>OR</Text>
-            <View style={styles.line} />
-          </View>
 
           {/* Create account */}
           <View style={styles.createRow}>
@@ -251,9 +244,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   label: {
-    fontFamily: fonts.mono,
+    fontFamily: fonts.bodySemibold,
     fontSize: 12,
-    letterSpacing: 0.6,
     color: colors.textMuted,
   },
   forgot: {
@@ -268,7 +260,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
+    borderRadius: 12,
     paddingHorizontal: 16,
   },
   inputBoxFocused: {
@@ -305,16 +297,9 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: colors.primary,
     paddingVertical: 18,
-    borderRadius: 999,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
-    ...{
-      shadowColor: '#000',
-      shadowOpacity: 0.12,
-      shadowOffset: { width: 0, height: 8 },
-      shadowRadius: 24,
-      elevation: 4,
-    },
   },
   primaryButtonPressed: { backgroundColor: colors.primaryDark, transform: [{ scale: 0.98 }] },
   primaryButtonDisabled: { opacity: 0.6 },
@@ -324,15 +309,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 
-  divider: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  line: { flex: 1, height: 1, backgroundColor: colors.border },
-  orText: {
-    fontFamily: fonts.mono,
-    fontSize: 13,
-    color: colors.textMuted,
-  },
 
-  createRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  createRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 24 },
   footerText: { fontFamily: fonts.body, color: colors.textMuted, fontSize: 16 },
   footerLink: { fontFamily: fonts.bodyBold, color: colors.primary, fontSize: 16 },
 

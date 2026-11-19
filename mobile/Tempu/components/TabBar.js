@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingVertical: 6,
-    borderRadius: 18,
+    borderRadius: 12,
   },
   // Active tab sits in a soft orange-tinted pill, echoing the mockup nav.
   itemActive: {

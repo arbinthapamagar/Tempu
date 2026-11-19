@@ -20,7 +20,7 @@ const SERVICES = [
   { id: 'rickshaw', label: 'Tempu', img: require('../../assets/ev-tuktuk.png'), bigLabel: true },
   { id: 'scooter', label: 'Scooter', img: require('../../assets/ev-scooter.png'), bigLabel: true },
   { id: 'delivery', label: 'Delivery', img: require('../../assets/ev-delivery.png'), bigLabel: true },
-  { id: 'subscribe', label: 'Subscribe', img: require('../../assets/subscription.png'), bigLabel: true },
+  { id: 'subscribe', label: 'Monthly plan', icon: 'calendar-month-outline', lib: 'mci', bigLabel: true },
 ];
 
 const SAVED_PLACE_ICON = { home: 'home', work: 'briefcase' };
@@ -38,7 +38,7 @@ function ServiceIcon({ icon, lib, color, img, cover }) {
     return (
       <Image
         source={img}
-        style={[{ width: '100%', height: '100%' }, cover && { borderRadius: 18 }]}
+        style={[{ width: '100%', height: '100%' }, cover && { borderRadius: 12 }]}
         resizeMode={cover ? 'cover' : 'contain'}
       />
     );
@@ -100,7 +100,6 @@ export default function HomeView({ onTapSearch, onPickSaved, onSubscribe, onAddP
           <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Services</Text>
           <Pressable hitSlop={8} onPress={onTapSearch} style={styles.seeAllRow}>
             <Text style={styles.seeAll}>See all</Text>
-            <Ionicons name="arrow-forward" size={14} color={colors.primary} />
           </Pressable>
         </View>
         <ScrollView
@@ -155,7 +154,7 @@ export default function HomeView({ onTapSearch, onPickSaved, onSubscribe, onAddP
 
         {/* Saved places */}
         <Text style={[styles.sectionTitle, { marginTop: 14, marginBottom: 8 }]}>
-          Saved Places
+          Saved places
         </Text>
         <View style={styles.savedList}>
           {savedAddresses.slice(0, 3).map((s) => (
@@ -189,33 +188,13 @@ export default function HomeView({ onTapSearch, onPickSaved, onSubscribe, onAddP
           </Pressable>
         </View>
 
-        {/* Promo banner */}
-        <View style={styles.promo}>
-          <View style={styles.promoTextWrap}>
-            <Text style={styles.promoTitle}>Switch to EV and save 20%</Text>
-            <Pressable style={styles.promoBtn} onPress={onTapSearch}>
-              <Text style={styles.promoBtnText}>Eco Now</Text>
-            </Pressable>
-          </View>
-          <MaterialCommunityIcons
-            name="moped-electric"
-            size={96}
-            color="rgba(255,255,255,0.15)"
-            style={styles.promoArt}
-          />
-        </View>
       </ScrollView>
     </View>
   );
 }
 
-const CARD_SHADOW = {
-  shadowColor: '#000',
-  shadowOpacity: 0.05,
-  shadowOffset: { width: 0, height: 8 },
-  shadowRadius: 24,
-  elevation: 2,
-};
+// Cards sit flat on hairline borders; shadows are kept for floating UI only.
+const CARD_SHADOW = {};
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
@@ -272,21 +251,21 @@ const styles = StyleSheet.create({
     gap: 12,
     height: 54,
     backgroundColor: colors.surface,
-    borderRadius: 999,
+    borderRadius: 12,
     paddingLeft: 20,
     paddingRight: 8,
     borderWidth: 1,
     borderColor: colors.border,
     shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 12 },
-    shadowRadius: 40,
-    elevation: 6,
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 2,
   },
   searchPillText: {
     flex: 1,
-    fontFamily: fonts.display,
-    fontSize: 22,
+    fontFamily: fonts.bodyBold,
+    fontSize: 18,
     color: colors.text,
   },
   nowChip: {
@@ -314,19 +293,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: {
-    fontFamily: fonts.display,
-    fontSize: 24,
+    fontFamily: fonts.displayBold,
+    fontSize: 19,
     color: colors.primary,
     paddingHorizontal: 20,
   },
   seeAllRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   seeAll: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.primary },
 
-  serviceRow: { gap: 16, paddingHorizontal: 20, paddingVertical: 8 },
+  serviceRow: { gap: 10, paddingHorizontal: 20, paddingVertical: 8 },
   serviceCard: {
-    width: 134,
+    width: 120,
     backgroundColor: colors.surface,
-    borderRadius: 24,
+    borderRadius: 12,
     padding: 10,
     alignItems: 'center',
     gap: 8,
@@ -348,7 +327,7 @@ const styles = StyleSheet.create({
   // Vehicle photo icons: large and no background bubble.
   serviceIconImage: { width: 106, height: 106, borderRadius: 0, backgroundColor: 'transparent' },
   serviceLabel: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.text },
-  serviceLabelBig: { fontSize: 19 },
+  serviceLabelBig: { fontSize: 15 },
   serviceSub: { fontFamily: fonts.body, fontSize: 11, color: colors.textMuted },
   textOnDark: { color: '#ffffff' },
   subOnDark: { color: 'rgba(255,255,255,0.7)' },
@@ -360,7 +339,7 @@ const styles = StyleSheet.create({
     gap: 16,
     padding: 12,
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -381,7 +360,7 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 2,
     borderStyle: 'dashed',
     borderColor: colors.border,
@@ -396,30 +375,4 @@ const styles = StyleSheet.create({
   },
   addLabel: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.textMuted },
 
-  promo: {
-    marginTop: 32,
-    marginHorizontal: 20,
-    height: 160,
-    borderRadius: 24,
-    backgroundColor: colors.primary,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  promoTextWrap: { maxWidth: '65%', gap: 12, zIndex: 2 },
-  promoTitle: {
-    fontFamily: fonts.display,
-    fontSize: 22,
-    lineHeight: 26,
-    color: '#ffffff',
-  },
-  promoBtn: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
-  },
-  promoBtnText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.primary },
-  promoArt: { position: 'absolute', right: 8, bottom: 4 },
 });

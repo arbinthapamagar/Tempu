@@ -307,7 +307,7 @@ function AppShell() {
               />
             )}
             {tab === 'trips' && <TripsScreen />}
-            {tab === 'subscribe' && <SubscriptionScreen onBack={() => setTab('home')} initialTab={subInitialTab} />}
+            {tab === 'subscribe' && <SubscriptionScreen onBack={() => setTab('home')} initialTab={subInitialTab} hideHeader />}
             {tab === 'inbox' && <InboxScreen />}
             {tab === 'support' && <SupportScreen role="passenger" underAppBar onBack={() => setTab('home')} />}
             {tab === 'account' && (

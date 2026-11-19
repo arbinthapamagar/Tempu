@@ -14,25 +14,21 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/type';
 import { LANGUAGES, useLanguage } from '../context/LanguageContext';
 
-function RoleCard({ image, badge, title, desc, cta, onPress }) {
+// One tappable row per role: photo, what it is, chevron. The whole row is
+// the button, so there's no separate CTA competing with the title.
+function RoleCard({ image, title, desc, onPress, last }) {
   return (
     <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [styles.card, !last && styles.cardDivider, pressed && styles.cardPressed]}
       onPress={onPress}
+      accessibilityRole="button"
     >
-      <View style={styles.cardTop}>
-        <Image source={image} style={styles.vehicle} resizeMode="contain" />
-        {badge ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{badge}</Text>
-          </View>
-        ) : null}
+      <Image source={image} style={styles.vehicle} resizeMode="contain" />
+      <View style={styles.cardText}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        <Text style={styles.cardDesc}>{desc}</Text>
       </View>
-      <Text style={styles.cardTitle}>{title}</Text>
-      <Text style={styles.cardDesc}>{desc}</Text>
-      <View style={styles.cardBtn}>
-        <Text style={styles.cardBtnText}>{cta}</Text>
-      </View>
+      <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
     </Pressable>
   );
 }
@@ -90,16 +86,14 @@ export default function RoleSelectScreen({ onPassenger, onDriver, onSignIn, onCo
             image={require('../assets/ev-scooter.png')}
             title={t('role.rideTitle')}
             desc={t('role.rideDesc')}
-            cta={t('role.rideCta')}
             onPress={onPassenger}
           />
           <RoleCard
             image={require('../assets/ev-tuktuk.png')}
-            badge={t('role.popular')}
             title={t('role.driveTitle')}
             desc={t('role.driveDesc')}
-            cta={t('role.driveCta')}
             onPress={onDriver}
+            last
           />
         </View>
 
@@ -124,13 +118,8 @@ export default function RoleSelectScreen({ onPassenger, onDriver, onSignIn, onCo
   );
 }
 
-const CARD_SHADOW = {
-  shadowColor: '#000',
-  shadowOpacity: 0.05,
-  shadowOffset: { width: 0, height: 8 },
-  shadowRadius: 24,
-  elevation: 3,
-};
+// Cards sit flat on hairline borders; shadows are kept for floating UI only.
+const CARD_SHADOW = {};
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
@@ -163,11 +152,11 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
 
-  hero: { marginBottom: 40 },
+  hero: { marginBottom: 24 },
   title: {
     fontFamily: fonts.displayBold,
-    fontSize: 32,
-    lineHeight: 40,
+    fontSize: 28,
+    lineHeight: 34,
     letterSpacing: -0.3,
     color: colors.primary,
     marginBottom: 8,
@@ -179,63 +168,38 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 
-  cards: { gap: 16 },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    padding: 24,
+  cards: {
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    ...CARD_SHADOW,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
-  cardPressed: { transform: [{ scale: 0.98 }] },
-  cardTop: {
+  card: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 16,
+    paddingLeft: 12,
+    paddingRight: 14,
+    backgroundColor: colors.surface,
   },
-  vehicle: {
-    width: 96,
-    height: 80,
-  },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-  },
-  badgeText: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    letterSpacing: 0.4,
-    color: colors.primary,
-  },
+  cardDivider: { borderBottomWidth: 1, borderBottomColor: colors.divider },
+  cardPressed: { backgroundColor: colors.surfaceMuted },
+  vehicle: { width: 92, height: 64 },
+  cardText: { flex: 1, minWidth: 0 },
   cardTitle: {
-    fontFamily: fonts.display,
-    fontSize: 24,
-    color: colors.primary,
-    marginBottom: 8,
+    fontFamily: fonts.displayBold,
+    fontSize: 18,
+    color: colors.text,
+    marginBottom: 2,
   },
   cardDesc: {
     fontFamily: fonts.body,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 19,
     color: colors.textMuted,
-    marginBottom: 24,
   },
-  cardBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: 16,
-    borderRadius: 999,
-    alignItems: 'center',
-  },
-  cardBtnText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 16,
-    color: '#ffffff',
-  },
-
   footer: {
     marginTop: 40,
     alignItems: 'center',
@@ -253,7 +217,7 @@ const styles = StyleSheet.create({
   },
   langSheet: {
     backgroundColor: '#ffffff',
-    borderRadius: 20,
+    borderRadius: 12,
     padding: 16,
     gap: 4,
   },

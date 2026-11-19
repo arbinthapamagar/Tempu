@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   btn: {
     backgroundColor: colors.primary,
     paddingVertical: 16,
-    borderRadius: 999,
+    borderRadius: 12,
     alignItems: 'center',
     marginBottom: 20,
   },

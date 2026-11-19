@@ -13,7 +13,7 @@ import SupportScreen from './SupportScreen';
 import WalletScreen from './WalletScreen';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { ChevronIcon, StarIcon } from '../components/Icons';
+import { ChevronIcon } from '../components/Icons';
 import MapPicker from '../components/MapPicker';
 import { confirm as hapticConfirm } from '../components/haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +22,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Linking,
   Switch,
   Text,
   View,
@@ -81,8 +82,6 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
   const [driverStatus, setDriverStatus] = useState(null); // null | 'pending' | 'approved' | 'rejected' | 'suspended'
   const [driverLoaded, setDriverLoaded] = useState(false); // false until the driver profile fetch resolves
   const [online, setOnline] = useState(false);
-  const [pushNotifs, setPushNotifs] = useState(true);
-  const [rideReminders, setRideReminders] = useState(true);
   const [avatarUri, setAvatarUri] = useState(user?.avatarUrl || null);
   const [driverOverlay, setDriverOverlay] = useState(null); // null | 'vehicle' | 'pending'
   const [refreshing, setRefreshing] = useState(false);
@@ -350,8 +349,6 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
         }
       >
         <View style={styles.hero}>
-          <View style={styles.heroDecorA} />
-          <View style={styles.heroDecorB} />
 
           <Pressable
             style={styles.avatarWrap}
@@ -377,38 +374,37 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
             )}
           </Pressable>
 
-          <Text style={styles.name}>{profile.name}</Text>
-          <Text style={styles.heroSub}>{profile.email}</Text>
-
-          {isDriver && (
-            <View style={styles.driverBadge}>
-              <Ionicons name="car-sport" size={13} color={colors.primary} />
-              <Text style={styles.driverBadgeText}>Driver</Text>
-            </View>
-          )}
+          <View style={styles.heroText}>
+            <Text style={styles.name} numberOfLines={1}>{profile.name}</Text>
+            <Text style={styles.heroSub} numberOfLines={1}>
+              {[profile.phone, profile.email].filter(Boolean).join('  ·  ')}
+            </Text>
+            {isDriver && (
+              <View style={styles.driverBadge}>
+                <Text style={styles.driverBadgeText}>Driver</Text>
+              </View>
+            )}
+          </View>
         </View>
 
         <View style={styles.statsGrid}>
           <Stat
-            icon={<StarIcon size={18} color={colors.warn} />}
             value={(user?.rating?.average ?? 0).toFixed(2)}
-            label={`${user?.rating?.total ?? 0} ratings`}
+            label="Rating"
           />
           <Stat
-            icon={<Ionicons name="navigate" size={16} color={colors.primary} />}
             value={isDriver ? String(driverProfile?.totalRides ?? 0) : riderTrips == null ? '-' : String(riderTrips)}
             label="Trips"
           />
           <Stat
-            icon={<Ionicons name="wallet" size={16} color={colors.primary} />}
             value={`Rs ${profile.walletBalance.toLocaleString()}`}
             label="Wallet"
             onPress={() => setWalletOpen(true)}
           />
           <Stat
-            icon={<Ionicons name="calendar" size={16} color={colors.textMuted} />}
             value={formatDate(user?.createdAt).split(' ')[2] || '-'}
-            label="Member since"
+            label="Joined"
+            last
           />
         </View>
 
@@ -620,38 +616,9 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
           </>
         )}
 
-        <Section title="Notifications">
-          <View style={styles.toggleRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.toggleLabel}>Push notifications</Text>
-              <Text style={styles.toggleHint}>
-                Updates about your account, rides and offers.
-              </Text>
-            </View>
-            <Switch
-              value={pushNotifs}
-              onValueChange={setPushNotifs}
-              thumbColor="#ffffff"
-              activeThumbColor="#ffffff"
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
-          <View style={styles.toggleRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.toggleLabel}>Ride reminders</Text>
-              <Text style={styles.toggleHint}>
-                Get a heads-up before your scheduled trips.
-              </Text>
-            </View>
-            <Switch
-              value={rideReminders}
-              onValueChange={setRideReminders}
-              thumbColor="#ffffff"
-              activeThumbColor="#ffffff"
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
-        </Section>
+        {/* "Push notifications" / "Ride reminders" switches used to live here.
+            Nothing stored them (no backend setting), so they were removed
+            rather than shown as settings that do nothing. */}
 
         <Section title="Help & safety">
           <View style={styles.safetyRow}>
@@ -693,7 +660,18 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
 
         <Section title="About">
           <Row label="Last login" value={formatDateTime(user?.lastLoginAt)} />
-          <Row label="App version" value="1.0.0 (beta)" last />
+          <Row label="App version" value="1.0.0 (beta)" />
+          {/* Required by the photo's CC BY-SA 4.0 licence. */}
+          <Pressable
+            style={styles.creditRow}
+            onPress={() => Linking.openURL(SAFA_PHOTO_URL).catch(() => {})}
+          >
+            <Text style={styles.creditTitle}>Photo credits</Text>
+            <Text style={styles.creditText}>
+              "Safa Tempo, Kathmandu, Nepal" by (WT-shared) Shoestring at wts wikivoyage,
+              CC BY-SA 4.0. Background removed, plate blurred.
+            </Text>
+          </Pressable>
         </Section>
 
         <Pressable style={styles.signOutBtn} onPress={async () => { await logout(); onSignOut(); }}>
@@ -754,12 +732,12 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
           <SafeAreaView style={styles.pendingRoot}>
             <View style={styles.pendingInner}>
               <View style={styles.pendingIconWrap}>
-                <Text style={styles.pendingIconEmoji}>🎉</Text>
+                <Ionicons name="checkmark" size={36} color={colors.success} />
               </View>
-              <Text style={styles.pendingTitle}>Application submitted!</Text>
+              <Text style={styles.pendingTitle}>Application sent</Text>
               <Text style={styles.pendingSub}>
-                Our team will review your vehicle and licence details within 24 hours.
-                You'll be notified once approved.
+                We'll check your vehicle and licence details, usually within 24 hours,
+                and notify you when it's approved.
               </Text>
               <Pressable style={styles.pendingBtn} onPress={() => setDriverOverlay(null)}>
                 <Text style={styles.pendingBtnText}>Done</Text>
@@ -1295,11 +1273,10 @@ function LinkRow({ label, last, onPress, badge }) {
   );
 }
 
-function Stat({ value, label, icon, onPress }) {
+function Stat({ value, label, onPress, last }) {
   const Wrap = onPress ? Pressable : View;
   return (
-    <Wrap style={styles.statCard} onPress={onPress}>
-      {icon ? <View style={styles.statIcon}>{icon}</View> : null}
+    <Wrap style={[styles.statCard, last && { borderRightWidth: 0 }]} onPress={onPress}>
       <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
         {value}
       </Text>
@@ -1317,7 +1294,12 @@ function Metric({ label, value }) {
   );
 }
 
+const SAFA_PHOTO_URL = 'https://commons.wikimedia.org/wiki/File:Safa_Tempo,_Kathmandu,_Nepal.JPG';
+
 const styles = StyleSheet.create({
+  creditRow: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  creditTitle: { fontSize: 14, fontFamily: fonts.bodySemibold, color: colors.text, marginBottom: 2 },
+  creditText: { fontSize: 12, lineHeight: 17, fontFamily: fonts.body, color: colors.textMuted, textDecorationLine: 'underline' },
   root: { flex: 1, backgroundColor: colors.background },
 
   header: {
@@ -1369,64 +1351,35 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: 12,
     backgroundColor: colors.primarySoft,
   },
   editText: { color: colors.primaryDark, fontSize: 13, fontFamily: fonts.bodyBold },
 
   scroll: { paddingBottom: 40 },
 
+  // Plain header: avatar left, name + phone beside it. No decoration.
   hero: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xxxl,
-    paddingBottom: spacing.xxl,
-    marginHorizontal: 20,
-    marginTop: spacing.xs,
-    borderRadius: radius.xxl,
-    backgroundColor: colors.primarySoft,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-    position: 'relative',
+    gap: spacing.lg,
+    paddingHorizontal: 20,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
   },
-  heroDecorA: {
-    position: 'absolute',
-    top: -40,
-    right: -30,
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(251, 122, 60, 0.12)',
-  },
-  heroDecorB: {
-    position: 'absolute',
-    bottom: -50,
-    left: -20,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(251, 122, 60, 0.08)',
-  },
-  avatarWrap: { position: 'relative', marginBottom: spacing.lg },
+  heroText: { flex: 1, minWidth: 0 },
+  avatarWrap: { position: 'relative' },
   avatarRing: {
-    width: 116,
-    height: 116,
-    borderRadius: 58,
-    backgroundColor: colors.surface,
-    padding: 5,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 14,
-    elevation: 8,
   },
   avatar: {
-    width: 106,
-    height: 106,
-    borderRadius: 53,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1435,47 +1388,45 @@ const styles = StyleSheet.create({
   avatarImage: { width: '100%', height: '100%' },
   avatarText: {
     color: '#ffffff',
-    fontSize: 38,
-    fontFamily: fonts.display,
-    letterSpacing: -1,
+    fontSize: 24,
+    fontFamily: fonts.displayBold,
   },
   cameraBadge: {
     position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    bottom: -2,
+    right: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: colors.text,
-    borderWidth: 3,
-    borderColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
   removeBadge: {
     position: 'absolute',
-    bottom: 2,
-    left: 2,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    bottom: -2,
+    left: -2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: colors.danger,
-    borderWidth: 3,
-    borderColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
   name: {
     color: colors.text,
-    fontSize: 26,
-    fontFamily: fonts.display,
-    letterSpacing: -0.5,
+    fontSize: 22,
+    fontFamily: fonts.displayBold,
   },
   heroSub: {
     color: colors.textMuted,
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: fonts.body,
-    marginTop: 4,
+    marginTop: 2,
   },
   roleRow: {
     flexDirection: 'row',
@@ -1519,7 +1470,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     backgroundColor: colors.surface,
-    borderRadius: 999,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -1535,7 +1486,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: 6,
     borderWidth: 1,
   },
   statusActive: {
@@ -1556,46 +1507,32 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
 
+  // One flat strip of numbers with dividers instead of four icon tiles.
   statsGrid: {
-    marginTop: spacing.lg,
     marginHorizontal: 20,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  statCard: {
-    width: '47%',
-    flexGrow: 1,
-    alignItems: 'center',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.xxl,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
   },
-  statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
+  statCard: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRightWidth: 1,
+    borderRightColor: colors.divider,
   },
   statValue: {
-    color: colors.primary,
-    fontSize: 20,
-    fontFamily: fonts.display,
-    letterSpacing: -0.4,
+    color: colors.text,
+    fontSize: 16,
+    fontFamily: fonts.bodyBold,
   },
   statLabel: {
     color: colors.textMuted,
-    fontSize: 11,
-    marginTop: 3,
-    fontFamily: fonts.bodySemibold,
-    letterSpacing: 0.2,
+    fontSize: 12,
+    marginTop: 2,
+    fontFamily: fonts.body,
   },
 
   section: {
@@ -1603,13 +1540,10 @@ const styles = StyleSheet.create({
     marginTop: 22,
   },
   sectionTitle: {
-    color: colors.textMuted,
-    fontSize: 12,
+    color: colors.text,
+    fontSize: 15,
     fontFamily: fonts.bodyBold,
-    letterSpacing: 0.7,
-    textTransform: 'uppercase',
-    marginBottom: 10,
-    paddingHorizontal: 4,
+    marginBottom: 8,
   },
   sectionHeaderToggle: {
     flexDirection: 'row',
@@ -1620,7 +1554,7 @@ const styles = StyleSheet.create({
   },
   sectionBody: {
     backgroundColor: colors.surface,
-    borderRadius: radius.xxl,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
@@ -1648,7 +1582,7 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 999,
+    borderRadius: 6,
     backgroundColor: colors.surfaceMuted,
   },
   badgeGood: { backgroundColor: colors.surfaceMuted },
@@ -1671,8 +1605,6 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontSize: 12,
     fontFamily: fonts.bodyBold,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
   },
   walletAmount: {
     color: colors.text,
@@ -1684,7 +1616,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     backgroundColor: colors.primary,
-    borderRadius: radius.pill,
+    borderRadius: 12,
   },
   topUpText: { color: '#ffffff', fontSize: 13, fontFamily: fonts.bodyBold },
 
@@ -1702,7 +1634,7 @@ const styles = StyleSheet.create({
   subManage: {
     marginTop: 12,
     paddingVertical: 10,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
@@ -1816,7 +1748,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxl,
     marginHorizontal: 20,
     paddingVertical: spacing.lg,
-    borderRadius: radius.pill,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.dangerSoft,
     backgroundColor: colors.dangerSoft,
@@ -1835,26 +1767,26 @@ const styles = StyleSheet.create({
   themeOptText: { ...type.caption, color: colors.textMuted },
   supportBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: colors.primarySoft, borderRadius: radius.pill, paddingVertical: spacing.lg,
+    backgroundColor: colors.primarySoft, borderRadius: radius.md, paddingVertical: spacing.lg,
   },
   supportBtnText: { color: colors.primary, fontSize: 14, fontFamily: fonts.bodyBold },
   sosBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: colors.danger, borderRadius: radius.pill, paddingVertical: spacing.lg,
+    backgroundColor: colors.danger, borderRadius: radius.md, paddingVertical: spacing.lg,
   },
   sosBtnText: { color: '#fff', fontSize: 14, fontFamily: fonts.bodyBold },
   sosWarn: { ...type.body, color: colors.textMuted, marginBottom: 14 },
   sosNoteInput: { height: 92, paddingTop: 12, textAlignVertical: 'top' },
   sosSendBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: colors.danger, borderRadius: 14, paddingVertical: 14, marginTop: 4,
+    backgroundColor: colors.danger, borderRadius: 12, paddingVertical: 14, marginTop: 4,
   },
 
   linkRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   linkBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 999,
+    borderRadius: 6,
     backgroundColor: colors.surfaceMuted,
   },
   linkBadgeText: { color: colors.textMuted, fontSize: 11, fontFamily: fonts.bodyBold },
@@ -1903,12 +1835,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: fonts.bodyBold,
     marginBottom: 6,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
   },
   formInput: {
     backgroundColor: colors.surfaceMuted,
-    borderRadius: 14,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
@@ -1929,7 +1859,7 @@ const styles = StyleSheet.create({
   primaryBtn: {
     marginTop: 6,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 12,
     backgroundColor: colors.primary,
     alignItems: 'center',
   },
@@ -1937,7 +1867,7 @@ const styles = StyleSheet.create({
   dangerBtn: {
     marginTop: 8,
     paddingVertical: 12,
-    borderRadius: 14,
+    borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.dangerSoft,
@@ -1951,7 +1881,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 12,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -1983,7 +1913,7 @@ const styles = StyleSheet.create({
   docPreview: {
     alignItems: 'center',
     padding: 24,
-    borderRadius: 16,
+    borderRadius: 12,
     backgroundColor: colors.surfaceMuted,
     marginBottom: 14,
     gap: 10,
@@ -2000,7 +1930,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: 6,
     borderWidth: 1,
     marginTop: 6,
   },
@@ -2023,7 +1953,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    borderRadius: 14,
+    borderRadius: 12,
     backgroundColor: colors.surfaceMuted,
     marginBottom: 8,
   },
@@ -2039,11 +1969,12 @@ const styles = StyleSheet.create({
   driverBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     gap: 5,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.border,
@@ -2057,7 +1988,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 14,
     padding: spacing.xl,
-    borderRadius: radius.xxl,
+    borderRadius: radius.md,
     backgroundColor: colors.warnSoft,
     borderWidth: 1.5,
     borderColor: colors.warn,
@@ -2086,7 +2017,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 14,
     padding: spacing.xl,
-    borderRadius: radius.xxl,
+    borderRadius: radius.md,
     backgroundColor: colors.primary,
   },
   switchModeCardAlt: {
@@ -2096,7 +2027,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 14,
     padding: spacing.xl,
-    borderRadius: radius.xxl,
+    borderRadius: radius.md,
     backgroundColor: colors.primarySoft,
     borderWidth: 1.5,
     borderColor: colors.primary,
@@ -2114,7 +2045,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 14,
     padding: spacing.xl,
-    borderRadius: radius.xxl,
+    borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1.5,
     borderColor: colors.border,
@@ -2178,7 +2109,7 @@ const styles = StyleSheet.create({
   pendingBtn: {
     width: '100%',
     paddingVertical: 15,
-    borderRadius: 999,
+    borderRadius: 12,
     backgroundColor: colors.primary,
     alignItems: 'center',
   },

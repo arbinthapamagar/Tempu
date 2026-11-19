@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
   },
   label: { ...type.bodyBold, fontFamily: fonts.bodyBold },
   iconL: {},

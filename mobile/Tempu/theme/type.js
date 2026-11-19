@@ -31,13 +31,10 @@ export const type = {
   small: { fontSize: 13, fontFamily: fonts.body },
   caption: { fontSize: 12, fontFamily: fonts.bodySemibold },
   // Prices / numeric data - JetBrains Mono, matches the design's price-lg / data-label.
-  price: { fontSize: 20, fontFamily: fonts.monoSemibold, letterSpacing: -0.2 },
-  dataLabel: { fontSize: 13, fontFamily: fonts.mono, letterSpacing: 0.4 },
-  micro: { fontSize: 11, fontFamily: fonts.monoSemibold, letterSpacing: 0.4 },
-  eyebrow: {
-    fontSize: 11,
-    fontFamily: fonts.monoSemibold,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-  },
+  price: { fontSize: 20, fontFamily: fonts.bodyBold },
+  dataLabel: { fontSize: 13, fontFamily: fonts.body },
+  micro: { fontSize: 12, fontFamily: fonts.bodySemibold },
+  // Section / field label. Sentence case in the body face — the old
+  // tracked-out mono caps read as template chrome.
+  eyebrow: { fontSize: 13, fontFamily: fonts.bodySemibold },
 };

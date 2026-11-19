@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import {
   Pressable,
   SafeAreaView,
@@ -9,38 +10,42 @@ import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/type';
 
+// Where the application stands. It really is a sequence, so it is shown as
+// one: done / in progress / still to come.
+const STEPS = [
+  { state: 'done', text: 'Account created' },
+  { state: 'active', text: 'Documents under review (usually within 24 hours)' },
+  { state: 'todo', text: 'Approval — we\'ll notify you' },
+];
+
+const STEP_ICON = {
+  done: { name: 'checkmark-circle', color: colors.success },
+  active: { name: 'time', color: colors.warn },
+  todo: { name: 'ellipse-outline', color: colors.textFaint },
+};
+
 export default function DriverPendingScreen() {
   const { logout } = useAuth();
 
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.inner}>
-        <View style={styles.iconWrap}>
-          <Text style={styles.icon}>🎉</Text>
-        </View>
-
-        <Text style={styles.title}>Application submitted!</Text>
+        <Text style={styles.title}>Application sent</Text>
         <Text style={styles.body}>
-          Your driver application has been received. Our team will review your vehicle and license
-          details within 24 hours.
+          We're checking your vehicle and licence details. You can start taking rides once
+          it's approved.
         </Text>
 
         <View style={styles.steps}>
-          {[
-            { emoji: '✅', text: 'Account created' },
-            { emoji: '⏳', text: 'Documents under review', active: true },
-            { emoji: '🔔', text: 'You\'ll be notified once approved' },
-          ].map((s, i) => (
-            <View key={i} style={[styles.step, s.active && styles.stepActive]}>
-              <Text style={styles.stepEmoji}>{s.emoji}</Text>
-              <Text style={[styles.stepText, s.active && styles.stepTextActive]}>{s.text}</Text>
+          {STEPS.map((s, i) => (
+            <View key={s.text} style={[styles.step, i === STEPS.length - 1 && styles.stepLast]}>
+              <Ionicons name={STEP_ICON[s.state].name} size={20} color={STEP_ICON[s.state].color} />
+              <Text style={[styles.stepText, s.state === 'active' && styles.stepTextActive]}>
+                {s.text}
+              </Text>
             </View>
           ))}
         </View>
-
-        <Text style={styles.note}>
-          Once approved, you can log back in and start accepting rides.
-        </Text>
 
         <Pressable style={styles.btn} onPress={logout}>
           <Text style={styles.btnText}>Sign out</Text>
@@ -54,79 +59,52 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   inner: {
     flex: 1,
-    paddingHorizontal: 28,
+    paddingHorizontal: 20,
     paddingTop: 64,
     paddingBottom: 40,
-    alignItems: 'center',
   },
-  iconWrap: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: colors.surfaceMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
-  icon: { fontSize: 40, fontFamily: fonts.body },
 
   title: {
     color: colors.text,
     fontSize: 26,
     fontFamily: fonts.display,
-    marginBottom: 12,
-    textAlign: 'center',
+    marginBottom: 8,
   },
   body: {
     color: colors.textMuted,
     fontSize: 15,
     fontFamily: fonts.body,
     lineHeight: 22,
-    textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
 
   steps: {
-    width: '100%',
-    gap: 10,
-    marginBottom: 28,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    marginBottom: 24,
   },
   step: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
   },
-  stepActive: {
-    backgroundColor: colors.warnSoft,
-    borderColor: colors.warn,
-  },
-  stepEmoji: { fontSize: 20, fontFamily: fonts.body },
-  stepText: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.body },
-  stepTextActive: { color: colors.warn, fontFamily: fonts.bodyBold },
-
-  note: {
-    color: colors.textFaint,
-    fontSize: 13,
-    fontFamily: fonts.body,
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 18,
-  },
+  stepLast: { borderBottomWidth: 0 },
+  stepText: { flex: 1, color: colors.textMuted, fontSize: 14, fontFamily: fonts.body },
+  stepTextActive: { color: colors.text, fontFamily: fonts.bodySemibold },
 
   btn: {
-    width: '100%',
     paddingVertical: 15,
-    borderRadius: 999,
-    borderWidth: 1.5,
+    borderRadius: 12,
+    borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.surface,
     alignItems: 'center',
   },
-  btnText: { color: colors.textMuted, fontSize: 15, fontFamily: fonts.bodySemibold },
+  btnText: { color: colors.text, fontSize: 15, fontFamily: fonts.bodySemibold },
 });

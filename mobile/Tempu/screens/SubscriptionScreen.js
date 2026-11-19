@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -39,7 +39,7 @@ function formatDate(value) {
   });
 }
 
-export default function SubscriptionScreen({ onBack, initialTab = 'active' }) {
+export default function SubscriptionScreen({ onBack, initialTab = 'active', hideHeader }) {
   const [tab, setTab] = useState(initialTab);
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -105,13 +105,17 @@ export default function SubscriptionScreen({ onBack, initialTab = 'active' }) {
 
   return (
     <View style={styles.root}>
-      <View style={styles.header}>
-        <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
-          <View style={styles.backArrow} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Subscriptions</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      {/* As a tab, the app bar already names the screen and the menu is the
+          way out — a second back + title row would just repeat it. */}
+      {!hideHeader && (
+        <View style={styles.header}>
+          <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
+            <View style={styles.backArrow} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Subscriptions</Text>
+          <View style={{ width: 40 }} />
+        </View>
+      )}
 
       <View style={styles.tabs}>
         <Pressable style={[styles.tab, tab === 'active' && styles.tabActive]} onPress={() => setTab('active')}>
@@ -148,7 +152,6 @@ export default function SubscriptionScreen({ onBack, initialTab = 'active' }) {
           )
         ) : (
           <>
-            <Image source={require('../assets/subscription-scene.png')} style={styles.subBanner} resizeMode="cover" />
             {Object.entries(PLAN_INFO).map(([id, plan]) => (
               <PlanCard key={id} plan={{ id, ...plan }} onSubscribe={() => handleSubscribe(id)} />
             ))}
@@ -235,12 +238,8 @@ function ActiveSubscription({ sub, onPause, onResume, onCancel }) {
 }
 
 function PlanCard({ plan, onSubscribe }) {
-  const short = plan.id === 'parent' ? 'PR' : 'BZ';
   return (
     <View style={styles.planCard}>
-      <View style={styles.planBadge}>
-        <Text style={styles.planBadgeText}>{short}</Text>
-      </View>
       <Text style={styles.planName}>{plan.name}</Text>
       <Text style={styles.planTag}>{plan.tagline}</Text>
       <Text style={styles.planPrice}>
@@ -249,7 +248,7 @@ function PlanCard({ plan, onSubscribe }) {
       <View style={styles.featureList}>
         {plan.features.map((f, i) => (
           <View key={i} style={styles.featureRow}>
-            <Text style={styles.featureCheck}>✓</Text>
+            <Ionicons name="checkmark" size={18} color={colors.success} />
             <Text style={styles.featureText}>{f}</Text>
           </View>
         ))}
@@ -285,7 +284,7 @@ const styles = StyleSheet.create({
   headerTitle: { ...type.h2, color: colors.text },
 
   tabs: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
-  tab: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm + 2, borderRadius: radius.pill, backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border },
+  tab: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm + 2, borderRadius: radius.sm, backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border },
   tabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   tabText: { ...type.caption, color: colors.textMuted },
   tabTextActive: { color: '#fff' },
@@ -296,21 +295,21 @@ const styles = StyleSheet.create({
   emptyWrap: { alignItems: 'center', paddingTop: 72, paddingHorizontal: spacing.lg },
   emptyTitle: { ...type.h1, color: colors.text },
   emptySub: { ...type.body, color: colors.textMuted, marginTop: spacing.sm, textAlign: 'center' },
-  browseCta: { marginTop: spacing.xl, paddingHorizontal: spacing.xxl, paddingVertical: spacing.md + 2, backgroundColor: colors.primary, borderRadius: radius.pill },
+  browseCta: { marginTop: spacing.xl, paddingHorizontal: spacing.xxl, paddingVertical: spacing.md + 2, backgroundColor: colors.primary, borderRadius: 12 },
   browseCtaText: { ...type.bodyBold, color: '#fff' },
 
-  heroCard: { backgroundColor: colors.primary, borderRadius: radius.xxl, padding: spacing.xl, marginBottom: spacing.xl, ...shadow.fab },
+  heroCard: { backgroundColor: colors.primary, borderRadius: radius.md, padding: spacing.xl, marginBottom: spacing.xl },
   heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  heroPlanPill: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 1, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.20)' },
+  heroPlanPill: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 1, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.20)' },
   heroPlanPillText: { ...type.eyebrow, color: '#fff' },
-  heroStatus: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2, paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 1, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.20)' },
+  heroStatus: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + 2, paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 1, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.20)' },
   heroStatusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#fff' },
   heroStatusText: { ...type.micro, color: '#fff', textTransform: 'capitalize' },
   heroTitle: { ...type.display, color: '#fff', marginTop: spacing.lg },
   heroTagline: { ...type.body, color: 'rgba(255,255,255,0.82)', marginTop: spacing.xs },
   heroPrice: { color: '#fff', fontSize: 32, fontFamily: type.display.fontFamily, marginTop: spacing.md, letterSpacing: -1 },
   heroPer: { fontSize: 14, fontFamily: type.bodyBold.fontFamily },
-  heroRenewsPill: { alignSelf: 'flex-start', marginTop: spacing.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 2, borderRadius: radius.pill, backgroundColor: 'rgba(0,0,0,0.18)' },
+  heroRenewsPill: { alignSelf: 'flex-start', marginTop: spacing.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.xs + 2, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.18)' },
   heroRenews: { ...type.caption, color: '#fff' },
 
   sectionTitle: { ...type.eyebrow, color: colors.textMuted, marginTop: spacing.xl, marginBottom: spacing.md },
@@ -320,13 +319,13 @@ const styles = StyleSheet.create({
   rowLabel: { ...type.small, color: colors.textMuted },
   rowValue: { ...type.bodyBold, color: colors.text, maxWidth: '60%', textTransform: 'capitalize' },
 
-  pauseBtn: { marginTop: spacing.xxl, paddingVertical: spacing.lg, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceMuted, alignItems: 'center' },
+  pauseBtn: { marginTop: spacing.xxl, paddingVertical: spacing.lg, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceMuted, alignItems: 'center' },
   pauseBtnText: { ...type.bodyBold, color: colors.text },
-  cancelBtn: { marginTop: spacing.md, paddingVertical: spacing.lg, borderRadius: radius.pill, backgroundColor: colors.dangerSoft, alignItems: 'center' },
+  cancelBtn: { marginTop: spacing.md, paddingVertical: spacing.lg, borderRadius: 12, backgroundColor: colors.dangerSoft, alignItems: 'center' },
   cancelBtnText: { ...type.bodyBold, color: colors.danger },
 
-  planCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.xxl, padding: spacing.xl, marginBottom: spacing.lg, ...shadow.card },
-  planBadge: { alignSelf: 'flex-start', paddingHorizontal: spacing.md, height: 30, borderRadius: radius.pill, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
+  planCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.xl, marginBottom: spacing.lg },
+  planBadge: { alignSelf: 'flex-start', paddingHorizontal: spacing.md, height: 30, borderRadius: 6, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
   planBadgeText: { ...type.micro, color: colors.primary },
   planName: { ...type.h1, color: colors.text },
   planTag: { ...type.body, color: colors.textMuted, marginTop: spacing.xs },
@@ -336,6 +335,6 @@ const styles = StyleSheet.create({
   featureRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   featureCheck: { color: colors.primary, fontSize: 12, fontFamily: type.bodyBold.fontFamily, width: 22, height: 22, lineHeight: 22, textAlign: 'center', borderRadius: radius.pill, backgroundColor: colors.primarySoft, overflow: 'hidden' },
   featureText: { ...type.small, color: colors.text, flex: 1 },
-  subscribeBtn: { marginTop: spacing.xl, paddingVertical: spacing.md + 2, borderRadius: radius.pill, backgroundColor: colors.primary, alignItems: 'center' },
+  subscribeBtn: { marginTop: spacing.xl, paddingVertical: spacing.md + 2, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' },
   subscribeBtnText: { ...type.bodyBold, color: '#fff' },
 });
