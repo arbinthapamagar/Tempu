@@ -23,8 +23,11 @@ export const userApi = {
 
   // Wallet & Transactions
   getWallet: () => api.get('/users/wallet'),
-  topUpWallet: ({ amount, method, gatewayRef }) =>
-    api.post('/users/wallet/topup', { amount, method, gatewayRef }),
+  // Gateway top-ups: initiate returns { transactionId, paymentUrl }; the
+  // status call settles it with the gateway and returns the new balance.
+  getPaymentMethods: () => api.get('/users/payment-methods'),
+  initiateWalletTopup: ({ amount, method }) => api.post('/users/wallet/topup/initiate', { amount, method }),
+  getWalletTopup: (id) => api.get(`/users/wallet/topup/${id}`),
   getTransactions: (page = 1, limit = 20) =>
     api.get(`/users/transactions?page=${page}&limit=${limit}`),
 
@@ -121,5 +124,6 @@ export const userApi = {
   requestWithdrawal: (data) => api.post('/users/driver/withdrawals', data),
   getMyWithdrawals: () => api.get('/users/driver/withdrawals'),
   // Top up the prepaid fee balance (standby payment — no real gateway yet).
-  topUpDriverBalance: ({ amount, method }) => api.post('/users/driver/topup', { amount, method }),
+  initiateDriverTopup: ({ amount, method }) => api.post('/users/driver/topup/initiate', { amount, method }),
+  getDriverTopup: (id) => api.get(`/users/driver/topup/${id}`),
 };

@@ -16,6 +16,7 @@ import { Button, Chip, FormField, Sheet } from '../../components/ui';
 import { colors, radius, shadow, spacing, type } from '../../theme';
 import { formatDateInput } from '../../utils/dateInput';
 import { fonts } from '../../theme/type';
+import { PaymentMethodPicker, useGatewayTopup, usePaymentMethods } from '../../components/PaymentTopup';
 
 function money(n) {
   return `Rs ${Number(n || 0).toLocaleString()}`; // "Rs" like the rest of the app
@@ -67,7 +68,6 @@ export default function DriverEarnings() {
   const [showTopup, setShowTopup] = useState(false);
   const [topupMethod, setTopupMethod] = useState('esewa');
   const [topupAmount, setTopupAmount] = useState('100');
-  const [toppingUp, setToppingUp] = useState(false);
 
   // Earnings breakdown (today/week/month totals + per-day chart) & date filter
   const [breakdown, setBreakdown] = useState({ totals: { today: 0, week: 0, month: 0 }, series: [] });
@@ -119,6 +119,10 @@ export default function DriverEarnings() {
     }
   }, []);
 
+  // Gateway top-up of the prepaid fee balance; reloads stats once it settles.
+  const topupMethods = usePaymentMethods();
+  const driverTopup = useGatewayTopup('driver', () => load());
+
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadBreakdown('7d'); }, [loadBreakdown]);
 
@@ -167,22 +171,14 @@ export default function DriverEarnings() {
   };
 
   const submitTopup = async () => {
-    const parsed = parseFloat(topupAmount);
-    if (!parsed || parsed <= 0) {
-      Alert.alert('Invalid amount', 'Enter a valid top-up amount.');
+    const parsed = Number(topupAmount);
+    if (!Number.isInteger(parsed) || parsed < 10) {
+      Alert.alert('Invalid amount', 'Enter a whole amount of at least Rs 10.');
       return;
     }
-    setToppingUp(true);
-    try {
-      await userApi.topUpDriverBalance({ amount: parsed, method: topupMethod });
+    if (await driverTopup.start({ amount: parsed, method: topupMethod })) {
       setShowTopup(false);
       setTopupAmount('100');
-      Alert.alert('Top-up successful', `${money(parsed)} added to your fee balance.`);
-      load();
-    } catch (e) {
-      Alert.alert('Failed', e?.message || 'Could not top up.');
-    } finally {
-      setToppingUp(false);
     }
   };
 
@@ -408,12 +404,8 @@ export default function DriverEarnings() {
               <Text style={styles.sheetTitle}>Top up fee balance</Text>
               <Text style={styles.sheetSub}>Current: {money(feeBalance)}</Text>
 
-              <Text style={styles.fieldLabel}>Payment method</Text>
-              <View style={styles.methodRow}>
-                {METHODS.map((m) => (
-                  <Chip key={m.key} label={m.label} active={topupMethod === m.key} onPress={() => setTopupMethod(m.key)} />
-                ))}
-              </View>
+              <Text style={styles.fieldLabel}>Pay with</Text>
+              <PaymentMethodPicker methods={topupMethods} value={topupMethod} onChange={setTopupMethod} />
 
               <View style={{ height: spacing.md }} />
               <Text style={styles.fieldLabel}>Amount</Text>
@@ -427,20 +419,20 @@ export default function DriverEarnings() {
               <FormField
                 label="Or enter amount (Rs)"
                 value={topupAmount}
-                onChangeText={setTopupAmount}
+                onChangeText={(t) => setTopupAmount(t.replace(/[^0-9]/g, ''))}
                 placeholder="100"
                 keyboardType="numeric"
               />
 
               <Text style={styles.standbyNote}>
-                Payments are in stand-by mode — eSewa / Khalti / bank aren't wired up yet, so the amount is credited instantly for now.
+                You'll finish paying in {topupMethod === 'khalti' ? 'Khalti' : 'eSewa'}. Your fee balance updates once the payment is confirmed.
               </Text>
 
               <View style={{ height: spacing.sm }} />
               <Button
-                label={toppingUp ? 'Processing…' : `Top up ${money(parseFloat(topupAmount) || 0)}`}
+                label={driverTopup.starting ? 'Opening payment…' : `Pay ${money(Number(topupAmount) || 0)}`}
                 onPress={submitTopup}
-                disabled={toppingUp}
+                disabled={driverTopup.starting}
               />
               <View style={{ height: spacing.sm }} />
               <Button label="Cancel" variant="ghost" onPress={() => setShowTopup(false)} />

@@ -26,6 +26,7 @@ import {
   View,
 } from 'react-native';
 import RefreshControl from '../components/RefreshControl';
+import { PaymentMethodPicker, useGatewayTopup, usePaymentMethods } from '../components/PaymentTopup';
 import { useAuth } from '../context/AuthContext';
 import { userApi } from '../api/user.api';
 import { colors } from '../theme/colors';
@@ -244,9 +245,16 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
     }
   };
 
-  const addToWallet = (amount) => {
-    setProfile((p) => ({ ...p, walletBalance: p.walletBalance + amount }));
+  // Server-confirmed balance after a gateway top-up settles.
+  const setWalletBalance = (balance) => {
+    if (typeof balance === 'number') setProfile((p) => ({ ...p, walletBalance: balance }));
+    refreshUser?.().catch?.(() => {});
   };
+  // Settles payments even when the top-up sheet is closed (user returns from
+  // eSewa / Khalti to this screen).
+  const walletTopup = useGatewayTopup('wallet', ({ status, balance }) => {
+    if (status === 'completed') setWalletBalance(balance);
+  });
 
   const pickAvatar = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -695,7 +703,7 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
         updateAddress={updateAddress}
         addAddress={addAddress}
         removeAddress={removeAddress}
-        addToWallet={addToWallet}
+        walletTopup={walletTopup}
         tfaEnabled={tfaEnabled}
         setTfaEnabled={setTfaEnabled}
         sendSOS={sendSOS}
@@ -755,7 +763,7 @@ function ProfileModal({
   updateAddress,
   addAddress,
   removeAddress,
-  addToWallet,
+  walletTopup,
   tfaEnabled,
   setTfaEnabled,
   sendSOS,
@@ -783,7 +791,7 @@ function ProfileModal({
             />
           )}
           {modal?.type === 'topup' && (
-            <TopupForm addToWallet={addToWallet} close={close} />
+            <TopupForm topup={walletTopup} close={close} />
           )}
           {modal?.type === 'edit-address' && (
             <EditAddressForm
@@ -922,11 +930,12 @@ function EditProfileForm({ profile, setProfile, close }) {
   );
 }
 
-function TopupForm({ addToWallet, close }) {
+function TopupForm({ topup, close }) {
   const [amount, setAmount] = useState('500');
-  const [method] = useState('esewa');
-  const [saving, setSaving] = useState(false);
+  const methods = usePaymentMethods();
+  const [method, setMethod] = useState('esewa');
   const presets = [200, 500, 1000, 2000];
+  const saving = topup.starting;
   return (
     <>
       <ModalHeader title="Top up wallet" close={close} />
@@ -949,24 +958,23 @@ function TopupForm({ addToWallet, close }) {
         onChangeText={(t) => setAmount(t.replace(/[^0-9]/g, ''))}
         keyboardType="number-pad"
       />
+      <Text style={styles.formLabel}>Pay with</Text>
+      <PaymentMethodPicker methods={methods} value={method} onChange={setMethod} />
       <PrimaryButton
-        label={saving ? 'Processing…' : `Add Rs ${amount || 0}`}
+        label={saving ? 'Opening payment…' : `Pay Rs ${amount || 0}`}
         disabled={saving}
         onPress={async () => {
           const num = Number(amount);
-          if (num <= 0 || saving) return;
-          setSaving(true);
-          try {
-            await userApi.topUpWallet({ amount: num, method, gatewayRef: `manual-${Date.now()}` });
-            addToWallet(num);
-            close();
-          } catch (err) {
-            Alert.alert('Error', err.message || 'Top up failed.');
-          } finally {
-            setSaving(false);
+          if (!Number.isInteger(num) || num < 10) {
+            Alert.alert('Invalid amount', 'Enter at least Rs 10.');
+            return;
           }
+          if (await topup.start({ amount: num, method })) close();
         }}
       />
+      <Text style={[styles.formCopy, { marginTop: 10 }]}>
+        You'll finish paying in {method === 'khalti' ? 'Khalti' : 'eSewa'}. Your balance updates once the payment is confirmed.
+      </Text>
     </>
   );
 }
