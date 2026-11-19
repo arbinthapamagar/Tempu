@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { userApi } from '../api/user.api';
 import { colors } from '../theme/colors';
 import { describeDateInput, formatDateInput, parseDateInput } from '../utils/dateInput';
+import { fonts } from '../theme/type';
 
 const VEHICLE_TYPES = [
   { id: 'tuktuk', label: 'Tempu', img: require('../assets/ev-tuktuk.png') },
@@ -423,7 +424,7 @@ export default function DriverVehicleScreen({ onSuccess, onBack }) {
             <View style={styles.infoBox}>
               <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
               <Text style={styles.infoText}>
-                Upload clear, readable photos. Your application will stay <Text style={{ fontWeight: '700' }}>under review</Text> until our admin approves it.
+                Upload clear, readable photos. Your application will stay <Text style={{ fontFamily: fonts.bodyBold }}>under review</Text> until our admin approves it.
               </Text>
             </View>
 
@@ -467,30 +468,30 @@ export default function DriverVehicleScreen({ onSuccess, onBack }) {
 const styles = StyleSheet.create({
   docCard: { flexDirection: 'column', alignItems: 'stretch' },
   docMain: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  docHintDone: { color: colors.primary, fontWeight: '600' },
+  docHintDone: { color: colors.primary, fontFamily: fonts.bodySemibold },
   docActions: { flexDirection: 'row', gap: 20, marginTop: 10, paddingLeft: 48 },
   docAction: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  docActionText: { color: colors.primary, fontSize: 13, fontWeight: '600' },
+  docActionText: { color: colors.primary, fontSize: 13, fontFamily: fonts.bodySemibold },
   pickRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   pickBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 10, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surface,
   },
-  pickText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
+  pickText: { color: colors.primary, fontSize: 14, fontFamily: fonts.bodyBold },
   pdfPreview: {
     marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 12,
     padding: 12, borderRadius: 12, backgroundColor: colors.surfaceMuted || '#f2f2f2',
   },
-  pdfName: { fontSize: 14, fontWeight: '700', color: colors.text },
-  pdfSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  pdfName: { fontSize: 14, fontFamily: fonts.bodyBold, color: colors.text },
+  pdfSub: { fontSize: 12, fontFamily: fonts.body, color: colors.textMuted, marginTop: 2 },
   docPreview: { marginTop: 10, width: '100%', height: 180, borderRadius: 12, backgroundColor: colors.surfaceMuted || '#f2f2f2' },
-  dateHint: { marginTop: 6, fontSize: 13, color: colors.textMuted },
+  dateHint: { marginTop: 6, fontSize: 13, fontFamily: fonts.body, color: colors.textMuted },
   warnBox: {
     flexDirection: 'row', gap: 8, alignItems: 'flex-start',
     marginTop: 8, padding: 10, borderRadius: 12,
     backgroundColor: '#fef3c7', borderWidth: 1, borderColor: '#fde68a',
   },
-  warnText: { flex: 1, fontSize: 13, lineHeight: 18, color: '#92400e' },
+  warnText: { flex: 1, fontSize: 13, fontFamily: fonts.body, lineHeight: 18, color: '#92400e' },
   flex: { flex: 1, backgroundColor: colors.background },
   scroll: {
     flexGrow: 1,
@@ -528,12 +529,13 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontSize: 26,
-    fontWeight: '700',
+    fontFamily: fonts.displayBold,
     marginBottom: 6,
   },
   subtitle: {
     color: colors.textMuted,
     fontSize: 14,
+    fontFamily: fonts.body,
     lineHeight: 20,
   },
 
@@ -543,10 +545,10 @@ const styles = StyleSheet.create({
   label: {
     color: colors.textMuted,
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemibold,
     marginBottom: 6,
   },
-  optional: { color: colors.textFaint, fontWeight: '400' },
+  optional: { color: colors.textFaint, fontFamily: fonts.bodyRegular },
   input: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -555,6 +557,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
+    fontFamily: fonts.body,
     color: colors.text,
   },
 
@@ -578,7 +581,7 @@ const styles = StyleSheet.create({
     width: 20, height: 20, borderRadius: 10,
     backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
   },
-  typeLabel: { color: colors.textMuted, fontSize: 14, fontWeight: '700' },
+  typeLabel: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.bodyBold },
   typeLabelSelected: { color: colors.primary },
 
   infoBox: {
@@ -592,7 +595,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 18,
   },
-  infoText: { flex: 1, color: colors.textMuted, fontSize: 13, lineHeight: 19 },
+  infoText: { flex: 1, color: colors.textMuted, fontSize: 13, fontFamily: fonts.body, lineHeight: 19 },
 
   docRow: {
     flexDirection: 'row',
@@ -618,19 +621,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   docIconDone: { backgroundColor: colors.primary },
-  docLabel: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  docLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.bodySemibold },
   docRequired: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: fonts.bodyBold,
     color: colors.warn,
     backgroundColor: colors.warnSoft,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 999,
   },
-  docHint: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  docHint: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 2 },
 
-  error: { color: colors.danger, fontSize: 13, marginBottom: 12 },
+  error: { color: colors.danger, fontSize: 13, fontFamily: fonts.body, marginBottom: 12 },
 
   btn: {
     backgroundColor: colors.primary,
@@ -641,8 +644,8 @@ const styles = StyleSheet.create({
   },
   btnPressed: { backgroundColor: colors.primaryDark },
   btnDisabled: { opacity: 0.6 },
-  btnText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
+  btnText: { color: '#ffffff', fontSize: 16, fontFamily: fonts.bodyBold },
 
   backLink: { alignItems: 'center', paddingTop: 8 },
-  backLinkText: { color: colors.textMuted, fontSize: 14 },
+  backLinkText: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.body },
 });

@@ -9,6 +9,7 @@ import {
   WalletIcon,
 } from './Icons';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/type';
 
 const TABS = [
   { id: 'home', label: 'Home', Icon: HomeIcon },
@@ -83,6 +84,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  label: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
-  labelActive: { fontWeight: '700' },
+  label: { color: colors.textFaint, fontSize: 11, fontFamily: fonts.bodySemibold },
+  labelActive: { fontFamily: fonts.bodyBold },
 });

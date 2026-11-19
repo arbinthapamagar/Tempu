@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, backgroundColor: colors.primarySoft,
   },
-  reopenText: { ...type.caption, color: colors.primary, fontWeight: '700', flexShrink: 1 },
+  reopenText: { ...type.caption, color: colors.primary, fontFamily: fonts.bodyBold, flexShrink: 1 },
 
   ratedNote: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg, padding: spacing.lg, alignItems: 'center',
     backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
   },
-  rateTitle: { ...type.body, color: colors.text, fontWeight: '700', marginBottom: spacing.md },
+  rateTitle: { ...type.body, color: colors.text, fontFamily: fonts.bodyBold, marginBottom: spacing.md },
   starRow: { flexDirection: 'row', alignItems: 'center' },
   rateHint: { ...type.micro, color: colors.textFaint, marginTop: spacing.sm },
   rateNote: {
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
   },
   replyInput: {
-    flex: 1, backgroundColor: colors.surfaceMuted, borderRadius: radius.lg,
+    flex: 1, minWidth: 0, backgroundColor: colors.surfaceMuted, borderRadius: radius.lg,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, ...type.body, color: colors.text,
     maxHeight: 120,
   },
@@ -376,12 +376,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md,
     backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
   },
-  closedTitle: { ...type.caption, color: colors.text, fontWeight: '700' },
+  closedTitle: { ...type.caption, color: colors.text, fontFamily: fonts.bodyBold },
   closedSub: { ...type.micro, color: colors.textMuted, marginTop: 2 },
   closedBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  closedBtnText: { ...type.caption, color: '#fff', fontWeight: '700' },
+  closedBtnText: { ...type.caption, color: '#fff', fontFamily: fonts.bodyBold },
   closedGhostBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  closedGhostText: { ...type.caption, color: colors.textMuted, fontWeight: '700' },
+  closedGhostText: { ...type.caption, color: colors.textMuted, fontFamily: fonts.bodyBold },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalSheet: {
     backgroundColor: colors.surfaceMuted, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
@@ -389,5 +389,5 @@ const styles = StyleSheet.create({
   },
   modalHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: spacing.sm },
   modalCancel: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },
-  modalCancelText: { ...type.caption, color: colors.textMuted, fontWeight: '700' },
+  modalCancelText: { ...type.caption, color: colors.textMuted, fontFamily: fonts.bodyBold },
 });

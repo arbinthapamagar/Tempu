@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/type';
 
 const GENDER_OPTIONS = [
   { value: 'female', label: 'Female' },
@@ -19,7 +20,7 @@ const GENDER_OPTIONS = [
   { value: 'other', label: 'Other' },
 ];
 
-export default function RegisterScreen({ onGoToLogin, onRegistered }) {
+export default function RegisterScreen({ onBack, onGoToLogin, onRegistered }) {
   const { register } = useAuth();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -81,6 +82,11 @@ export default function RegisterScreen({ onGoToLogin, onRegistered }) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {onBack && (
+          <Pressable onPress={onBack} style={styles.back} hitSlop={12}>
+            <View style={styles.backArrow} />
+          </Pressable>
+        )}
         <View style={styles.header}>
           <Image source={require('../assets/logo-wordmark.png')} style={styles.brand} resizeMode="contain" />
           <Text style={styles.title}>Create your account</Text>
@@ -234,8 +240,27 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 64,
+    paddingTop: 24,
     paddingBottom: 40,
+  },
+  // Same back control as the OTP screen (iOS has no hardware back).
+  back: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  backArrow: {
+    width: 10,
+    height: 10,
+    borderLeftWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: colors.text,
+    transform: [{ rotate: '45deg' }],
+    marginLeft: 4,
   },
   header: { marginBottom: 24 },
   // logo-wordmark.png is 1266x358 (~3.5:1), same size as the other auth screens.
@@ -247,12 +272,13 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontSize: 26,
-    fontWeight: '700',
+    fontFamily: fonts.displayBold,
     marginBottom: 6,
   },
   subtitle: {
     color: colors.textMuted,
     fontSize: 14,
+    fontFamily: fonts.body,
     lineHeight: 20,
   },
   form: { marginBottom: 16 },
@@ -260,12 +286,12 @@ const styles = StyleSheet.create({
   label: {
     color: colors.textMuted,
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemibold,
     marginBottom: 6,
   },
   optional: {
     color: colors.textFaint,
-    fontWeight: '400',
+    fontFamily: fonts.bodyRegular,
   },
   input: {
     backgroundColor: colors.surface,
@@ -275,6 +301,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
+    fontFamily: fonts.body,
     color: colors.text,
   },
   genderRow: { flexDirection: 'row', gap: 8 },
@@ -291,8 +318,8 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.primarySoft,
   },
-  genderChipText: { color: colors.textMuted, fontSize: 14, fontWeight: '500' },
-  genderChipTextSelected: { color: colors.primaryDark, fontWeight: '600' },
+  genderChipText: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.body },
+  genderChipTextSelected: { color: colors.primaryDark, fontFamily: fonts.bodySemibold },
   passwordRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -305,8 +332,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 6,
   },
-  toggleText: { color: colors.primary, fontSize: 13, fontWeight: '600' },
-  error: { color: colors.danger, fontSize: 13, marginBottom: 12 },
+  toggleText: { color: colors.primary, fontSize: 13, fontFamily: fonts.bodySemibold },
+  error: { color: colors.danger, fontSize: 13, fontFamily: fonts.body, marginBottom: 12 },
   primaryButton: {
     backgroundColor: colors.primary,
     paddingVertical: 14,
@@ -316,10 +343,11 @@ const styles = StyleSheet.create({
   },
   primaryButtonPressed: { backgroundColor: colors.primaryDark },
   primaryButtonDisabled: { opacity: 0.6 },
-  primaryButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
+  primaryButtonText: { color: '#ffffff', fontSize: 16, fontFamily: fonts.bodyBold },
   legal: {
     color: colors.textFaint,
     fontSize: 12,
+    fontFamily: fonts.body,
     textAlign: 'center',
     marginTop: 14,
     lineHeight: 17,
@@ -330,6 +358,6 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 16,
   },
-  footerText: { color: colors.textMuted, fontSize: 14 },
-  footerLink: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  footerText: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.body },
+  footerLink: { color: colors.primary, fontSize: 14, fontFamily: fonts.bodySemibold },
 });

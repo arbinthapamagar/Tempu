@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, type } from '../../theme';
+import { fonts } from '../../theme/type';
 
 const VARIANT = {
   primary: { bg: colors.primary, pressedBg: colors.primaryDark, fg: '#ffffff' },
@@ -61,7 +62,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: radius.pill,
   },
-  label: { ...type.bodyBold, fontWeight: '800' },
+  label: { ...type.bodyBold, fontFamily: fonts.bodyBold },
   iconL: {},
   iconR: {},
   disabled: { opacity: 0.5 },

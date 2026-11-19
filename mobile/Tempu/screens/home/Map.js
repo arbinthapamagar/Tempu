@@ -6,6 +6,7 @@ import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { userApi } from '../../api/user.api';
 import { colors, radius, shadow } from '../../theme';
 import { KATHMANDU } from './constants';
+import { fonts } from '../../theme/type';
 
 const ZOOMED = { latitudeDelta: 0.01, longitudeDelta: 0.01 };
 // Leaves room for the bottom sheet + the floating search pill so the route
@@ -190,8 +191,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     ...shadow.fab,
   },
-  tripPillText: { fontSize: 14, fontWeight: '700', color: colors.text },
-  tripPillMuted: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
+  tripPillText: { fontSize: 14, fontFamily: fonts.bodyBold, color: colors.text },
+  tripPillMuted: { fontSize: 14, fontFamily: fonts.bodySemibold, color: colors.textMuted },
   tripDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: colors.textMuted },
   recenter: {
     position: 'absolute',

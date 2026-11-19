@@ -4,7 +4,7 @@ import { bidApi, tripApi } from '../../api/trip.api';
 import { userApi } from '../../api/user.api';
 
 const VEHICLE_TYPES = [
-  { id: 'tuktuk', name: 'Rickshaw', note: 'Up to 3 passengers', baseFare: 80, eta: 3 },
+  { id: 'tuktuk', name: 'Tempu', note: 'Up to 3 passengers', baseFare: 80, eta: 3 },
   { id: 'scooter', name: 'Scooter', note: 'Quick & affordable', baseFare: 60, eta: 4 },
   { id: 'tuktuk_delivery', name: 'Delivery', note: 'Package delivery', baseFare: 100, eta: 4 },
 ];

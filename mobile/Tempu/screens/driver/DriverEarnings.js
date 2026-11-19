@@ -13,11 +13,12 @@ import RefreshControl from '../../components/RefreshControl';
 import { bidApi } from '../../api/trip.api';
 import { userApi } from '../../api/user.api';
 import { Button, Chip, FormField, Sheet } from '../../components/ui';
-import { colors, radius, shadow, spacing, STATUS_TOP_PAD, type } from '../../theme';
+import { colors, radius, shadow, spacing, type } from '../../theme';
 import { formatDateInput } from '../../utils/dateInput';
+import { fonts } from '../../theme/type';
 
 function money(n) {
-  return `NPR ${Number(n || 0).toLocaleString()}`;
+  return `Rs ${Number(n || 0).toLocaleString()}`; // "Rs" like the rest of the app
 }
 
 const MIN_WITHDRAWAL = 100;
@@ -362,7 +363,7 @@ export default function DriverEarnings() {
               <View style={{ height: spacing.md }} />
 
               <FormField
-                label="Amount (NPR)"
+                label="Amount (Rs)"
                 value={amount}
                 onChangeText={setAmount}
                 placeholder={`Min ${MIN_WITHDRAWAL}`}
@@ -424,7 +425,7 @@ export default function DriverEarnings() {
 
               <View style={{ height: spacing.md }} />
               <FormField
-                label="Or enter amount (NPR)"
+                label="Or enter amount (Rs)"
                 value={topupAmount}
                 onChangeText={setTopupAmount}
                 placeholder="100"
@@ -463,7 +464,7 @@ function EarningsChart({ series }) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chartRow}
+        contentContainerStyle={[styles.chartRow, styles.chartRowFill]}
       >
         {series.map((s) => {
           const amt = Number(s.amount) || 0;
@@ -474,7 +475,8 @@ function EarningsChart({ series }) {
               <View style={styles.barTrack}>
                 <View style={[styles.bar, { height: h }, amt === 0 && styles.barEmpty]} />
               </View>
-              <Text style={styles.barLabel}>{s.date.slice(5)}</Text>
+              {/* day of month only: "MM-DD" wrapped onto two lines in the 34px column */}
+              <Text style={styles.barLabel} numberOfLines={1}>{String(Number(s.date.slice(8, 10)))}</Text>
             </View>
           );
         })}
@@ -486,7 +488,8 @@ function EarningsChart({ series }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceMuted },
   center: { alignItems: 'center', justifyContent: 'center' },
-  content: { padding: spacing.xl, paddingTop: STATUS_TOP_PAD, paddingBottom: spacing.xxl },
+  // The driver top bar above already covers the status bar inset.
+  content: { padding: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   title: { ...type.h1, color: colors.text, marginBottom: spacing.lg },
 
   heroCard: {
@@ -524,6 +527,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border, padding: spacing.lg, marginBottom: spacing.md,
   },
   chartRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, paddingVertical: spacing.xs },
+  // Short ranges (7 days) spread across the card instead of bunching left;
+  // long ones still scroll.
+  chartRowFill: { flexGrow: 1, justifyContent: 'space-between' },
   barCol: { width: 34, alignItems: 'center', gap: 4 },
   barValue: { ...type.micro, color: colors.textMuted, height: 14 },
   barTrack: { height: 130, width: 22, justifyContent: 'flex-end', backgroundColor: colors.surfaceMuted, borderRadius: radius.sm, overflow: 'hidden' },
@@ -542,7 +548,7 @@ const styles = StyleSheet.create({
   },
   bidRoute: { ...type.body, color: colors.text },
   bidMeta: { ...type.caption, color: colors.textMuted, marginTop: 2 },
-  bidStatus: { ...type.caption, fontWeight: '800', textTransform: 'capitalize' },
+  bidStatus: { ...type.caption, fontFamily: fonts.bodyBold, textTransform: 'capitalize' },
 
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheetWrap: { position: 'absolute', left: 0, right: 0, bottom: 0 },

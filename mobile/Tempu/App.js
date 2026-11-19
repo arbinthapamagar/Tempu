@@ -33,6 +33,7 @@ import TripsScreen from './screens/TripsScreen';
 import { colors, isDark } from './theme/colors';
 import { STATUS_TOP_PAD } from './theme';
 import useBackHandler, { BACK_DEPTH } from './utils/useBackHandler';
+import { fonts } from './theme/type';
 
 // App is a white (Uber-style light) theme, so the status bar needs dark icons.
 const STATUS_BAR_STYLE = 'dark-content';
@@ -213,6 +214,7 @@ function AppShell() {
 
         {authScreen === 'register' && (
           <RegisterScreen
+            onBack={() => setAuthScreen('role-select')}
             onGoToLogin={() => setAuthScreen('login')}
             onRegistered={(phone) => {
               setPendingPhone(phone);
@@ -295,9 +297,10 @@ function AppShell() {
             {tab === 'trips' && <TripsScreen />}
             {tab === 'subscribe' && <SubscriptionScreen onBack={() => setTab('home')} initialTab={subInitialTab} />}
             {tab === 'inbox' && <InboxScreen />}
-            {tab === 'support' && <SupportScreen role="passenger" onBack={() => setTab('home')} />}
+            {tab === 'support' && <SupportScreen role="passenger" underAppBar onBack={() => setTab('home')} />}
             {tab === 'account' && (
               <ProfileScreen
+                hideTitle
                 onBack={() => setTab('home')}
                 initialModal={accountModal}
                 onInitialModalShown={() => setAccountModal(null)}
@@ -377,5 +380,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  topbarTitle: { flex: 1, fontSize: 18, fontWeight: '800', color: colors.text },
+  topbarTitle: { flex: 1, fontSize: 18, fontFamily: fonts.bodyBold, color: colors.text },
 });

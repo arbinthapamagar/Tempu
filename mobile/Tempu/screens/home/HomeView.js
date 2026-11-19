@@ -96,7 +96,8 @@ export default function HomeView({ onTapSearch, onPickSaved, onSubscribe, onAddP
 
         {/* Services */}
         <View style={styles.sectionHead}>
-          <Text style={styles.sectionTitle}>Services</Text>
+          {/* the head row already pads 20 — don't pad the title twice */}
+          <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Services</Text>
           <Pressable hitSlop={8} onPress={onTapSearch} style={styles.seeAllRow}>
             <Text style={styles.seeAll}>See all</Text>
             <Ionicons name="arrow-forward" size={14} color={colors.primary} />
@@ -306,7 +307,7 @@ const styles = StyleSheet.create({
 
   sectionHead: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     marginTop: 12,

@@ -19,6 +19,7 @@ import {
   success as hapticSuccess,
 } from './haptics';
 import Button from './ui/Button';
+import { fonts } from '../theme/type';
 
 const DEFAULT_REGION = {
   latitude: 27.7172,
@@ -341,6 +342,6 @@ const styles = StyleSheet.create({
   myLocText: {
     color: colors.primaryDark,
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: fonts.bodyBold,
   },
 });

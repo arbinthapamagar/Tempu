@@ -34,6 +34,7 @@ import { sendShortcut } from '../utils/sendShortcut';
 import { type, radius, spacing } from '../theme';
 import { getThemeMode, setThemeMode } from '../theme/themeStore';
 import { reloadApp } from '../theme/reload';
+import { fonts } from '../theme/type';
 
 
 const PAYMENT_LABELS = {
@@ -71,7 +72,7 @@ function formatDateTime(value) {
   });
 }
 
-export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, onSwitchToDriver, onSwitchToPassenger, initialModal, onInitialModalShown }) {
+export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubscription, onSwitchToDriver, onSwitchToPassenger, initialModal, onInitialModalShown }) {
   const { user, logout, refreshUser } = useAuth();
 
   const [driverProfile, setDriverProfile] = useState(null);
@@ -305,7 +306,14 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
         <Pressable onPress={onBack} style={styles.backBtn} hitSlop={8}>
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Account</Text>
+        {/* The passenger shell's top bar already says "Account". */}
+        {!hideTitle && (
+          // Centred on the screen, not between the (narrow) back and (wide)
+          // Edit buttons, which pulled it off-centre.
+          <View pointerEvents="none" style={styles.headerTitleWrap}>
+            <Text style={styles.headerTitle}>Account</Text>
+          </View>
+        )}
         <Pressable
           style={styles.editBtn}
           onPress={() => setModal({ type: 'edit-profile' })}
@@ -417,7 +425,11 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
             onPress={() => setDriverOverlay('vehicle')}
           >
             <View style={styles.becomeDriverLeft}>
-              <Text style={styles.becomeDriverEmoji}>🚗</Text>
+              <Image
+                source={require('../assets/ev-tuktuk.png')}
+                style={styles.becomeDriverImg}
+                resizeMode="contain"
+              />
               <View>
                 <Text style={styles.becomeDriverTitle}>Become a driver</Text>
                 <Text style={styles.becomeDriverSub}>Earn money driving in your city</Text>
@@ -549,6 +561,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
                   value={online}
                   onValueChange={toggleOnline}
                   thumbColor="#ffffff"
+                  activeThumbColor="#ffffff"
                   trackColor={{ false: colors.border, true: colors.primary }}
                   disabled={driverProfile?.isOnRide}
                 />
@@ -597,6 +610,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
               value={pushNotifs}
               onValueChange={setPushNotifs}
               thumbColor="#ffffff"
+              activeThumbColor="#ffffff"
               trackColor={{ false: colors.border, true: colors.primary }}
             />
           </View>
@@ -611,6 +625,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
               value={rideReminders}
               onValueChange={setRideReminders}
               thumbColor="#ffffff"
+              activeThumbColor="#ffffff"
               trackColor={{ false: colors.border, true: colors.primary }}
             />
           </View>
@@ -1366,7 +1381,7 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: Platform.OS === 'android' ? 28 : 16,
     paddingBottom: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1389,10 +1404,21 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '45deg' }],
     marginLeft: 4,
   },
+  headerTitleWrap: {
+    // match the header's own vertical padding so the title stays level
+    // with the buttons
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: Platform.OS === 'android' ? 28 : 16,
+    bottom: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerTitle: {
     color: colors.text,
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: fonts.bodyBold,
     letterSpacing: -0.3,
   },
   editBtn: {
@@ -1404,7 +1430,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: colors.primarySoft,
   },
-  editText: { color: colors.primaryDark, fontSize: 13, fontWeight: '700' },
+  editText: { color: colors.primaryDark, fontSize: 13, fontFamily: fonts.bodyBold },
 
   scroll: { paddingBottom: 40 },
 
@@ -1413,7 +1439,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.xxxl,
     paddingBottom: spacing.xxl,
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     marginTop: spacing.xs,
     borderRadius: radius.xxl,
     backgroundColor: colors.primarySoft,
@@ -1468,7 +1494,7 @@ const styles = StyleSheet.create({
   avatarText: {
     color: '#ffffff',
     fontSize: 38,
-    fontWeight: '800',
+    fontFamily: fonts.display,
     letterSpacing: -1,
   },
   cameraBadge: {
@@ -1500,12 +1526,13 @@ const styles = StyleSheet.create({
   name: {
     color: colors.text,
     fontSize: 26,
-    fontWeight: '800',
+    fontFamily: fonts.display,
     letterSpacing: -0.5,
   },
   heroSub: {
     color: colors.textMuted,
     fontSize: 13,
+    fontFamily: fonts.body,
     marginTop: 4,
   },
   roleRow: {
@@ -1538,7 +1565,7 @@ const styles = StyleSheet.create({
   modeBtnText: {
     color: colors.textMuted,
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: fonts.bodyBold,
   },
   modeBtnTextActive: {
     color: '#ffffff',
@@ -1557,7 +1584,7 @@ const styles = StyleSheet.create({
   rolePillText: {
     color: colors.primaryDark,
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: fonts.bodyBold,
     letterSpacing: 0.2,
   },
   statusPill: {
@@ -1583,13 +1610,13 @@ const styles = StyleSheet.create({
   statusPillText: {
     color: colors.text,
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemibold,
     textTransform: 'capitalize',
   },
 
   statsGrid: {
     marginTop: spacing.lg,
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
@@ -1618,25 +1645,25 @@ const styles = StyleSheet.create({
   statValue: {
     color: colors.primary,
     fontSize: 20,
-    fontWeight: '800',
+    fontFamily: fonts.display,
     letterSpacing: -0.4,
   },
   statLabel: {
     color: colors.textMuted,
     fontSize: 11,
     marginTop: 3,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemibold,
     letterSpacing: 0.2,
   },
 
   section: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     marginTop: 22,
   },
   sectionTitle: {
     color: colors.textMuted,
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: fonts.bodyBold,
     letterSpacing: 0.7,
     textTransform: 'uppercase',
     marginBottom: 10,
@@ -1667,14 +1694,14 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   rowLast: { borderBottomWidth: 0 },
-  rowLabel: { color: colors.textMuted, fontSize: 13 },
+  rowLabel: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.body },
   rowRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     maxWidth: '65%',
   },
-  rowValue: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  rowValue: { color: colors.text, fontSize: 14, fontFamily: fonts.bodySemibold },
 
   badge: {
     paddingHorizontal: 8,
@@ -1684,7 +1711,7 @@ const styles = StyleSheet.create({
   },
   badgeGood: { backgroundColor: colors.surfaceMuted },
   badgeWarn: { backgroundColor: colors.primarySoft },
-  badgeText: { fontSize: 11, fontWeight: '700', color: colors.textMuted },
+  badgeText: { fontSize: 11, fontFamily: fonts.bodyBold, color: colors.textMuted },
   badgeTextGood: { color: colors.primaryDark },
   badgeTextWarn: { color: colors.warn },
 
@@ -1701,14 +1728,14 @@ const styles = StyleSheet.create({
   walletLabel: {
     color: colors.primaryDark,
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: fonts.bodyBold,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
   walletAmount: {
     color: colors.text,
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: fonts.displayBold,
     marginTop: 4,
   },
   topUpBtn: {
@@ -1717,7 +1744,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: radius.pill,
   },
-  topUpText: { color: '#ffffff', fontSize: 13, fontWeight: '700' },
+  topUpText: { color: '#ffffff', fontSize: 13, fontFamily: fonts.bodyBold },
 
   subCard: {
     padding: 14,
@@ -1727,9 +1754,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  subPlan: { color: colors.text, fontSize: 16, fontWeight: '700' },
-  subPrice: { color: colors.textMuted, fontSize: 13, marginTop: 6 },
-  subRenews: { color: colors.textFaint, fontSize: 12, marginTop: 4 },
+  subPlan: { color: colors.text, fontSize: 16, fontFamily: fonts.bodyBold },
+  subPrice: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.body, marginTop: 6 },
+  subRenews: { color: colors.textFaint, fontSize: 12, fontFamily: fonts.body, marginTop: 4 },
   subManage: {
     marginTop: 12,
     paddingVertical: 10,
@@ -1738,7 +1765,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
   },
-  subManageText: { color: colors.text, fontSize: 13, fontWeight: '600' },
+  subManageText: { color: colors.text, fontSize: 13, fontFamily: fonts.bodySemibold },
 
   savedRow: {
     flexDirection: 'row',
@@ -1757,9 +1784,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  savedLabel: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  savedAddress: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  savedAction: { color: colors.primary, fontSize: 13, fontWeight: '600' },
+  savedLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.bodySemibold },
+  savedAddress: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 2 },
+  savedAction: { color: colors.primary, fontSize: 13, fontFamily: fonts.bodySemibold },
   addAddressBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1768,7 +1795,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
-  addAddressText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
+  addAddressText: { color: colors.primary, fontSize: 14, fontFamily: fonts.bodyBold },
 
   toggleRow: {
     flexDirection: 'row',
@@ -1779,8 +1806,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  toggleLabel: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  toggleHint: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  toggleLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.bodySemibold },
+  toggleHint: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 2 },
 
   metricsGrid: {
     flexDirection: 'row',
@@ -1798,8 +1825,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  metricValue: { color: colors.primary, fontSize: 18, fontWeight: '800' },
-  metricLabel: { color: colors.textMuted, fontSize: 12, marginTop: 3, fontWeight: '600' },
+  metricValue: { color: colors.primary, fontSize: 18, fontFamily: fonts.bodyBold },
+  metricLabel: { color: colors.textMuted, fontSize: 12, marginTop: 3, fontFamily: fonts.bodySemibold },
 
   docRow: {
     flexDirection: 'row',
@@ -1818,11 +1845,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  docLabel: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  docState: { fontSize: 12, marginTop: 2, fontWeight: '600' },
+  docLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.bodySemibold },
+  docState: { fontSize: 12, marginTop: 2, fontFamily: fonts.bodySemibold },
   docStateGood: { color: colors.primaryDark },
   docStateWarn: { color: colors.warn },
-  docAction: { color: colors.primary, fontSize: 13, fontWeight: '600' },
+  docAction: { color: colors.primary, fontSize: 13, fontFamily: fonts.bodySemibold },
 
   linkRow: {
     flexDirection: 'row',
@@ -1833,7 +1860,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  linkLabel: { color: colors.text, fontSize: 14, fontWeight: '500' },
+  linkLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.body },
   chevron: {
     width: 8,
     height: 8,
@@ -1845,7 +1872,7 @@ const styles = StyleSheet.create({
 
   signOutBtn: {
     marginTop: spacing.xxl,
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     paddingVertical: spacing.lg,
     borderRadius: radius.pill,
     borderWidth: 1,
@@ -1853,7 +1880,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dangerSoft,
     alignItems: 'center',
   },
-  signOutText: { color: colors.danger, fontSize: 15, fontWeight: '700' },
+  signOutText: { color: colors.danger, fontSize: 15, fontFamily: fonts.bodyBold },
 
   safetyRow: { flexDirection: 'row', gap: spacing.md, padding: spacing.md },
   themeRow: { flexDirection: 'row', gap: spacing.md, padding: spacing.md },
@@ -1868,12 +1895,12 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: colors.primarySoft, borderRadius: radius.pill, paddingVertical: spacing.lg,
   },
-  supportBtnText: { color: colors.primary, fontSize: 14, fontWeight: '800' },
+  supportBtnText: { color: colors.primary, fontSize: 14, fontFamily: fonts.bodyBold },
   sosBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: colors.danger, borderRadius: radius.pill, paddingVertical: spacing.lg,
   },
-  sosBtnText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  sosBtnText: { color: '#fff', fontSize: 14, fontFamily: fonts.bodyBold },
   sosWarn: { ...type.body, color: colors.textMuted, marginBottom: 14 },
   sosNoteInput: { height: 92, paddingTop: 12, textAlignVertical: 'top' },
   sosSendBtn: {
@@ -1888,7 +1915,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: colors.surfaceMuted,
   },
-  linkBadgeText: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
+  linkBadgeText: { color: colors.textMuted, fontSize: 11, fontFamily: fonts.bodyBold },
 
   modalBackdrop: {
     flex: 1,
@@ -1918,7 +1945,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 14,
   },
-  modalTitle: { color: colors.text, fontSize: 20, fontWeight: '800' },
+  modalTitle: { color: colors.text, fontSize: 20, fontFamily: fonts.display },
   modalClose: {
     width: 32,
     height: 32,
@@ -1932,7 +1959,7 @@ const styles = StyleSheet.create({
   formLabel: {
     color: colors.textMuted,
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: fonts.bodyBold,
     marginBottom: 6,
     letterSpacing: 0.3,
     textTransform: 'uppercase',
@@ -1943,14 +1970,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
+    fontFamily: fonts.body,
     color: colors.text,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  formError: { color: colors.danger, fontSize: 12, marginTop: -4, marginBottom: 8 },
+  formError: { color: colors.danger, fontSize: 12, fontFamily: fonts.body, marginTop: -4, marginBottom: 8 },
   formCopy: {
     color: colors.textMuted,
     fontSize: 13,
+    fontFamily: fonts.body,
     lineHeight: 19,
     marginBottom: 12,
   },
@@ -1962,7 +1991,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
   },
-  primaryBtnText: { color: '#ffffff', fontSize: 15, fontWeight: '800' },
+  primaryBtnText: { color: '#ffffff', fontSize: 15, fontFamily: fonts.bodyBold },
   dangerBtn: {
     marginTop: 8,
     paddingVertical: 12,
@@ -1972,7 +2001,7 @@ const styles = StyleSheet.create({
     borderColor: colors.dangerSoft,
     backgroundColor: colors.dangerSoft,
   },
-  dangerBtnText: { color: colors.danger, fontSize: 14, fontWeight: '700' },
+  dangerBtnText: { color: colors.danger, fontSize: 14, fontFamily: fonts.bodyBold },
 
   setOnMapBtn: {
     flexDirection: 'row',
@@ -1989,7 +2018,7 @@ const styles = StyleSheet.create({
   setOnMapText: {
     color: colors.text,
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: fonts.bodyBold,
   },
 
   presetRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
@@ -2006,7 +2035,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.primarySoft,
   },
-  presetText: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  presetText: { color: colors.text, fontSize: 13, fontFamily: fonts.bodyBold },
   presetTextActive: { color: colors.primaryDark },
 
   docPreview: {
@@ -2020,6 +2049,7 @@ const styles = StyleSheet.create({
   docPreviewText: {
     color: colors.textMuted,
     fontSize: 13,
+    fontFamily: fonts.body,
     textAlign: 'center',
   },
   docStatusPill: {
@@ -2041,8 +2071,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     marginBottom: 12,
   },
-  tfaTitle: { color: colors.text, fontSize: 14, fontWeight: '700' },
-  tfaSub: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  tfaTitle: { color: colors.text, fontSize: 14, fontFamily: fonts.bodyBold },
+  tfaSub: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 2 },
   tfaToggle: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -2050,7 +2080,7 @@ const styles = StyleSheet.create({
   },
   tfaToggleOn: { backgroundColor: colors.primary },
   tfaToggleOff: { backgroundColor: colors.textFaint },
-  tfaToggleText: { color: '#ffffff', fontSize: 12, fontWeight: '800' },
+  tfaToggleText: { color: '#ffffff', fontSize: 12, fontFamily: fonts.bodyBold },
 
   deviceRow: {
     flexDirection: 'row',
@@ -2060,9 +2090,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  deviceName: { color: colors.text, fontSize: 14, fontWeight: '700' },
-  deviceMeta: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  deviceRevoke: { color: colors.danger, fontSize: 12, fontWeight: '700' },
+  deviceName: { color: colors.text, fontSize: 14, fontFamily: fonts.bodyBold },
+  deviceMeta: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 2 },
+  deviceRevoke: { color: colors.danger, fontSize: 12, fontFamily: fonts.bodyBold },
 
   helpRow: {
     flexDirection: 'row',
@@ -2072,7 +2102,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  helpText: { color: colors.text, fontSize: 14, flex: 1 },
+  helpText: { color: colors.text, fontSize: 14, fontFamily: fonts.body, flex: 1 },
 
   contactRow: {
     flexDirection: 'row',
@@ -2084,10 +2114,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     marginBottom: 8,
   },
-  contactLabel: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  contactLabel: { color: colors.text, fontSize: 14, fontFamily: fonts.bodySemibold },
   footer: {
     color: colors.textFaint,
     fontSize: 12,
+    fontFamily: fonts.body,
     textAlign: 'center',
     marginTop: 18,
   },
@@ -2104,13 +2135,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  driverBadgeText: { color: colors.primary, fontSize: 12, fontWeight: '800' },
+  driverBadgeText: { color: colors.primary, fontSize: 12, fontFamily: fonts.bodyBold },
 
   reviewBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     marginTop: 14,
     padding: spacing.xl,
     borderRadius: radius.xxl,
@@ -2125,12 +2156,13 @@ const styles = StyleSheet.create({
   reviewBannerTitle: {
     color: colors.warn,
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: fonts.bodyBold,
     marginBottom: 3,
   },
   reviewBannerSub: {
     color: colors.textMuted,
     fontSize: 12,
+    fontFamily: fonts.body,
     lineHeight: 18,
   },
 
@@ -2138,7 +2170,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     marginTop: 14,
     padding: spacing.xl,
     borderRadius: radius.xxl,
@@ -2148,7 +2180,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     marginTop: 14,
     padding: spacing.xl,
     borderRadius: radius.xxl,
@@ -2157,16 +2189,16 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   switchModeLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  switchModeTitle: { color: '#fff', fontSize: 15, fontWeight: '800' },
-  switchModeSub: { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 2 },
-  switchModeTitleAlt: { color: colors.primaryDark, fontSize: 15, fontWeight: '800' },
-  switchModeSubAlt: { color: colors.primaryDark, fontSize: 12, marginTop: 2, opacity: 0.8 },
+  switchModeTitle: { color: '#fff', fontSize: 15, fontFamily: fonts.bodyBold },
+  switchModeSub: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontFamily: fonts.body, marginTop: 2 },
+  switchModeTitleAlt: { color: colors.primaryDark, fontSize: 15, fontFamily: fonts.bodyBold },
+  switchModeSubAlt: { color: colors.primaryDark, fontSize: 12, fontFamily: fonts.body, marginTop: 2, opacity: 0.8 },
 
   becomeDriverCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     marginTop: 14,
     padding: spacing.xl,
     borderRadius: radius.xxl,
@@ -2175,9 +2207,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   becomeDriverLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  becomeDriverEmoji: { fontSize: 32 },
-  becomeDriverTitle: { color: colors.primary, fontSize: 15, fontWeight: '800' },
-  becomeDriverSub: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  becomeDriverImg: { width: 44, height: 44 },
+  becomeDriverTitle: { color: colors.primary, fontSize: 15, fontFamily: fonts.bodyBold },
+  becomeDriverSub: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 2 },
 
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -2205,17 +2237,18 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
   },
-  pendingIconEmoji: { fontSize: 40 },
+  pendingIconEmoji: { fontSize: 40, fontFamily: fonts.body },
   pendingTitle: {
     color: colors.text,
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: fonts.display,
     marginBottom: 12,
     textAlign: 'center',
   },
   pendingSub: {
     color: colors.textMuted,
     fontSize: 14,
+    fontFamily: fonts.body,
     lineHeight: 22,
     textAlign: 'center',
     marginBottom: 36,
@@ -2227,5 +2260,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
   },
-  pendingBtnText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
+  pendingBtnText: { color: '#ffffff', fontSize: 16, fontFamily: fonts.bodyBold },
 });

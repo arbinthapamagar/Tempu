@@ -22,9 +22,10 @@ import { colors, radius, shadow, spacing, STATUS_TOP_PAD, type } from '../../the
 import { sendShortcut } from '../../utils/sendShortcut';
 import { Button } from '../../components/ui';
 import { ACTION_LABEL } from './useDriverFlow';
+import { fonts } from '../../theme/type';
 
 function money(n) {
-  return `NPR ${Number(n || 0).toLocaleString()}`;
+  return `Rs ${Number(n || 0).toLocaleString()}`;
 }
 
 // A single ride request card with a Bid action
@@ -70,7 +71,7 @@ function BidModal({ trip, onClose, onSubmit }) {
   const submit = async () => {
     const n = Number(amount);
     if (!n || n < 50) {
-      Alert.alert('Invalid amount', 'Enter a fare of at least NPR 50.');
+      Alert.alert('Invalid amount', 'Enter a fare of at least Rs 50.');
       return;
     }
     setSubmitting(true);
@@ -95,7 +96,7 @@ function BidModal({ trip, onClose, onSubmit }) {
         <Text style={styles.sheetHint}>Rider offered {money(trip?.offeredPrice)}</Text>
 
         <View style={styles.amountRow}>
-          <Text style={styles.npr}>NPR</Text>
+          <Text style={styles.npr}>Rs</Text>
           <TextInput
             style={styles.amountInput}
             value={amount}
@@ -264,8 +265,9 @@ const DEFAULT_OFFLINE_IMAGE = require('../../assets/ev-tuktuk.png');
 const VEHICLE_LABELS = {
   bike: 'Bike',
   scooter: 'Scooter',
-  tuktuk: 'Tuk-tuk',
-  tuktuk_delivery: 'Tuk-tuk (Delivery)',
+  // Same names the rider sees on Home / Choose ride.
+  tuktuk: 'Tempu',
+  tuktuk_delivery: 'Delivery',
   comfort: 'Comfort',
 };
 
@@ -359,6 +361,7 @@ export default function DriverHome({ flow, vehicleType, subscriptionDriver }) {
               disabled={togglingOnline}
               trackColor={{ true: colors.success, false: colors.border }}
               thumbColor="#fff"
+              activeThumbColor="#fff"
             />
           </View>
         )}
@@ -455,7 +458,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySoft, borderRadius: radius.pill,
     paddingHorizontal: 10, paddingVertical: 3,
   },
-  vehicleText: { ...type.caption, color: colors.primary, fontWeight: '700', textTransform: 'capitalize' },
+  vehicleText: { ...type.caption, color: colors.primary, fontFamily: fonts.bodyBold, textTransform: 'capitalize' },
   brand: { ...type.h2, color: colors.text },
   headerToggle: {
     position: 'absolute', right: spacing.xl, top: 0, bottom: 0,
@@ -533,7 +536,7 @@ const styles = StyleSheet.create({
   },
   bidBtn: { paddingHorizontal: spacing.xl },
   bidPlaced: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  bidPlacedText: { ...type.caption, color: colors.primary, fontWeight: '700' },
+  bidPlacedText: { ...type.caption, color: colors.primary, fontFamily: fonts.bodyBold },
 
   // Bid modal
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
@@ -554,7 +557,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   npr: { ...type.bodyBold, color: colors.textMuted },
-  amountInput: { flex: 1, ...type.h2, color: colors.text, paddingVertical: spacing.md },
+  amountInput: { flex: 1, minWidth: 0, ...type.h2, color: colors.text, paddingVertical: spacing.md },
   msgInput: {
     borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, ...type.body, color: colors.text,
@@ -567,7 +570,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: 6, borderRadius: radius.pill,
     marginBottom: spacing.lg,
   },
-  statusPillText: { ...type.caption, color: colors.primaryDark, fontWeight: '800', letterSpacing: 0.5 },
+  statusPillText: { ...type.caption, color: colors.primaryDark, fontFamily: fonts.bodyBold, letterSpacing: 0.5 },
   riderCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1,

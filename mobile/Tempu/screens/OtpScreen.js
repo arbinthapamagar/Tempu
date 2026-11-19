@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/type';
 
 const OTP_LENGTH = 6;
 
@@ -192,12 +193,13 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: fonts.displayBold,
     marginBottom: 8,
   },
   subtitle: {
     color: colors.textMuted,
     fontSize: 15,
+    fontFamily: fonts.body,
     lineHeight: 22,
   },
   boxRow: {
@@ -220,7 +222,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     textAlign: 'center',
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: fonts.displayBold,
     color: colors.text,
     backgroundColor: colors.surface,
   },
@@ -236,6 +238,7 @@ const styles = StyleSheet.create({
   error: {
     color: colors.danger,
     fontSize: 13,
+    fontFamily: fonts.body,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -247,13 +250,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   btnDisabled: { opacity: 0.5 },
-  btnText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
+  btnText: { color: '#ffffff', fontSize: 16, fontFamily: fonts.bodySemibold },
   resendRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 6,
   },
-  resendLabel: { color: colors.textMuted, fontSize: 14 },
-  resendLink: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  resendLabel: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.body },
+  resendLink: { color: colors.primary, fontSize: 14, fontFamily: fonts.bodySemibold },
   resendDisabled: { color: colors.textFaint },
 });

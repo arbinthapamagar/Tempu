@@ -15,6 +15,7 @@ import CallScreen from './CallScreen';
 import { colors, radius, spacing, type } from '../theme';
 import useBackHandler from '../utils/useBackHandler';
 import { sendShortcut } from '../utils/sendShortcut';
+import { fonts } from '../theme/type';
 
 const CATEGORIES = [
   { key: 'trip_issue', label: 'Trip issue' },
@@ -34,7 +35,7 @@ const STATUS_COLOR = {
 const isImageAttachment = (m) =>
   m.attachmentType !== 'audio' && /\.(png|jpe?g|gif|webp|heic)$/i.test(m.attachmentName || m.attachmentUrl || '');
 
-export default function SupportScreen({ onBack, role }) {
+export default function SupportScreen({ underAppBar, onBack, role }) {
   const [view, setView] = useState('list'); // 'list' | 'new' | 'thread'
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -296,7 +297,11 @@ export default function SupportScreen({ onBack, role }) {
   return (
     <View style={styles.root}>
       <ScreenHeader
-        title={view === 'new' ? 'New ticket' : view === 'thread' ? 'Support ticket' : 'Support'}
+        // In the passenger shell this sits under the app's top bar, which
+        // already clears the status bar — don't add that inset twice. (Driver
+        // mode hides its top bar on this tab, so keep the inset there.)
+        style={underAppBar ? { paddingTop: spacing.md } : undefined}
+        title={view === 'new' ? 'New ticket' : view === 'thread' ? 'Support ticket' : underAppBar ? '' : 'Support'}
         left={<Pressable onPress={back} hitSlop={8}><Ionicons name="chevron-back" size={24} color={colors.text} /></Pressable>}
         right={view === 'list' ? (
           <Pressable onPress={() => setView('new')} hitSlop={8}><Ionicons name="add" size={24} color={colors.primary} /></Pressable>
@@ -537,7 +542,7 @@ function Centered() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.surfaceMuted },
+  root: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { padding: spacing.xl },
   empty: { ...type.body, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xxl },
@@ -547,9 +552,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1,
     borderColor: colors.border, padding: spacing.lg, marginBottom: spacing.sm,
   },
-  cardTitle: { ...type.body, color: colors.text, fontWeight: '700' },
+  cardTitle: { ...type.body, color: colors.text, fontFamily: fonts.bodyBold },
   cardMeta: { ...type.caption, color: colors.textMuted, marginTop: 2, textTransform: 'capitalize' },
-  status: { ...type.caption, fontWeight: '800', textTransform: 'capitalize' },
+  status: { ...type.caption, fontFamily: fonts.bodyBold, textTransform: 'capitalize' },
 
   fieldLabel: { ...type.eyebrow, color: colors.textMuted, marginBottom: 6 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
@@ -565,7 +570,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primarySoft, borderRadius: radius.pill,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
   },
-  callBtnText: { ...type.caption, color: colors.primary, fontWeight: '700' },
+  callBtnText: { ...type.caption, color: colors.primary, fontFamily: fonts.bodyBold },
   bubble: { borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm, maxWidth: '85%' },
   bubbleMine: { backgroundColor: colors.orange, alignSelf: 'flex-end' },
   bubbleAdmin: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignSelf: 'flex-start' },
@@ -577,7 +582,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
   },
   replyInput: {
-    flex: 1, backgroundColor: colors.surfaceMuted, borderRadius: radius.pill,
+    // minWidth 0: a TextInput's intrinsic width otherwise pushes the send
+    // button off-screen on narrow phones.
+    flex: 1, minWidth: 0, backgroundColor: colors.surfaceMuted, borderRadius: radius.pill,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, ...type.body, color: colors.text,
   },
   sendBtn: { backgroundColor: colors.primary, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
@@ -590,7 +597,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: 6, alignSelf: 'flex-start', maxWidth: '100%',
   },
   attachChipMine: { backgroundColor: 'rgba(255,255,255,0.18)' },
-  attachText: { ...type.caption, color: colors.primary, fontWeight: '700', flexShrink: 1 },
+  attachText: { ...type.caption, color: colors.primary, fontFamily: fonts.bodyBold, flexShrink: 1 },
   bubbleImage: { width: 200, height: 200, borderRadius: radius.md, marginTop: 6, backgroundColor: colors.surfaceMuted },
 
   previewBar: {
@@ -608,13 +615,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, backgroundColor: colors.dangerSoft,
   },
   recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.danger },
-  recordingText: { ...type.caption, color: colors.danger, fontWeight: '700' },
+  recordingText: { ...type.caption, color: colors.danger, fontFamily: fonts.bodyBold },
 
   reopenBar: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, backgroundColor: colors.primarySoft,
   },
-  reopenText: { ...type.caption, color: colors.primary, fontWeight: '700', flexShrink: 1 },
+  reopenText: { ...type.caption, color: colors.primary, fontFamily: fonts.bodyBold, flexShrink: 1 },
 
   ratedNote: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
   ratedText: { ...type.caption, color: colors.textMuted, flexShrink: 1 },
@@ -622,12 +629,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md,
     backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
   },
-  closedTitle: { ...type.caption, color: colors.text, fontWeight: '700' },
+  closedTitle: { ...type.caption, color: colors.text, fontFamily: fonts.bodyBold },
   closedSub: { ...type.micro, color: colors.textMuted, marginTop: 2 },
   closedBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  closedBtnText: { ...type.caption, color: '#fff', fontWeight: '700' },
+  closedBtnText: { ...type.caption, color: '#fff', fontFamily: fonts.bodyBold },
   closedGhostBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  closedGhostText: { ...type.caption, color: colors.textMuted, fontWeight: '700' },
+  closedGhostText: { ...type.caption, color: colors.textMuted, fontFamily: fonts.bodyBold },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   modalSheet: {
     backgroundColor: colors.surfaceMuted, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
@@ -635,12 +642,12 @@ const styles = StyleSheet.create({
   },
   modalHandle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: spacing.sm },
   modalCancel: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },
-  modalCancelText: { ...type.caption, color: colors.textMuted, fontWeight: '700' },
+  modalCancelText: { ...type.caption, color: colors.textMuted, fontFamily: fonts.bodyBold },
   rateCard: {
     marginTop: spacing.lg, padding: spacing.lg, alignItems: 'center',
     backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
   },
-  rateTitle: { ...type.body, color: colors.text, fontWeight: '700', marginBottom: spacing.md },
+  rateTitle: { ...type.body, color: colors.text, fontFamily: fonts.bodyBold, marginBottom: spacing.md },
   starRow: { flexDirection: 'row', alignItems: 'center' },
   rateHint: { ...type.micro, color: colors.textFaint, marginTop: spacing.sm },
   rateNote: {

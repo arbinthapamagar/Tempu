@@ -294,6 +294,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    minWidth: 0,
     paddingVertical: 16,
     paddingLeft: 8,
     fontFamily: fonts.body,

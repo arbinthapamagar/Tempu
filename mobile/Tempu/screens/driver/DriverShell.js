@@ -12,6 +12,7 @@ import DriverHome from './DriverHome';
 import useDriverFlow from './useDriverFlow';
 import useBackHandler, { BACK_DEPTH } from '../../utils/useBackHandler';
 import { sendShortcut } from '../../utils/sendShortcut';
+import { fonts } from '../../theme/type';
 
 const TABS = [
   { id: 'home', label: 'Drive', icon: 'car-sport' },
@@ -313,13 +314,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, height: 32, borderRadius: 16,
     backgroundColor: colors.danger,
   },
-  sosText: { color: '#fff', fontWeight: '800', fontSize: 13, letterSpacing: 0.5 },
+  sosText: { color: '#fff', fontFamily: fonts.bodyBold, fontSize: 13, letterSpacing: 0.5 },
   iconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   badge: {
     position: 'absolute', top: 4, right: 4, minWidth: 16, height: 16, paddingHorizontal: 3,
     borderRadius: 8, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center',
   },
-  badgeText: { color: '#fff', fontSize: 9, fontWeight: '800' },
+  badgeText: { color: '#fff', fontSize: 9, fontFamily: fonts.bodyBold },
 
   // Overlay (support / notifications)
   overlayHeader: {
@@ -368,6 +369,6 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
   },
   tab: { flex: 1, alignItems: 'center', gap: 5, paddingVertical: 4 },
-  label: { color: colors.textFaint, fontSize: 11, fontWeight: '600' },
-  labelActive: { color: colors.primary, fontWeight: '700' },
+  label: { color: colors.textFaint, fontSize: 11, fontFamily: fonts.bodySemibold },
+  labelActive: { color: colors.primary, fontFamily: fonts.bodyBold },
 });

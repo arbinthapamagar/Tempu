@@ -12,6 +12,7 @@ import { CallIcon, ChatIcon, ShareIcon } from '../../components/Icons';
 import { Button, Sheet } from '../../components/ui';
 import { colors, radius, shadow, spacing, type } from '../../theme';
 import { PAYMENT_METHODS } from './constants';
+import { fonts } from '../../theme/type';
 
 const STATUS_LABEL = {
   accepted: 'Driver on the way',
@@ -203,9 +204,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  driverInitials: { color: colors.primary, fontSize: 18, fontWeight: '700' },
+  driverInitials: { color: colors.primary, fontSize: 18, fontFamily: fonts.bodyBold },
   driverInfo: { flex: 1, gap: 6 },
-  driverName: { color: colors.text, fontSize: 17, fontWeight: '700' },
+  driverName: { color: colors.text, fontSize: 17, fontFamily: fonts.bodyBold },
   ratingPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -216,9 +217,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.primarySoft,
   },
-  ratingText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
+  ratingText: { color: colors.primary, fontSize: 12, fontFamily: fonts.bodyBold },
   vehicleBlock: { alignItems: 'flex-end', gap: 6, maxWidth: '40%' },
-  vehicleText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+  vehicleText: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.bodySemibold },
   plate: {
     paddingHorizontal: spacing.sm + 2,
     paddingVertical: 5,
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  plateText: { color: colors.text, fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
+  plateText: { color: colors.text, fontSize: 12, fontFamily: fonts.bodyBold, letterSpacing: 0.5 },
 
   etaRow: { marginTop: spacing.md },
   etaPill: {
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.primarySoft,
   },
-  etaPillText: { color: colors.primary, fontSize: 13, fontWeight: '700' },
+  etaPillText: { color: colors.primary, fontSize: 13, fontFamily: fonts.bodyBold },
 
   actions: {
     flexDirection: 'row',
@@ -289,8 +290,8 @@ const styles = StyleSheet.create({
   journeyLabels: { flex: 1, justifyContent: 'space-between' },
   journeyStop: { marginBottom: spacing.lg },
   journeyStopLast: {},
-  journeyLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
-  journeyValue: { color: colors.text, fontSize: 14, fontWeight: '700', marginTop: 2 },
+  journeyLabel: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.bodySemibold },
+  journeyValue: { color: colors.text, fontSize: 14, fontFamily: fonts.bodyBold, marginTop: 2 },
 
   detailList: {
     backgroundColor: colors.surface,
@@ -309,14 +310,14 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.divider,
   },
   rowLast: { borderBottomWidth: 0 },
-  rowLabel: { color: colors.textMuted, fontSize: 14 },
+  rowLabel: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.body },
   rowValue: {
     color: colors.text,
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: fonts.bodySemibold,
     maxWidth: '60%',
   },
-  rowValueBold: { fontSize: 16, fontWeight: '800' },
+  rowValueBold: { fontSize: 16, fontFamily: fonts.bodyBold },
 
   cancel: {
     marginTop: spacing.md + 2,
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
   },
-  cancelText: { color: colors.danger, fontSize: 14, fontWeight: '700' },
+  cancelText: { color: colors.danger, fontSize: 14, fontFamily: fonts.bodyBold },
   inProgress: {
     marginTop: spacing.md + 2,
     paddingVertical: spacing.md,
@@ -337,5 +338,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     borderRadius: radius.md,
   },
-  inProgressText: { color: colors.textMuted, fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  inProgressText: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.bodySemibold, textAlign: 'center' },
 });

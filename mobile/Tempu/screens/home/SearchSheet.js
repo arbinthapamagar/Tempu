@@ -17,6 +17,7 @@ import { confirm as hapticConfirm, pick as hapticPick } from '../../components/h
 import { useAuth } from '../../context/AuthContext';
 import { userApi } from '../../api/user.api';
 import { colors, radius, spacing, type } from '../../theme';
+import { fonts } from '../../theme/type';
 
 const SAVED_ICON = { home: 'home', work: 'briefcase' };
 
@@ -258,7 +259,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 8 : 56,
+    // Rendered under the app's own top bar, so no status-bar inset here
+    // (it left a large empty band above the title).
+    paddingTop: 12,
     paddingBottom: 12,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
@@ -272,7 +275,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  topTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
+  topTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.bodyBold },
 
   kav: { flex: 1 },
 
@@ -321,7 +324,9 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
+    minWidth: 0,
     fontSize: 15,
+    fontFamily: fonts.body,
     color: colors.text,
     paddingVertical: 10,
   },
@@ -341,7 +346,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   mapBtnDivider: { width: 1, backgroundColor: colors.divider },
-  mapBtnText: { fontSize: 13, color: colors.text, fontWeight: '600' },
+  mapBtnText: { fontSize: 13, color: colors.text, fontFamily: fonts.bodySemibold },
 
   results: { flex: 1, paddingHorizontal: 16 },
 
@@ -349,10 +354,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 16,
   },
-  loadingText: { color: colors.textMuted, fontSize: 13 },
+  loadingText: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.body },
 
   sectionLabel: {
-    fontSize: 11, fontWeight: '700', color: colors.textMuted,
+    fontSize: 11, fontFamily: fonts.bodyBold, color: colors.textMuted,
     textTransform: 'uppercase', letterSpacing: 0.8,
     marginTop: 16, marginBottom: 4,
   },
@@ -368,11 +373,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   rowText: { flex: 1 },
-  rowTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
-  rowSub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  rowTitle: { fontSize: 15, fontFamily: fonts.bodySemibold, color: colors.text },
+  rowSub: { fontSize: 13, fontFamily: fonts.body, color: colors.textMuted, marginTop: 2 },
 
   empty: {
-    color: colors.textMuted, fontSize: 13,
+    color: colors.textMuted, fontSize: 13, fontFamily: fonts.body,
     textAlign: 'center', paddingVertical: 32,
   },
   hint: {
@@ -380,7 +385,7 @@ const styles = StyleSheet.create({
     paddingTop: 48, paddingHorizontal: 32,
   },
   hintText: {
-    color: colors.textMuted, fontSize: 14,
+    color: colors.textMuted, fontSize: 14, fontFamily: fonts.body,
     textAlign: 'center', lineHeight: 20,
   },
 });

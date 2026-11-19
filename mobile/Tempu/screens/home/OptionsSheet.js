@@ -124,7 +124,7 @@ export default function OptionsSheet({
                     </Text>
                     <Text
                       style={[styles.rideNote, selected && styles.subOnDark]}
-                      numberOfLines={1}
+                      numberOfLines={2}
                     >
                       {r.eta} min away • {r.note}
                     </Text>

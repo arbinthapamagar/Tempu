@@ -20,6 +20,7 @@ import {
 } from './Icons';
 import { colors } from '../theme/colors';
 import { STATUS_TOP_PAD } from '../theme';
+import { fonts } from '../theme/type';
 
 const NAV = [
   { id: 'home', label: 'Home', Icon: HomeIcon },
@@ -123,7 +124,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  brand: { fontSize: 18, fontWeight: '800', color: colors.text },
+  brand: { fontSize: 18, fontFamily: fonts.bodyBold, color: colors.text },
   closeBtn: {
     width: 32,
     height: 32,
@@ -143,6 +144,6 @@ const styles = StyleSheet.create({
   },
   rowActive: { backgroundColor: colors.primarySoft },
   iconBox: { width: 24, alignItems: 'center', justifyContent: 'center' },
-  rowLabel: { fontSize: 15, fontWeight: '600', color: colors.textMuted },
-  rowLabelActive: { color: colors.text, fontWeight: '700' },
+  rowLabel: { fontSize: 15, fontFamily: fonts.bodySemibold, color: colors.textMuted },
+  rowLabelActive: { color: colors.text, fontFamily: fonts.bodyBold },
 });

@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/type';
 
 export default function DriverPendingScreen() {
   const { logout } = useAuth();
@@ -69,18 +70,19 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
   },
-  icon: { fontSize: 40 },
+  icon: { fontSize: 40, fontFamily: fonts.body },
 
   title: {
     color: colors.text,
     fontSize: 26,
-    fontWeight: '800',
+    fontFamily: fonts.display,
     marginBottom: 12,
     textAlign: 'center',
   },
   body: {
     color: colors.textMuted,
     fontSize: 15,
+    fontFamily: fonts.body,
     lineHeight: 22,
     textAlign: 'center',
     marginBottom: 32,
@@ -105,13 +107,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warnSoft,
     borderColor: colors.warn,
   },
-  stepEmoji: { fontSize: 20 },
-  stepText: { color: colors.textMuted, fontSize: 14, fontWeight: '500' },
-  stepTextActive: { color: colors.warn, fontWeight: '700' },
+  stepEmoji: { fontSize: 20, fontFamily: fonts.body },
+  stepText: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.body },
+  stepTextActive: { color: colors.warn, fontFamily: fonts.bodyBold },
 
   note: {
     color: colors.textFaint,
     fontSize: 13,
+    fontFamily: fonts.body,
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 18,
@@ -125,5 +128,5 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
   },
-  btnText: { color: colors.textMuted, fontSize: 15, fontWeight: '600' },
+  btnText: { color: colors.textMuted, fontSize: 15, fontFamily: fonts.bodySemibold },
 });

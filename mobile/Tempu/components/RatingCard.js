@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from './ui';
 import { colors, radius, spacing, type } from '../theme';
 import { sendShortcut } from '../utils/sendShortcut';
+import { fonts } from '../theme/type';
 
 // Dynamic headline under the stars, keyed by the selected score.
 const SUBTITLE = {
@@ -109,11 +110,11 @@ const styles = StyleSheet.create({
   },
   avatar: { width: 64, height: 64, borderRadius: 32, marginBottom: spacing.sm, backgroundColor: colors.surfaceMuted },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
-  avatarInitials: { ...type.body, color: colors.textMuted, fontWeight: '700', fontSize: 24 },
-  title: { ...type.body, color: colors.text, fontWeight: '700', textAlign: 'center' },
+  avatarInitials: { ...type.body, color: colors.textMuted, fontFamily: fonts.displayBold, fontSize: 24 },
+  title: { ...type.body, color: colors.text, fontFamily: fonts.bodyBold, textAlign: 'center' },
   designation: { ...type.caption, color: colors.textMuted, marginBottom: spacing.md },
   stars: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm },
-  subtitle: { ...type.caption, color: colors.primary, fontWeight: '700', marginTop: spacing.sm, marginBottom: spacing.md },
+  subtitle: { ...type.caption, color: colors.primary, fontFamily: fonts.bodyBold, marginTop: spacing.sm, marginBottom: spacing.md },
   tags: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm },
   chip: {
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 999,
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
   },
   chipOn: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   chipText: { ...type.caption, color: colors.textMuted },
-  chipTextOn: { color: colors.primary, fontWeight: '700' },
+  chipTextOn: { color: colors.primary, fontFamily: fonts.bodyBold },
   note: {
     marginTop: spacing.md, alignSelf: 'stretch', minHeight: 64,
     backgroundColor: colors.surfaceMuted, borderRadius: radius.sm,

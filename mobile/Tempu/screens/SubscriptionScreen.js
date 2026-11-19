@@ -110,7 +110,7 @@ export default function SubscriptionScreen({ onBack, initialTab = 'active' }) {
           <View style={styles.backArrow} />
         </Pressable>
         <Text style={styles.headerTitle}>Subscriptions</Text>
-        <View style={{ width: 36 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.tabs}>
@@ -140,7 +140,7 @@ export default function SubscriptionScreen({ onBack, initialTab = 'active' }) {
           ) : (
             <View style={styles.emptyWrap}>
               <Text style={styles.emptyTitle}>No active plan</Text>
-              <Text style={styles.emptySub}>Browse plans below to get started.</Text>
+              <Text style={styles.emptySub}>Browse plans to get started.</Text>
               <Pressable style={styles.browseCta} onPress={() => setTab('browse')}>
                 <Text style={styles.browseCtaText}>Browse plans</Text>
               </Pressable>
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
@@ -284,13 +284,13 @@ const styles = StyleSheet.create({
   backArrow: { width: 10, height: 10, borderLeftWidth: 2, borderBottomWidth: 2, borderColor: colors.text, transform: [{ rotate: '45deg' }], marginLeft: 4 },
   headerTitle: { ...type.h2, color: colors.text },
 
-  tabs: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  tabs: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
   tab: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm + 2, borderRadius: radius.pill, backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border },
   tabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   tabText: { ...type.caption, color: colors.textMuted },
   tabTextActive: { color: '#fff' },
 
-  scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl + spacing.sm, paddingTop: spacing.xs },
+  scroll: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl + spacing.sm, paddingTop: spacing.xs },
   subBanner: { width: '100%', height: 230, borderRadius: radius.xl, marginBottom: spacing.lg },
 
   emptyWrap: { alignItems: 'center', paddingTop: 72, paddingHorizontal: spacing.lg },

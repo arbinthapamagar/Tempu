@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, type } from '../../theme';
+import { fonts } from '../../theme/type';
 
 /**
  * Selectable filter chip with an optional trailing count badge.
@@ -38,7 +39,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  label: { ...type.small, color: colors.text, fontWeight: '700' },
+  label: { ...type.small, color: colors.text, fontFamily: fonts.bodyBold },
   labelActive: { color: '#ffffff' },
   count: {
     minWidth: 20,
@@ -50,6 +51,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   countActive: { backgroundColor: 'rgba(255,255,255,0.22)' },
-  countText: { fontSize: 11, fontWeight: '800', color: colors.text },
+  countText: { fontSize: 11, fontFamily: fonts.bodyBold, color: colors.text },
   countTextActive: { color: '#ffffff' },
 });

@@ -35,13 +35,15 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    backgroundColor: colors.surfaceMuted,
+    // White like every other text field (login, register, message boxes).
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     paddingHorizontal: spacing.md + 2,
     paddingVertical: spacing.md,
     fontSize: 15,
+    fontFamily: type.body.fontFamily,
     color: colors.text,
   },
 });

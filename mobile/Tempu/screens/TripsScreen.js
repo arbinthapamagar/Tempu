@@ -14,6 +14,7 @@ import { VehiclePhoto } from '../components/Brand';
 import { ChevronIcon, ReceiptIcon, StarIcon } from '../components/Icons';
 import { userApi } from '../api/user.api';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/type';
 
 const FILTERS = [
   { id: 'all', label: 'All' },
@@ -31,7 +32,7 @@ const PAYMENT_LABELS = {
 const VEHICLE_LABELS = {
   scooter: 'Scooter',
   bike: 'Bike',
-  tuktuk: 'Rickshaw',
+  tuktuk: 'Tempu',
   tuktuk_delivery: 'Delivery',
   comfort: 'Comfort',
 };
@@ -98,9 +99,6 @@ export default function TripsScreen() {
           <Text style={styles.headerSubtitle}>
             {filtered.length} {filtered.length === 1 ? 'trip' : 'trips'} · your past rides
           </Text>
-        </View>
-        <View style={styles.countPill}>
-          <Text style={styles.countPillText}>{filtered.length}</Text>
         </View>
       </View>
 
@@ -287,8 +285,8 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 8 : 16,
     paddingBottom: 14,
   },
-  headerTitle: { color: colors.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.6 },
-  headerSubtitle: { color: colors.textMuted, fontSize: 13, marginTop: 2, letterSpacing: -0.1 },
+  headerTitle: { color: colors.text, fontSize: 26, fontFamily: fonts.display, letterSpacing: -0.6 },
+  headerSubtitle: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.body, marginTop: 2, letterSpacing: -0.1 },
   countPill: {
     minWidth: 30,
     height: 26,
@@ -300,9 +298,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  countPillText: { color: colors.text, fontSize: 13, fontWeight: '800' },
+  countPillText: { color: colors.text, fontSize: 13, fontFamily: fonts.bodyBold },
 
-  filters: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 10 },
+  filters: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingBottom: 10 },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -315,7 +313,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  filterText: { color: colors.text, fontSize: 13, fontWeight: '700', letterSpacing: -0.2 },
+  filterText: { color: colors.text, fontSize: 13, fontFamily: fonts.bodyBold, letterSpacing: -0.2 },
   filterTextActive: { color: '#ffffff' },
   filterCount: {
     minWidth: 20,
@@ -327,11 +325,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   filterCountActive: { backgroundColor: 'rgba(255,255,255,0.22)' },
-  filterCountText: { color: colors.text, fontSize: 12, fontWeight: '800' },
+  filterCountText: { color: colors.text, fontSize: 12, fontFamily: fonts.bodyBold },
   filterCountTextActive: { color: '#ffffff' },
 
   list: { paddingHorizontal: 20, paddingBottom: 28 },
-  errorText: { color: colors.danger, textAlign: 'center', marginTop: 36, fontSize: 14 },
+  errorText: { color: colors.danger, textAlign: 'center', marginTop: 36, fontSize: 14, fontFamily: fonts.body },
 
   emptyWrap: { alignItems: 'center', marginTop: 64, paddingHorizontal: 24 },
   emptyIcon: {
@@ -345,8 +343,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 14,
   },
-  emptyTitle: { color: colors.text, fontSize: 16, fontWeight: '800', letterSpacing: -0.2 },
-  emptySub: { color: colors.textMuted, fontSize: 13, marginTop: 4, textAlign: 'center' },
+  emptyTitle: { color: colors.text, fontSize: 16, fontFamily: fonts.bodyBold, letterSpacing: -0.2 },
+  emptySub: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.body, marginTop: 4, textAlign: 'center' },
 
   card: {
     backgroundColor: colors.surface,
@@ -369,12 +367,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  cardTitleSmall: { color: colors.text, fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
+  cardTitleSmall: { color: colors.text, fontSize: 15, fontFamily: fonts.bodyBold, letterSpacing: -0.2 },
   compactMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5 },
   statusDotSmall: { width: 6, height: 6, borderRadius: 3 },
-  compactMeta: { color: colors.textMuted, fontSize: 12, flex: 1 },
+  compactMeta: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, flex: 1 },
   cardRightCompact: { alignItems: 'flex-end', gap: 6 },
-  cardPriceSmall: { color: colors.primary, fontSize: 16, fontWeight: '800', letterSpacing: -0.3 },
+  cardPriceSmall: { color: colors.primary, fontSize: 16, fontFamily: fonts.bodyBold, letterSpacing: -0.3 },
   rightBottomRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   typePill: {
     paddingHorizontal: 9,
@@ -384,7 +382,7 @@ const styles = StyleSheet.create({
   },
   typePillOk: { backgroundColor: colors.primarySoft },
   typePillCancelled: { backgroundColor: colors.dangerSoft },
-  typePillText: { fontSize: 11, fontWeight: '700', letterSpacing: -0.1 },
+  typePillText: { fontSize: 11, fontFamily: fonts.bodyBold, letterSpacing: -0.1 },
   typePillTextOk: { color: colors.primary },
   typePillTextCancelled: { color: colors.danger },
 
@@ -413,15 +411,15 @@ const styles = StyleSheet.create({
   },
   statusOk: { backgroundColor: colors.primarySoft },
   statusCancelled: { backgroundColor: colors.dangerSoft },
-  statusText: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
+  statusText: { fontSize: 11, fontFamily: fonts.bodyBold, textTransform: 'capitalize' },
   statusTextOk: { color: colors.primaryDark },
   statusTextCancelled: { color: colors.danger },
-  cardMeta: { color: colors.textMuted, fontSize: 12, marginTop: 4 },
+  cardMeta: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 4 },
 
   cardDetails: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.divider },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
-  detailLabel: { color: colors.textMuted, fontSize: 13 },
-  detailValue: { color: colors.text, fontSize: 13, fontWeight: '600', maxWidth: '60%' },
+  detailLabel: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.body },
+  detailValue: { color: colors.text, fontSize: 13, fontFamily: fonts.bodySemibold, maxWidth: '60%' },
 
   ghostBtn: {
     flexDirection: 'row',
@@ -434,5 +432,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ghostBtnText: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  ghostBtnText: { color: colors.text, fontSize: 13, fontFamily: fonts.bodyBold },
 });

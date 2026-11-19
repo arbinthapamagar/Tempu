@@ -20,6 +20,7 @@ import OptionsSheet from './OptionsSheet';
 import SearchSheet from './SearchSheet';
 import useRideFlow, { VEHICLE_TYPES } from './useRideFlow';
 import useBackHandler from '../../utils/useBackHandler';
+import { fonts } from '../../theme/type';
 
 export default function HomeScreen({ onOpenSubscription, onAddPlace }) {
   const flow = useRideFlow();
@@ -131,7 +132,9 @@ export default function HomeScreen({ onOpenSubscription, onAddPlace }) {
     <View style={styles.root}>
       <Map step={step} pickupCoords={pickupCoords} destCoords={destCoords} driverCoords={driverCoords} />
 
-      {step !== 'active' && (
+      {/* The search sheet has its own header + back button; drawing this one
+          too stacked two back buttons on top of its title. */}
+      {step !== 'active' && step !== 'search' && (
         <View style={styles.topBar}>
           <Pressable style={styles.backBtn} onPress={goBack} hitSlop={8}>
             <Ionicons name="chevron-back" size={20} color={colors.text} />
@@ -224,7 +227,8 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   topBar: {
     position: 'absolute',
-    top: 56,
+    // Sits under the app's top bar already; 56 pushed it onto the sheet edge.
+    top: 16,
     left: 18,
     right: 18,
     flexDirection: 'row',
@@ -258,5 +262,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.danger,
   },
-  errorBannerText: { color: colors.danger, fontSize: 13, fontWeight: '500' },
+  errorBannerText: { color: colors.danger, fontSize: 13, fontFamily: fonts.body },
 });

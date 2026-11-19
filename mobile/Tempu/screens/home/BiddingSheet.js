@@ -14,6 +14,7 @@ import { VehiclePhoto } from '../../components/Brand';
 import { StarIcon } from '../../components/Icons';
 import { Sheet } from '../../components/ui';
 import { colors, radius, spacing, type } from '../../theme';
+import { fonts } from '../../theme/type';
 
 function diffLabel(amount, offered) {
   const diff = amount - offered;
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.primarySoft,
   },
-  timerText: { color: colors.primaryDark, fontSize: 12, fontWeight: '800' },
+  timerText: { color: colors.primaryDark, fontSize: 12, fontFamily: fonts.bodyBold },
 
   pulseStage: {
     alignSelf: 'center',
@@ -213,6 +214,7 @@ const styles = StyleSheet.create({
   waiting: {
     color: colors.textMuted,
     fontSize: 14,
+    fontFamily: fonts.body,
     textAlign: 'center',
   },
 
@@ -235,7 +237,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
   },
-  avatarText: { color: colors.primaryDark, fontSize: 14, fontWeight: '800' },
+  avatarText: { color: colors.primaryDark, fontSize: 14, fontFamily: fonts.bodyBold },
   avatarBadge: {
     position: 'absolute',
     bottom: -4,
@@ -251,7 +253,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 6,
   },
-  bidName: { ...type.bodyBold, color: colors.text, fontWeight: '700', flex: 1 },
+  bidName: { ...type.bodyBold, color: colors.text, fontFamily: fonts.bodyBold, flex: 1 },
   ratingPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -261,13 +263,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.primarySoft,
   },
-  ratingText: { color: colors.primaryDark, fontSize: 11, fontWeight: '800' },
-  bidMeta: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  bidMessage: { color: colors.text, fontSize: 12, marginTop: 4, fontStyle: 'italic' },
+  ratingText: { color: colors.primaryDark, fontSize: 11, fontFamily: fonts.bodyBold },
+  bidMeta: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 2 },
+  bidMessage: { color: colors.text, fontSize: 12, fontFamily: fonts.body, marginTop: 4, fontStyle: 'italic' },
 
   bidRight: { alignItems: 'flex-end', gap: 4 },
-  bidAmount: { color: colors.text, fontSize: 16, fontWeight: '800' },
-  diffBase: { fontSize: 11, fontWeight: '700' },
+  bidAmount: { color: colors.text, fontSize: 16, fontFamily: fonts.bodyBold },
+  diffBase: { fontSize: 11, fontFamily: fonts.bodyBold },
   diffSame: { color: colors.textMuted },
   diffHigh: { color: colors.danger },
   diffLow: { color: colors.primary },
@@ -278,7 +280,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.primary,
   },
-  acceptText: { color: '#ffffff', fontSize: 12, fontWeight: '700' },
+  acceptText: { color: '#ffffff', fontSize: 12, fontFamily: fonts.bodyBold },
 
   cancel: {
     marginTop: spacing.md,
@@ -291,5 +293,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
   },
-  cancelText: { color: colors.danger, fontSize: 14, fontWeight: '700' },
+  cancelText: { color: colors.danger, fontSize: 14, fontFamily: fonts.bodyBold },
 });

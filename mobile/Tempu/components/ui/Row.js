@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Pill from './Pill';
 import { colors, spacing, type } from '../../theme';
+import { fonts } from '../../theme/type';
 
 /**
  * A horizontal row used inside a Section body.
@@ -59,5 +60,5 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     maxWidth: '65%',
   },
-  value: { ...type.bodyBold, color: colors.text, fontWeight: '600' },
+  value: { ...type.bodyBold, color: colors.text, fontFamily: fonts.bodySemibold },
 });
