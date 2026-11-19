@@ -7,9 +7,11 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import RefreshControl from '../components/RefreshControl';
+import { ScreenHeader } from '../components/ui';
 import { PaymentLogo } from '../components/Brand';
-import { ArrowDownIcon, ArrowUpIcon, CheckIcon } from '../components/Icons';
+import { ArrowDownIcon, ArrowUpIcon } from '../components/Icons';
 import { userApi } from '../api/user.api';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
@@ -49,21 +51,29 @@ function formatDate(value) {
   });
 }
 
-export default function WalletScreen() {
+// Rider wallet: balance, top-up (through eSewa / Khalti, settled by the
+// backend) and the full transaction history, including top-ups that are still
+// being confirmed or did not go through.
+export default function WalletScreen({ onBack, onTopup, refreshKey = 0, underAppBar = false }) {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState([]);
   const [walletBalance, setWalletBalance] = useState(user?.walletBalance ?? 0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const [walletRes, txRes] = await Promise.all([
         userApi.getWallet(),
-        userApi.getTransactions(),
+        userApi.getTransactions(1),
       ]);
       setWalletBalance(walletRes.data?.walletBalance ?? 0);
-      setTransactions(txRes.data?.transactions || txRes.data || []);
+      setTransactions(txRes.data?.transactions || []);
+      setPage(1);
+      setPages(txRes.data?.pagination?.pages || 1);
     } catch {
       // keep stale data
     } finally {
@@ -72,112 +82,142 @@ export default function WalletScreen() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Reload on mount and whenever a top-up settles (refreshKey bumps).
+  useEffect(() => { load(); }, [load, refreshKey]);
+
+  const loadMore = async () => {
+    if (loadingMore || page >= pages) return;
+    setLoadingMore(true);
+    try {
+      const res = await userApi.getTransactions(page + 1);
+      const more = res.data?.transactions || [];
+      setTransactions((prev) => {
+        const seen = new Set(prev.map((t) => t._id));
+        return [...prev, ...more.filter((t) => !seen.has(t._id))];
+      });
+      setPage(page + 1);
+      setPages(res.data?.pagination?.pages || pages);
+    } catch {
+      // leave the button so they can retry
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
     load();
   };
 
-  const preferredMethod = user?.preferredPaymentMethod || 'cash';
-
   return (
-    <ScrollView
-      style={styles.root}
-      contentContainerStyle={styles.scroll}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-      }
-    >
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Wallet</Text>
-        <Text style={styles.headerSub}>Manage your balance & payments</Text>
-      </View>
-
-      <View style={styles.balanceCard}>
-        <View style={styles.balanceDecor} />
-        <View style={styles.balanceDecorSmall} />
-        <Text style={styles.balanceLabel}>Available Balance</Text>
-        <Text style={styles.balanceAmount}>Rs {walletBalance.toLocaleString()}</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Payment Methods</Text>
-        <View style={styles.methodList}>
-          {Object.entries(PAYMENT_LABELS).map(([id, label]) => {
-            const preferred = preferredMethod === id;
-            return (
-              <View key={id} style={styles.methodRow}>
-                <PaymentLogo id={id} size={44} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.methodLabel}>{label}</Text>
-                  <Text style={styles.methodSub}>
-                    {preferred ? 'Preferred method' : 'Tap to set as preferred'}
-                  </Text>
-                </View>
-                {preferred && (
-                  <View style={styles.preferredPill}>
-                    <CheckIcon size={12} color={colors.primaryDark} />
-                    <Text style={styles.preferredText}>Default</Text>
-                  </View>
-                )}
+    <View style={styles.root}>
+      <ScreenHeader
+        style={underAppBar ? { paddingTop: spacing.md } : undefined}
+        title="Wallet"
+        left={onBack ? (
+          <Pressable onPress={onBack} hitSlop={8}>
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
+          </Pressable>
+        ) : null}
+      />
+      <ScrollView
+        style={styles.root}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      >
+        <View style={styles.balanceCard}>
+          <View style={styles.balanceDecor} />
+          <View style={styles.balanceDecorSmall} />
+          <Text style={styles.balanceLabel}>Available Balance</Text>
+          <Text style={styles.balanceAmount}>Rs {Number(walletBalance || 0).toLocaleString()}</Text>
+          {onTopup ? (
+            <View style={styles.balanceActions}>
+              <Pressable style={styles.balanceBtnPrimary} onPress={onTopup}>
+                <Text style={styles.balanceBtnPrimaryText}>Top up</Text>
+              </Pressable>
+              <View style={styles.gatewayRow}>
+                <PaymentLogo id="esewa" size={22} />
+                <PaymentLogo id="khalti" size={22} />
               </View>
-            );
-          })}
+            </View>
+          ) : null}
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-          {transactions.length > 0 && (
-            <Pressable onPress={onRefresh} hitSlop={8}>
-              <Text style={styles.viewAll}>View All</Text>
-            </Pressable>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Activity</Text>
+          {loading ? (
+            <ActivityIndicator color={colors.primary} style={{ marginTop: 16 }} />
+          ) : transactions.length === 0 ? (
+            <Text style={styles.empty}>No transactions yet.</Text>
+          ) : (
+            <View style={styles.txList}>
+              {transactions.map((t, i) => {
+                const pending = t.status === 'pending';
+                const failed = t.status === 'failed' || t.status === 'refunded';
+                // The backend stores every amount as positive; direction comes
+                // from the type (a paid ride is money out, not "+Rs").
+                const positive = DEBIT_TYPES.has(t.type) ? false : t.amount > 0;
+                const settled = !pending && !failed;
+                return (
+                  <View
+                    key={t._id}
+                    style={[styles.txRow, i === transactions.length - 1 && styles.txRowLast]}
+                  >
+                    <View style={[styles.txIcon, settled && (positive ? styles.txIconPos : styles.txIconNeg)]}>
+                      {pending ? (
+                        <Ionicons name="time-outline" size={16} color={colors.warn} />
+                      ) : failed ? (
+                        <Ionicons name="close" size={16} color={colors.textMuted} />
+                      ) : positive ? (
+                        <ArrowDownIcon size={16} color={colors.success} />
+                      ) : (
+                        <ArrowUpIcon size={16} color={colors.danger} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.txTitle} numberOfLines={1}>{t.note || TYPE_LABELS[t.type] || t.type}</Text>
+                      {/* the title already names the type — just say how it was paid */}
+                      <Text style={styles.txMeta} numberOfLines={1}>
+                        {PAYMENT_LABELS[t.method] || t.method}
+                      </Text>
+                      {pending ? (
+                        <Text style={[styles.txState, styles.txStatePending]}>Confirming payment…</Text>
+                      ) : failed ? (
+                        <Text style={[styles.txState, styles.txStateFailed]}>
+                          {t.status === 'refunded' ? 'Refunded' : 'Failed · not charged'}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <View style={styles.txRight}>
+                      <Text
+                        style={[
+                          styles.txAmount,
+                          settled ? (positive ? styles.txPos : styles.txNeg) : styles.txMuted,
+                          failed && styles.txStruck,
+                        ]}
+                      >
+                        {settled ? (positive ? '+' : '−') : ''}Rs {Math.abs(t.amount).toLocaleString()}
+                      </Text>
+                      <Text style={styles.txDate}>{formatDate(t.createdAt)}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
           )}
+          {!loading && page < pages ? (
+            <Pressable style={styles.loadMore} onPress={loadMore} disabled={loadingMore}>
+              {loadingMore
+                ? <ActivityIndicator color={colors.primary} />
+                : <Text style={styles.loadMoreText}>Load more</Text>}
+            </Pressable>
+          ) : null}
         </View>
-        {loading ? (
-          <ActivityIndicator color={colors.primary} style={{ marginTop: 16 }} />
-        ) : transactions.length === 0 ? (
-          <Text style={styles.empty}>No transactions yet.</Text>
-        ) : (
-          <View style={styles.txList}>
-            {transactions.map((t, i) => {
-              // The backend stores every amount as positive; direction comes
-              // from the type (a paid ride is money out, not "+Rs").
-              const positive = DEBIT_TYPES.has(t.type) ? false : t.amount > 0;
-              return (
-                <View
-                  key={t._id}
-                  style={[styles.txRow, i === transactions.length - 1 && styles.txRowLast]}
-                >
-                  <View style={[styles.txIcon, positive ? styles.txIconPos : styles.txIconNeg]}>
-                    {positive ? (
-                      <ArrowDownIcon size={16} color={colors.success} />
-                    ) : (
-                      <ArrowUpIcon size={16} color={colors.danger} />
-                    )}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.txTitle}>{t.note || TYPE_LABELS[t.type] || t.type}</Text>
-                    <Text style={styles.txMeta}>
-                      {TYPE_LABELS[t.type]} · {PAYMENT_LABELS[t.method] || t.method}
-                    </Text>
-                  </View>
-                  <View style={styles.txRight}>
-                    <Text style={[styles.txAmount, positive ? styles.txPos : styles.txNeg]}>
-                      {positive ? '+' : '−'}Rs {Math.abs(t.amount)}
-                    </Text>
-                    <Text style={styles.txDate}>{formatDate(t.createdAt)}</Text>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -227,7 +267,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     letterSpacing: -1,
   },
-  balanceActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl },
+  balanceActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.xl },
   balanceBtnPrimary: {
     flex: 1,
     flexDirection: 'row',
@@ -350,4 +390,20 @@ const styles = StyleSheet.create({
   txNeg: { color: colors.danger },
   txDate: { ...type.micro, color: colors.textFaint, marginTop: 2 },
   empty: { ...type.body, color: colors.textMuted, textAlign: 'center', marginTop: spacing.lg },
+  txMuted: { color: colors.textMuted },
+  txStruck: { textDecorationLine: 'line-through' },
+  txState: { ...type.caption, marginTop: 4 },
+  txStatePending: { color: colors.warn },
+  txStateFailed: { color: colors.textMuted },
+  gatewayRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginLeft: 'auto' },
+  loadMore: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+  },
+  loadMoreText: { ...type.bodyBold, color: colors.text },
 });

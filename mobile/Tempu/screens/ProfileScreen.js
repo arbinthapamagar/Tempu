@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import DriverVehicleScreen from './DriverVehicleScreen';
 import SupportScreen from './SupportScreen';
+import WalletScreen from './WalletScreen';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { ChevronIcon, StarIcon } from '../components/Icons';
@@ -109,6 +110,8 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
   const [addresses, setAddresses] = useState([]);
   const [tfaEnabled, setTfaEnabled] = useState(false);
   const [modal, setModal] = useState(null);
+  const [walletOpen, setWalletOpen] = useState(false);
+  const [walletRefresh, setWalletRefresh] = useState(0); // bump → Wallet reloads
   // Opened straight into a form from elsewhere (Home's "Add new place").
   useEffect(() => {
     if (!initialModal) return;
@@ -196,6 +199,7 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
   // Hardware back closes whichever full-screen overlay is on top. The modals
   // below are RN <Modal>s, which already close themselves via onRequestClose.
   useBackHandler(() => {
+    if (walletOpen) { setWalletOpen(false); return true; }
     if (driverOverlay) { setDriverOverlay(null); return true; }
     if (helpView) { setHelpView(null); return true; }
     return false;
@@ -254,6 +258,7 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
   // eSewa / Khalti to this screen).
   const walletTopup = useGatewayTopup('wallet', ({ status, balance }) => {
     if (status === 'completed') setWalletBalance(balance);
+    setWalletRefresh((k) => k + 1); // show the settled (or failed) top-up in history
   });
 
   const pickAvatar = async () => {
@@ -393,6 +398,7 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
             icon={<Ionicons name="wallet" size={16} color={colors.primary} />}
             value={`Rs ${profile.walletBalance.toLocaleString()}`}
             label="Wallet"
+            onPress={() => setWalletOpen(true)}
           />
           <Stat
             icon={<Ionicons name="calendar" size={16} color={colors.textMuted} />}
@@ -508,8 +514,11 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
           <Row
             label="Preferred method"
             value={PAYMENT_LABELS[user?.preferredPaymentMethod] || '-'}
-            last
           />
+          <Pressable style={styles.walletHistoryRow} onPress={() => setWalletOpen(true)}>
+            <Text style={styles.walletHistoryText}>Transaction history</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
         </Section>
 
         <Section title="Saved places">
@@ -709,6 +718,17 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
         sendSOS={sendSOS}
         sosBusy={sosBusy}
       />
+
+      {walletOpen && (
+        <View style={styles.overlay}>
+          <WalletScreen
+            onBack={() => setWalletOpen(false)}
+            onTopup={() => setModal({ type: 'topup' })}
+            refreshKey={walletRefresh}
+            underAppBar={!!hideTitle}
+          />
+        </View>
+      )}
 
       {helpView === 'support' && (
         <View style={styles.overlay}>
@@ -1362,15 +1382,16 @@ function LinkRow({ label, last, onPress, badge }) {
   );
 }
 
-function Stat({ value, label, icon }) {
+function Stat({ value, label, icon, onPress }) {
+  const Wrap = onPress ? Pressable : View;
   return (
-    <View style={styles.statCard}>
+    <Wrap style={styles.statCard} onPress={onPress}>
       {icon ? <View style={styles.statIcon}>{icon}</View> : null}
       <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
         {value}
       </Text>
       <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
-    </View>
+    </Wrap>
   );
 }
 
@@ -2219,6 +2240,15 @@ const styles = StyleSheet.create({
   becomeDriverTitle: { color: colors.primary, fontSize: 15, fontFamily: fonts.bodyBold },
   becomeDriverSub: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 2 },
 
+  // Same box as Row (the row above keeps its bottom divider).
+  walletHistoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+  },
+  walletHistoryText: { color: colors.text, fontSize: 14, fontFamily: fonts.bodySemibold },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 300,
