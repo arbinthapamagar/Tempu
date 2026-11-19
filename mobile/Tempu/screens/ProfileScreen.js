@@ -108,7 +108,6 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
   }, [user]);
 
   const [addresses, setAddresses] = useState([]);
-  const [tfaEnabled, setTfaEnabled] = useState(false);
   const [modal, setModal] = useState(null);
   const [walletOpen, setWalletOpen] = useState(false);
   const [riderTrips, setRiderTrips] = useState(null);
@@ -675,15 +674,9 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
             label="Change password"
             onPress={() => setModal({ type: 'password' })}
           />
-          <LinkRow
-            label="Two-factor authentication"
-            badge={tfaEnabled ? 'On' : 'Off'}
-            onPress={() => setModal({ type: 'tfa' })}
-          />
-          <LinkRow
-            label="Linked devices"
-            onPress={() => setModal({ type: 'devices' })}
-          />
+          {/* "Two-factor authentication" and "Linked devices" lived here as
+              local-only toggles; the backend has neither, so they promised
+              protection that didn't exist. Bring them back with real APIs. */}
           <LinkRow
             label="Help centre"
             onPress={() => setModal({ type: 'help' })}
@@ -719,8 +712,6 @@ export default function ProfileScreen({ hideTitle, onBack, onSignOut, onOpenSubs
         addAddress={addAddress}
         removeAddress={removeAddress}
         walletTopup={walletTopup}
-        tfaEnabled={tfaEnabled}
-        setTfaEnabled={setTfaEnabled}
         sendSOS={sendSOS}
         sosBusy={sosBusy}
       />
@@ -790,8 +781,6 @@ function ProfileModal({
   addAddress,
   removeAddress,
   walletTopup,
-  tfaEnabled,
-  setTfaEnabled,
   sendSOS,
   sosBusy,
 }) {
@@ -831,14 +820,6 @@ function ProfileModal({
             <AddAddressForm addAddress={addAddress} close={close} />
           )}
           {modal?.type === 'password' && <PasswordForm close={close} onSignOut={onSignOut} />}
-          {modal?.type === 'tfa' && (
-            <TfaForm
-              enabled={tfaEnabled}
-              setEnabled={setTfaEnabled}
-              close={close}
-            />
-          )}
-          {modal?.type === 'devices' && <LinkedDevices close={close} />}
           {modal?.type === 'help' && <HelpCentre close={close} />}
           {modal?.type === 'contact' && <ContactSupport close={close} />}
           {modal?.type === 'sos' && <SosForm onSend={sendSOS} busy={sosBusy} close={close} />}
@@ -1158,81 +1139,7 @@ function PasswordForm({ close, onSignOut }) {
   );
 }
 
-function TfaForm({ enabled, setEnabled, close }) {
-  return (
-    <>
-      <ModalHeader title="Two-factor authentication" close={close} />
-      <Text style={styles.formCopy}>
-        Add a second step when signing in. We'll send a code to your phone
-        whenever you log in from a new device.
-      </Text>
-      <View style={styles.tfaCard}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.tfaTitle}>SMS verification</Text>
-          <Text style={styles.tfaSub}>
-            {enabled ? 'Enabled · sent to your phone' : 'Currently off'}
-          </Text>
-        </View>
-        <Pressable
-          onPress={() => setEnabled((v) => !v)}
-          style={[
-            styles.tfaToggle,
-            enabled ? styles.tfaToggleOn : styles.tfaToggleOff,
-          ]}
-        >
-          <Text style={styles.tfaToggleText}>{enabled ? 'On' : 'Off'}</Text>
-        </Pressable>
-      </View>
-      <PrimaryButton label="Done" onPress={close} />
-    </>
-  );
-}
 
-function LinkedDevices({ close }) {
-  const [devices, setDevices] = useState([
-    { id: 'd1', name: 'iPhone 14', meta: 'Kathmandu · last seen now', current: true },
-    { id: 'd2', name: 'Pixel 8', meta: 'Lalitpur · 3 days ago' },
-    { id: 'd3', name: 'Chrome (Mac)', meta: 'Kathmandu · 1 week ago' },
-  ]);
-
-  const revoke = (device) => {
-    Alert.alert(
-      'Revoke access',
-      `Sign ${device.name} out of your account?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Revoke',
-          style: 'destructive',
-          onPress: () => setDevices((prev) => prev.filter((d) => d.id !== device.id)),
-        },
-      ],
-    );
-  };
-
-  return (
-    <>
-      <ModalHeader title="Linked devices" close={close} />
-      {devices.map((d) => (
-        <View key={d.id} style={styles.deviceRow}>
-          <Ionicons name="phone-portrait" size={22} color={colors.text} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.deviceName}>
-              {d.name}
-              {d.current ? '  ·  This device' : ''}
-            </Text>
-            <Text style={styles.deviceMeta}>{d.meta}</Text>
-          </View>
-          {!d.current && (
-            <Pressable hitSlop={6} onPress={() => revoke(d)}>
-              <Text style={styles.deviceRevoke}>Revoke</Text>
-            </Pressable>
-          )}
-        </View>
-      ))}
-    </>
-  );
-}
 
 function HelpCentre({ close }) {
   const topics = [
@@ -2098,36 +2005,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
-  tfaCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: colors.surfaceMuted,
-    marginBottom: 12,
-  },
-  tfaTitle: { color: colors.text, fontSize: 14, fontFamily: fonts.bodyBold },
-  tfaSub: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 2 },
-  tfaToggle: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-  },
-  tfaToggleOn: { backgroundColor: colors.primary },
-  tfaToggleOff: { backgroundColor: colors.textFaint },
-  tfaToggleText: { color: '#ffffff', fontSize: 12, fontFamily: fonts.bodyBold },
 
-  deviceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
-  },
-  deviceName: { color: colors.text, fontSize: 14, fontFamily: fonts.bodyBold },
-  deviceMeta: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.body, marginTop: 2 },
-  deviceRevoke: { color: colors.danger, fontSize: 12, fontFamily: fonts.bodyBold },
 
   helpRow: {
     flexDirection: 'row',
