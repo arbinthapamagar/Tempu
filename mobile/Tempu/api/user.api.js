@@ -8,24 +8,14 @@ export const userApi = {
   changePassword: (data) => api.put('/users/password', data),
   updateFcmToken: (fcmToken) => api.put('/users/fcm-token', { fcmToken }),
   uploadAvatar: async (uri) => {
-    const { tokenStore } = await import('./tokenStore');
-    const { accessToken } = tokenStore.get();
-    const { BASE_URL } = await import('./client');
     const form = new FormData();
     await appendFile(form, 'avatar', { uri, name: 'avatar.jpg', type: 'image/jpeg' });
-    const res = await fetch(`${BASE_URL}/users/profile/avatar`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: form,
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`);
-    return json;
+    return request('POST', '/users/profile/avatar', form);
   },
   deleteAvatar: () => api.del('/users/profile/avatar'),
 
   // Location
-  updateLocation: (coordinates) => api.put('/users/location', { coordinates }),
+  updateLocation: ({ latitude, longitude }) => api.put('/users/location', { latitude, longitude }),
   getSavedAddresses: () => api.get('/users/saved-addresses'),
   addSavedAddress: (data) => api.post('/users/saved-addresses', data),
   updateSavedAddress: (id, data) => api.put(`/users/saved-addresses/${id}`, data),
@@ -72,20 +62,10 @@ export const userApi = {
   rateTicket: (id, score, comment = '', tags = []) => api.post(`/users/support/${id}/rate`, { score, comment, tags }),
   // Voice note / document attachment on a ticket. `file` = { uri, name, type }.
   sendTicketAttachment: async (id, { message, file }) => {
-    const { tokenStore } = await import('./tokenStore');
-    const { accessToken } = tokenStore.get();
-    const { BASE_URL } = await import('./client');
     const form = new FormData();
     if (message) form.append('message', message);
     await appendFile(form, 'attachment', { uri: file.uri, name: file.name, type: file.type });
-    const res = await fetch(`${BASE_URL}/users/support/${id}/messages`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: form,
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.message || 'Failed to send attachment');
-    return json;
+    return request('POST', `/users/support/${id}/messages`, form);
   },
 
   // Place search / geocoding (backend proxy → Google when admin key is set,
@@ -114,22 +94,12 @@ export const userApi = {
   updateDriverProfile: (data) => api.put('/users/driver', data),
   // `file` = { uri, name, mimeType } — a photo or a PDF.
   uploadDriverDocument: async (type, file) => {
-    const { tokenStore } = await import('./tokenStore');
-    const { accessToken } = tokenStore.get();
-    const { BASE_URL } = await import('./client');
     const form = new FormData();
     const mimeType = file.mimeType || 'image/jpeg';
     const name = file.name || (mimeType === 'application/pdf' ? 'document.pdf' : 'document.jpg');
     await appendFile(form, 'document', { uri: file.uri, name, type: mimeType });
     form.append('type', type);
-    const res = await fetch(`${BASE_URL}/users/driver/documents`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: form,
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`);
-    return json;
+    return request('POST', '/users/driver/documents', form);
   },
   goOnline: () => api.put('/users/driver/go-online'),
   goOffline: () => api.put('/users/driver/go-offline'),

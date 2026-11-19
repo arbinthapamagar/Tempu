@@ -7,7 +7,11 @@ export function reloadApp() {
   try {
     // eslint-disable-next-line global-require
     const Updates = require('expo-updates');
-    if (Updates?.reloadAsync) { Updates.reloadAsync(); return; }
+    if (Updates?.reloadAsync) {
+      // Rejects when updates are disabled (dev builds) — fall back then.
+      Updates.reloadAsync().catch(() => DevSettings.reload());
+      return;
+    }
   } catch { /* expo-updates not installed */ }
   DevSettings.reload();
 }

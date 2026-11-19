@@ -67,7 +67,7 @@ function AppShell() {
   useEffect(() => {
     AsyncStorage.getItem('shakti_mode').then((m) => {
       if (m === 'driver') setModeState('driver');
-    });
+    }).catch(() => {});
   }, []);
 
   // The /users/profile payload doesn't always embed the driver profile, so

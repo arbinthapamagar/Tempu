@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { authApi } from '../api/auth.api';
+import { setOnAuthFailure } from '../api/client';
 import { tokenStore } from '../api/tokenStore';
 import { userApi } from '../api/user.api';
 
@@ -41,6 +42,16 @@ export function AuthProvider({ children }) {
     })();
   }, []);
 
+  // The refresh token was rejected (expired / replaced by a login elsewhere):
+  // drop the dead session so the app returns to the login screen.
+  useEffect(() => {
+    setOnAuthFailure(() => {
+      tokenStore.clear().catch(() => {});
+      setUser(null);
+    });
+    return () => setOnAuthFailure(null);
+  }, []);
+
   const login = useCallback(async (phone, password) => {
     const res = await authApi.login(phone, password);
     const { user: u, accessToken, refreshToken } = res.data;
@@ -71,7 +82,10 @@ export function AuthProvider({ children }) {
 
   const resendOtp = useCallback(async () => {
     if (!tempToken) throw new Error('No temp token');
-    await authApi.resendOtp(tempToken);
+    const res = await authApi.resendOtp(tempToken);
+    // The backend issues a fresh 10-minute temp token with each resend; keep
+    // using the old one and verifying the new OTP fails as "expired".
+    if (res?.data?.tempToken) setTempToken(res.data.tempToken);
   }, [tempToken]);
 
   const logout = useCallback(async () => {

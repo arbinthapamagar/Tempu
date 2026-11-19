@@ -6,9 +6,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 let _access = null;
 let _refresh = null;
+// Bumped on every clear() so an in-flight token refresh can tell it was
+// overtaken by a logout and must not write tokens back.
+let _session = 0;
 
 export const tokenStore = {
   get: () => ({ accessToken: _access, refreshToken: _refresh }),
+
+  session: () => _session,
 
   set: async (access, refresh) => {
     _access = access;
@@ -27,6 +32,7 @@ export const tokenStore = {
   },
 
   clear: async () => {
+    _session++;
     _access = null;
     _refresh = null;
     await AsyncStorage.multiRemove(['shakti_access', 'shakti_refresh']);

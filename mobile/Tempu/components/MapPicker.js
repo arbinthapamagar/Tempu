@@ -48,6 +48,7 @@ export default function MapPicker({ visible, title = 'Drop-off', onCancel, onCon
   // background) so the interaction always feels immediate, never "stuck".
   const pinLift = useRef(new Animated.Value(0)).current;
   const draggingRef = useRef(false);
+  const userMovedRef = useRef(false); // user dragged the pin since the picker opened
   const programmaticRef = useRef(false); // true while a coded animateToRegion runs
   const geocodeTimer = useRef(null);
 
@@ -77,16 +78,28 @@ export default function MapPicker({ visible, title = 'Drop-off', onCancel, onCon
 
   useEffect(() => {
     if (!visible) return;
+    let cancelled = false;
+    userMovedRef.current = false;
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
-      const me = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      const c = { latitude: me.coords.latitude, longitude: me.coords.longitude };
-      setCenter(c);
-      moveTo(c);
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted' || cancelled) return;
+        const me = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        // A slow GPS fix must not yank the pin away from where the user put
+        // it, nor touch a picker that has already closed.
+        if (cancelled || userMovedRef.current) return;
+        const c = { latitude: me.coords.latitude, longitude: me.coords.longitude };
+        setCenter(c);
+        moveTo(c);
+      } catch {
+        // location services off / no fix — keep the default centre
+      }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [visible]);
 
   // Reverse-geocode the centre, debounced so rapid pans don't stack slow
@@ -163,6 +176,7 @@ export default function MapPicker({ visible, title = 'Drop-off', onCancel, onCon
             // programmatic recenters, and lift only once per drag).
             if (programmaticRef.current || draggingRef.current) return;
             draggingRef.current = true;
+            userMovedRef.current = true;
             liftPin();
           }}
           onRegionChangeComplete={(r) => {

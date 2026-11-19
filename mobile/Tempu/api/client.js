@@ -17,17 +17,40 @@ export const BASE_URL =
 // own socket timeout — minutes on Android. Fail fast with a real message.
 const REQUEST_TIMEOUT_MS = 15000;
 
+// Uploads (avatar, documents, voice notes) need far longer than JSON calls.
+const UPLOAD_TIMEOUT_MS = 120000;
+
 let isRefreshing = false;
 let waitQueue = [];
+
+// Called when the refresh token itself is rejected (expired, or replaced by a
+// login on another device). AuthProvider registers this to sign the user out;
+// without it the app sat on its main screens failing every request.
+let onAuthFailure = null;
+export function setOnAuthFailure(fn) {
+  onAuthFailure = fn;
+}
 
 function flushQueue(err, token) {
   waitQueue.forEach((cb) => cb(err, token));
   waitQueue = [];
 }
 
+// Parse a response body without letting a non-JSON body (an HTML 502 from a
+// proxy while the host wakes up) surface as a SyntaxError — callers would
+// otherwise treat that as "session rejected" and sign the user out.
+async function readJson(res) {
+  const json = await res.json().catch(() => null);
+  if (json === null && (res.status >= 500 || res.status === 0)) throw networkError();
+  return json;
+}
+
 async function doRefresh() {
   const { refreshToken } = tokenStore.get();
   if (!refreshToken) throw new Error('No refresh token');
+  // If logout() clears the store while this is in flight, don't write the
+  // refreshed tokens back — that would resurrect the session on next launch.
+  const session = tokenStore.session();
   // Via rawFetch so the refresh call gets the same timeout as everything else.
   let res;
   try {
@@ -38,9 +61,10 @@ async function doRefresh() {
   } catch {
     throw networkError();
   }
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Token refresh failed');
+  const json = await readJson(res);
+  if (!res.ok) throw new Error(json?.message || 'Token refresh failed');
   const { accessToken, refreshToken: newRefresh } = json.data;
+  if (tokenStore.session() !== session) throw new Error('Signed out');
   await tokenStore.set(accessToken, newRefresh);
   return accessToken;
 }
@@ -54,14 +78,16 @@ function networkError() {
   return err;
 }
 
-async function rawFetch(method, path, body, headers) {
+const isFormData = (body) => typeof FormData !== 'undefined' && body instanceof FormData;
+
+async function rawFetch(method, path, body, headers, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(`${BASE_URL}${path}`, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : isFormData(body) ? body : JSON.stringify(body),
       signal: controller.signal,
     });
   } finally {
@@ -71,11 +97,14 @@ async function rawFetch(method, path, body, headers) {
 
 export async function request(method, path, body, opts = {}) {
   const { skipAuth = false, tempToken = null } = opts;
+  const form = isFormData(body);
+  const timeoutMs = opts.timeoutMs ?? (form ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
   const { accessToken } = tokenStore.get();
 
   // X-Client tags every request so the backend API-Log viewer buckets this
   // traffic under the "Mobile" section (the web admin sends 'web').
-  const headers = { 'Content-Type': 'application/json', 'X-Client': 'mobile' };
+  // FormData must not get a Content-Type: fetch sets the multipart boundary.
+  const headers = form ? { 'X-Client': 'mobile' } : { 'Content-Type': 'application/json', 'X-Client': 'mobile' };
   if (tempToken) {
     headers.Authorization = `Bearer ${tempToken}`;
   } else if (!skipAuth && accessToken) {
@@ -84,45 +113,40 @@ export async function request(method, path, body, opts = {}) {
 
   let res;
   try {
-    res = await rawFetch(method, path, body, headers);
+    res = await rawFetch(method, path, body, headers, timeoutMs);
   } catch {
     throw networkError();
   }
 
   if (res.status === 401 && !skipAuth && !tempToken) {
+    let newToken;
     if (isRefreshing) {
-      const newToken = await new Promise((resolve, reject) => {
+      newToken = await new Promise((resolve, reject) => {
         waitQueue.push((err, tok) => (err ? reject(err) : resolve(tok)));
       });
-      headers.Authorization = `Bearer ${newToken}`;
-      try {
-        res = await rawFetch(method, path, body, headers);
-      } catch {
-        throw networkError();
-      }
     } else {
       isRefreshing = true;
-      let newToken;
       try {
         newToken = await doRefresh();
         flushQueue(null, newToken);
       } catch (err) {
         flushQueue(err, null);
-        isRefreshing = false;
+        if (!err?.network && onAuthFailure) onAuthFailure();
         throw err;
+      } finally {
+        isRefreshing = false;
       }
-      isRefreshing = false;
-      headers.Authorization = `Bearer ${newToken}`;
-      try {
-        res = await rawFetch(method, path, body, headers);
-      } catch {
-        throw networkError();
-      }
+    }
+    headers.Authorization = `Bearer ${newToken}`;
+    try {
+      res = await rawFetch(method, path, body, headers, timeoutMs);
+    } catch {
+      throw networkError();
     }
   }
 
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || `Request failed (${res.status})`);
+  const json = await readJson(res);
+  if (!res.ok) throw new Error(json?.message || `Request failed (${res.status})`);
   return json;
 }
 
