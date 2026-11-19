@@ -7,6 +7,7 @@ import app from './app.js';
 import { initSignaling } from './socket/signaling.js';
 import { ensureRagService } from './utils/ragAutostart.js';
 import { getRedis, closeRedis, isRedisConfigured } from './utils/redis.js';
+import { reconcileStaleTopups } from './controller/users/user.payment.controller.js';
 
 const port = process.env.PORT || 8000;
 
@@ -56,6 +57,11 @@ dbConnect()
             // serving. Fire-and-forget: it reuses an existing instance, never
             // blocks startup, and never throws. See utils/ragAutostart.js.
             ensureRagService();
+
+            // Close out abandoned gateway top-ups every 10 minutes.
+            const sweep = () => reconcileStaleTopups()
+                .catch((err) => console.warn('[payments] sweep failed:', err.message));
+            setInterval(sweep, 10 * 60 * 1000).unref();
         });
     })
     .catch((error) => {

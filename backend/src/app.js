@@ -12,6 +12,7 @@ import { getRedis, isRedisReady, isRedisConfigured } from './utils/redis.js';
 
 import { authRouter } from './routes/auth.route.js';
 import { userRouter } from './routes/user.route.js';
+import { paymentRouter } from './routes/payment.route.js';
 import { tripRouter } from './routes/trip.route.js';
 import { bidRouter } from './routes/bid.route.js';
 import { driverRouter } from './routes/driver.route.js';
@@ -243,6 +244,7 @@ app.use('/api/v1/auth/verify-otp', otpLimiter);
 app.use('/api/v1/auth/forgot-password', otpLimiter);
 app.use('/api/v1/auth', authLimiter, authRouter);
 app.use('/api/v1/users', userRouter);
+app.use('/api/v1/payments', paymentRouter);
 app.use('/api/v1/trips', tripRouter);
 app.use('/api/v1/bids', bidRouter);
 app.use('/api/v1/drivers', driverRouter);

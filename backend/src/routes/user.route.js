@@ -3,7 +3,8 @@ import { verifyUserJwt } from '../middlewares/auth.middleware.js';
 import { upload, uploadDocument } from '../middlewares/multer.middleware.js';
 import { getProfile, updateProfile, uploadAvatar, deleteAvatar, changePassword, updateFcmToken } from '../controller/users/user.profile.controller.js';
 import { updateLocation, getSavedAddresses, addSavedAddress, updateSavedAddress, deleteSavedAddress } from '../controller/users/user.location.controller.js';
-import { getWallet, getTransactions, topUpWallet } from '../controller/users/user.wallet.controller.js';
+import { getWallet, getTransactions } from '../controller/users/user.wallet.controller.js';
+import { getPaymentMethods, initiateTopup, getTopupStatus } from '../controller/users/user.payment.controller.js';
 import { getNotifications, markAsRead, markAllAsRead, deleteNotification } from '../controller/users/user.notification.controller.js';
 import { getTripHistory, getTripById, getFareQuote } from '../controller/users/user.trip.controller.js';
 import { createReview, getMyReviews, driverCreateReview } from '../controller/users/user.review.controller.js';
@@ -15,7 +16,7 @@ import { createTicket, getMyTickets, getTicketById, addMessage, getSupportConfig
 import {
     registerAsDriver, getMyDriverProfile, updateDriverProfile, uploadDriverDocument,
     goOnline, goOffline, updateDriverLocation, getNearbyTrips, getMyEarnings,
-    requestWithdrawal, getMyWithdrawals, topUpDriverBalance, getEarningsBreakdown,
+    requestWithdrawal, getMyWithdrawals, getEarningsBreakdown,
 } from '../controller/users/user.driver.controller.js';
 import { triggerEmergency, getMyEmergencies } from '../controller/users/user.emergency.controller.js';
 import { autocomplete as geoAutocomplete, placeDetails as geoPlaceDetails, directions as geoDirections } from '../controller/geo.controller.js';
@@ -41,7 +42,11 @@ userRouter.delete('/saved-addresses/:id', deleteSavedAddress);
 
 // Wallet & Transactions
 userRouter.get('/wallet', getWallet);
-userRouter.post('/wallet/topup', topUpWallet);
+// Top-ups go through eSewa / Khalti; the balance is credited only after the
+// gateway confirms (see user.payment.controller.js).
+userRouter.get('/payment-methods', getPaymentMethods);
+userRouter.post('/wallet/topup/initiate', initiateTopup('wallet'));
+userRouter.get('/wallet/topup/:id', getTopupStatus('wallet'));
 userRouter.get('/transactions', getTransactions);
 
 // Notifications
@@ -97,7 +102,8 @@ userRouter.put('/driver/location', updateDriverLocation);
 userRouter.get('/driver/nearby-trips', getNearbyTrips);
 userRouter.get('/driver/earnings', getMyEarnings);
 userRouter.get('/driver/earnings/breakdown', getEarningsBreakdown);
-userRouter.post('/driver/topup', verifyDriverProfile, topUpDriverBalance);
+userRouter.post('/driver/topup/initiate', verifyDriverProfile, initiateTopup('driver'));
+userRouter.get('/driver/topup/:id', verifyDriverProfile, getTopupStatus('driver'));
 userRouter.post('/driver/withdrawals', verifyDriverProfile, requestWithdrawal);
 userRouter.get('/driver/withdrawals', verifyDriverProfile, getMyWithdrawals);
 

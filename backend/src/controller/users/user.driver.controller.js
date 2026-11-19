@@ -323,40 +323,6 @@ const getEarningsBreakdown = asyncHandler(async (req, res) => {
 // Standby payment: no real gateway yet — the amount is recorded and credited
 // immediately. Swap for a verified gateway callback when integrating eSewa/
 // Khalti/bank for real.
-const topUpDriverBalance = asyncHandler(async (req, res) => {
-    const { amount, method } = req.body;
-
-    const parsedAmount = parseFloat(amount);
-    if (!parsedAmount || parsedAmount <= 0) throw new apiError(400, 'Valid amount is required');
-    if (parsedAmount > 100000) throw new apiError(400, 'Maximum top-up amount is NPR 100,000');
-    if (!['khalti', 'esewa', 'bank'].includes(method)) {
-        throw new apiError(400, 'Payment method must be khalti, esewa or bank');
-    }
-
-    const driver = await Driver.findOne({ userId: req.user._id });
-    if (!driver) throw new apiError(404, 'Driver profile not found');
-
-    const transaction = await Transaction.create({
-        driverId: driver._id,
-        amount: parsedAmount,
-        type: 'wallet_topup',
-        method,
-        status: 'completed',
-        gatewayRef: `STANDBY_${Date.now()}`,
-        note: 'Driver fee-balance top-up (standby payment)',
-    });
-
-    const updated = await Driver.findByIdAndUpdate(
-        driver._id,
-        { $inc: { topupBalance: parsedAmount } },
-        { new: true }
-    ).select('topupBalance');
-
-    return res.status(201).json(
-        new apiResponse(201, { transaction, topupBalance: updated.topupBalance }, 'Top-up successful')
-    );
-});
-
 const MIN_WITHDRAWAL = 100;
 
 const requestWithdrawal = asyncHandler(async (req, res) => {
@@ -423,5 +389,5 @@ const getMyWithdrawals = asyncHandler(async (req, res) => {
 export {
     registerAsDriver, getMyDriverProfile, updateDriverProfile, uploadDriverDocument,
     goOnline, goOffline, updateDriverLocation, getNearbyTrips, getMyEarnings,
-    requestWithdrawal, getMyWithdrawals, topUpDriverBalance, getEarningsBreakdown,
+    requestWithdrawal, getMyWithdrawals, getEarningsBreakdown,
 };

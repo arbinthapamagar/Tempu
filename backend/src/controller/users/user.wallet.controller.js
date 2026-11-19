@@ -34,39 +34,4 @@ const getTransactions = asyncHandler(async (req, res) => {
     );
 });
 
-const topUpWallet = asyncHandler(async (req, res) => {
-    const { amount, method, gatewayRef } = req.body;
-
-    const parsedAmount = parseFloat(amount);
-    if (!parsedAmount || parsedAmount <= 0) throw new apiError(400, 'Valid amount is required');
-    if (parsedAmount > 100000) throw new apiError(400, 'Maximum top-up amount is NPR 100,000');
-
-    if (!method || !['khalti', 'esewa'].includes(method)) {
-        throw new apiError(400, 'Payment method must be khalti or esewa');
-    }
-
-    if (!gatewayRef || gatewayRef.trim().length < 5) {
-        throw new apiError(400, 'Valid payment gateway reference is required');
-    }
-
-    const transaction = await Transaction.create({
-        userId: req.user._id,
-        amount: parsedAmount,
-        type: 'wallet_topup',
-        method,
-        status: 'completed',
-        gatewayRef: gatewayRef.trim(),
-    });
-
-    const user = await User.findByIdAndUpdate(
-        req.user._id,
-        { $inc: { walletBalance: parsedAmount } },
-        { new: true }
-    ).select('walletBalance');
-
-    return res.status(201).json(
-        new apiResponse(201, { transaction, walletBalance: user.walletBalance }, 'Wallet topped up')
-    );
-});
-
-export { getWallet, getTransactions, topUpWallet };
+export { getWallet, getTransactions };

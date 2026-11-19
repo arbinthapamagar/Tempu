@@ -50,7 +50,14 @@ const transactionSchema = new mongoose.Schema(
       default: 'pending',
     },
 
-    gatewayRef: { type: String, default: null }, // khalti/esewa transaction id
+    gatewayRef: { type: String, default: null }, // khalti pidx / esewa transaction_uuid
+    // Our own order id sent to the gateway (eSewa transaction_uuid, Khalti
+    // purchase_order_id) — unique per top-up attempt.
+    orderRef: { type: String, default: null },
+    // Raw verification response from the gateway (status API / lookup), kept
+    // for reconciliation and support.
+    gatewayData: { type: mongoose.Schema.Types.Mixed, default: null },
+    failureReason: { type: String, default: null },
     note: { type: String, default: null },        // e.g. admin grant reason / promotion
   },
   { timestamps: true }
@@ -61,5 +68,6 @@ transactionSchema.index({ driverId: 1 });
 transactionSchema.index({ tripId: 1 });
 transactionSchema.index({ status: 1 });
 transactionSchema.index({ type: 1 });
+transactionSchema.index({ orderRef: 1 }, { unique: true, sparse: true });
 
 export const Transaction = mongoose.model('Transaction', transactionSchema);
