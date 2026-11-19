@@ -63,6 +63,12 @@ export default function SupportScreen({ onBack, role }) {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [recording, setRecording] = useState(false);
   const callRef = useRef(null);
+  // Thread poll guard: which ticket is open, and a counter bumped on every
+  // write (reply / attachment / rating) so a poll that started earlier can't
+  // overwrite newer data or show the wrong ticket.
+  const activeIdRef = useRef(null);
+  const writeSeqRef = useRef(0);
+  useEffect(() => { activeIdRef.current = active?._id ?? null; }, [active?._id]);
 
   // Attachment compose/preview (WhatsApp-style) before sending.
   const [pending, setPending] = useState(null); // { type:'images'|'doc'|'audio', items:[{uri,name,type}] }
@@ -95,9 +101,11 @@ export default function SupportScreen({ onBack, role }) {
     if (view !== 'thread' || !active?._id) return undefined;
     const id = active._id;
     const timer = setInterval(async () => {
+      const seq = writeSeqRef.current;
       try {
         const res = await userApi.getTicketById(id);
-        if (res.data) setActive(res.data);
+        if (!res.data || res.data._id !== activeIdRef.current || seq !== writeSeqRef.current) return;
+        setActive(res.data);
       } catch { /* ignore poll errors */ }
     }, 4000);
     return () => clearInterval(timer);
@@ -111,6 +119,7 @@ export default function SupportScreen({ onBack, role }) {
   }, [active?._id, active?.status, active?.rating?.score, reviewDismissedFor]);
 
   const openTicket = async (id) => {
+    discardDraftMedia();
     setView('thread');
     setActive(null);
     loadSettings(); // pick up any permission changes before showing call buttons
@@ -142,6 +151,7 @@ export default function SupportScreen({ onBack, role }) {
     setBusy(true);
     try {
       const res = await userApi.addTicketMessage(active._id, reply.trim());
+      writeSeqRef.current++;
       setReply('');
       setActive(res.data || active);
     } catch { /* noop */ } finally { setBusy(false); }
@@ -152,6 +162,7 @@ export default function SupportScreen({ onBack, role }) {
     setBusy(true);
     try {
       const res = await userApi.rateTicket(active._id, score, note, tags);
+      writeSeqRef.current++;
       setActive(res.data || active);
       setReviewOpenFor(null);
     } catch (e) {
@@ -179,12 +190,16 @@ export default function SupportScreen({ onBack, role }) {
     if (!pending?.items?.length || !active?._id) return;
     setBusy(true);
     try {
-      let latest = active;
-      for (const file of pending.items) {
-        const res = await userApi.sendTicketAttachment(active._id, { file });
-        if (res?.data) latest = res.data;
+      const items = [...pending.items];
+      while (items.length) {
+        const res = await userApi.sendTicketAttachment(active._id, { file: items[0] });
+        writeSeqRef.current++;
+        if (res?.data) setActive(res.data);
+        // Drop each file as soon as it's sent, so Retry after a failure
+        // doesn't send the earlier ones a second time.
+        items.shift();
+        setPending((p) => (p ? { ...p, items: [...items] } : p));
       }
-      setActive(latest);
       setPending(null);
     } catch (e) {
       Alert.alert('Upload failed', e?.message || 'Could not send the attachment.');
@@ -255,9 +270,19 @@ export default function SupportScreen({ onBack, role }) {
 
   const startCall = (video) => callRef.current?.start(video ? 'video' : 'audio');
 
+  // Leaving a thread must not carry a running recording or staged files
+  // over to the next ticket that gets opened.
+  const discardDraftMedia = () => {
+    if (recording) {
+      setRecording(false);
+      try { Promise.resolve(recorder.stop()).catch(() => {}); } catch { /* not recording */ }
+    }
+    cancelPending();
+  };
+
   const back = () => {
     if (view === 'list') onBack?.();
-    else { setView('list'); setActive(null); loadTickets(); }
+    else { discardDraftMedia(); setView('list'); setActive(null); loadTickets(); }
   };
 
   // Hardware back mirrors the header chevron: out of a thread/new-ticket form

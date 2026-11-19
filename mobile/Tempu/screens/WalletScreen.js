@@ -22,6 +22,13 @@ const PAYMENT_LABELS = {
   wallet: 'Wallet',
 };
 
+const DEBIT_TYPES = new Set([
+  'trip_payment',
+  'subscription_payment',
+  'wallet_withdrawal',
+  'platform_fee',
+]);
+
 const TYPE_LABELS = {
   trip_payment: 'Trip payment',
   trip_earning: 'Trip earning',
@@ -137,7 +144,9 @@ export default function WalletScreen() {
         ) : (
           <View style={styles.txList}>
             {transactions.map((t, i) => {
-              const positive = t.amount > 0;
+              // The backend stores every amount as positive; direction comes
+              // from the type (a paid ride is money out, not "+Rs").
+              const positive = DEBIT_TYPES.has(t.type) ? false : t.amount > 0;
               return (
                 <View
                   key={t._id}
@@ -158,7 +167,7 @@ export default function WalletScreen() {
                   </View>
                   <View style={styles.txRight}>
                     <Text style={[styles.txAmount, positive ? styles.txPos : styles.txNeg]}>
-                      {positive ? '+' : ''}Rs {Math.abs(t.amount)}
+                      {positive ? '+' : '−'}Rs {Math.abs(t.amount)}
                     </Text>
                     <Text style={styles.txDate}>{formatDate(t.createdAt)}</Text>
                   </View>

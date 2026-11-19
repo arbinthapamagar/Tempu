@@ -172,8 +172,10 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
         setDriverProfile(dp);
         setDriverStatus(dp?.status || null);
         setOnline(dp?.isOnline ?? false);
-      }).catch(() => {
-        setDriverStatus(null);
+      }).catch((err) => {
+        // Only "no driver profile" means not a driver. A timeout must not
+        // show "Become a driver" to an approved/pending driver.
+        if (!err?.network) setDriverStatus(null);
       }).finally(() => {
         setDriverLoaded(true);
       }),
@@ -235,6 +237,7 @@ export default function ProfileScreen({ onBack, onSignOut, onOpenSubscription, o
     try {
       await userApi.deleteSavedAddress(id);
       setAddresses((prev) => prev.filter((a) => a._id !== id));
+      refreshUser?.(); // Home's Saved Places reads user.savedAddresses
     } catch (err) {
       Alert.alert('Error', err.message || 'Could not remove address.');
     }
@@ -778,7 +781,7 @@ function ProfileModal({
           {modal?.type === 'add-address' && (
             <AddAddressForm addAddress={addAddress} close={close} />
           )}
-          {modal?.type === 'password' && <PasswordForm close={close} />}
+          {modal?.type === 'password' && <PasswordForm close={close} onSignOut={onSignOut} />}
           {modal?.type === 'tfa' && (
             <TfaForm
               enabled={tfaEnabled}
@@ -807,7 +810,7 @@ function ModalHeader({ title, close }) {
   );
 }
 
-function FormField({ label, value, onChangeText, keyboardType, secure }) {
+function FormField({ label, value, onChangeText, keyboardType, secure, editable = true }) {
   return (
     <View style={styles.formField}>
       <Text style={styles.formLabel}>{label}</Text>
@@ -819,14 +822,19 @@ function FormField({ label, value, onChangeText, keyboardType, secure }) {
         keyboardType={keyboardType}
         secureTextEntry={secure}
         autoCapitalize="none"
+        editable={editable}
       />
     </View>
   );
 }
 
-function PrimaryButton({ label, onPress }) {
+function PrimaryButton({ label, onPress, disabled }) {
   return (
-    <Pressable style={styles.primaryBtn} onPress={onPress}>
+    <Pressable
+      style={[styles.primaryBtn, disabled && { opacity: 0.6 }]}
+      onPress={onPress}
+      disabled={disabled}
+    >
       <Text style={styles.primaryBtnText}>{label}</Text>
     </Pressable>
   );
@@ -865,23 +873,28 @@ function SosForm({ onSend, busy, close }) {
 }
 
 function EditProfileForm({ profile, setProfile, close }) {
+  const { refreshUser } = useAuth();
   const [name, setName] = useState(profile.name);
-  const [phone, setPhone] = useState(profile.phone);
   const [email, setEmail] = useState(profile.email);
   const [saving, setSaving] = useState(false);
   return (
     <>
       <ModalHeader title="Edit profile" close={close} />
       <FormField label="Full name" value={name} onChangeText={setName} />
-      <FormField label="Phone" value={phone} onChangeText={(v) => setPhone(v.replace(/\D/g, ''))} keyboardType="phone-pad" />
+      {/* The server doesn't change phone numbers here (it's the login id and
+          needs OTP verification), so don't pretend it saved one. */}
+      <FormField label="Phone" value={profile.phone} editable={false} />
       <FormField label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" />
       <PrimaryButton
         label={saving ? 'Saving…' : 'Save changes'}
+        disabled={saving}
         onPress={async () => {
           setSaving(true);
           try {
-            await userApi.updateProfile({ name, phone, email });
-            setProfile((p) => ({ ...p, name, phone, email }));
+            const res = await userApi.updateProfile({ name, email });
+            const saved = res?.data || {};
+            setProfile((p) => ({ ...p, name: saved.name ?? p.name, email: saved.email ?? p.email }));
+            refreshUser?.().catch(() => {});
             close();
           } catch (err) {
             Alert.alert('Error', err.message || 'Could not save profile.');
@@ -923,9 +936,10 @@ function TopupForm({ addToWallet, close }) {
       />
       <PrimaryButton
         label={saving ? 'Processing…' : `Add Rs ${amount || 0}`}
+        disabled={saving}
         onPress={async () => {
           const num = Number(amount);
-          if (num <= 0) return;
+          if (num <= 0 || saving) return;
           setSaving(true);
           try {
             await userApi.topUpWallet({ amount: num, method, gatewayRef: `manual-${Date.now()}` });
@@ -1054,7 +1068,8 @@ function AddAddressForm({ addAddress, close }) {
   );
 }
 
-function PasswordForm({ close }) {
+function PasswordForm({ close, onSignOut }) {
+  const { logout } = useAuth();
   const [oldPwd, setOldPwd] = useState('');
   const [newPwd, setNewPwd] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -1069,14 +1084,20 @@ function PasswordForm({ close }) {
       {error ? <Text style={styles.formError}>{error}</Text> : null}
       <PrimaryButton
         label={saving ? 'Updating…' : 'Update password'}
+        disabled={saving}
         onPress={async () => {
           if (newPwd.length < 8) { setError('Password must be at least 8 characters.'); return; }
           if (newPwd !== confirm) { setError('Passwords do not match.'); return; }
           setSaving(true);
           try {
-            await userApi.changePassword({ oldPassword: oldPwd, newPassword: newPwd });
-            Alert.alert('Success', 'Password updated successfully.');
+            // Backend reads currentPassword (oldPassword always got a 400).
+            await userApi.changePassword({ currentPassword: oldPwd, newPassword: newPwd, confirmPassword: confirm });
+            // The server revokes the refresh token on a password change, so the
+            // session can't be renewed — sign in again with the new password.
             close();
+            Alert.alert('Password updated', 'Please sign in again with your new password.');
+            await logout();
+            onSignOut?.();
           } catch (err) {
             setError(err.message || 'Could not update password.');
           } finally {

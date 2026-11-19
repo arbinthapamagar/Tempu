@@ -152,6 +152,8 @@ export default function ContactSupportScreen({ onBack }) {
           await AsyncStorage.removeItem(STORE_KEY);
           setChat(null);
           setTicket(null);
+          setReviewDismissed(false); // a new chat should prompt for its own review
+          setReopening(false);
           setPhase('intro');
         },
       },

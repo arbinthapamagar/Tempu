@@ -108,6 +108,17 @@ function AppShell() {
     }
   }, [user, role, authScreen]);
 
+  // Whenever the session ends — sign-out from any screen (e.g. the driver
+  // pending screen calls logout() directly) or a dead refresh token — land on
+  // role select. Without this a stale 'driver-pending' authScreen rendered an
+  // empty screen for a signed-out user.
+  useEffect(() => {
+    if (!user && (authScreen === 'driver-vehicle' || authScreen === 'driver-pending')) {
+      setAuthScreen('role-select');
+      setOverlay(null);
+    }
+  }, [user, authScreen]);
+
   // Reset to home tab on passenger login. Keyed on the user's id, not the
   // object: refreshUser() (e.g. after saving a place) hands back a new object
   // for the same person and must not yank them off the screen they're on.

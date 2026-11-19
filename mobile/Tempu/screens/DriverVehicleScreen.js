@@ -186,23 +186,41 @@ export default function DriverVehicleScreen({ onSuccess, onBack }) {
 
   const pickAndUpload = async (type, kind = 'photo') => {
     let file = null;
+    try {
+      file = await pickFile(kind);
+    } catch (e) {
+      setUploadError(e?.message || 'Could not open the picker. Please try again.');
+      return;
+    }
+    if (!file) return;
+    await uploadPicked(type, file);
+  };
+
+  const pickFile = async (kind) => {
+    let file = null;
     if (kind === 'pdf') {
       const res = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
-      if (res.canceled || !res.assets?.[0]) return;
+      if (res.canceled || !res.assets?.[0]) return null;
       const a = res.assets[0];
       file = { uri: a.uri, name: a.name || 'document.pdf', mimeType: 'application/pdf', size: a.size };
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') return;
+      if (status !== 'granted') {
+        throw new Error('Allow photo access to upload this document.');
+      }
       const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: false,
         quality: 0.8,
       });
-      if (res.canceled || !res.assets?.[0]?.uri) return;
+      if (res.canceled || !res.assets?.[0]?.uri) return null;
       const a = res.assets[0];
       file = { uri: a.uri, name: a.fileName || 'document.jpg', mimeType: a.mimeType || 'image/jpeg', size: a.fileSize };
     }
+    return file;
+  };
+
+  const uploadPicked = async (type, file) => {
     const label = DOCS.find((d) => d.type === type)?.label || type;
     if (file.size && file.size > MAX_BYTES) {
       setUploadError(`${label}: file is too large (max 10 MB).`);
