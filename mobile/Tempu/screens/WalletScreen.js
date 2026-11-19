@@ -10,12 +10,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import RefreshControl from '../components/RefreshControl';
 import { ScreenHeader } from '../components/ui';
-import { PaymentLogo } from '../components/Brand';
 import { ArrowDownIcon, ArrowUpIcon } from '../components/Icons';
 import { userApi } from '../api/user.api';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
-import { radius, spacing, type, shadow } from '../theme';
+import { spacing, type } from '../theme';
 
 const PAYMENT_LABELS = {
   cash: 'Cash',
@@ -129,25 +128,20 @@ export default function WalletScreen({ onBack, onTopup, refreshKey = 0, underApp
         }
       >
         <View style={styles.balanceCard}>
-          <View style={styles.balanceDecor} />
-          <View style={styles.balanceDecorSmall} />
-          <Text style={styles.balanceLabel}>Available Balance</Text>
-          <Text style={styles.balanceAmount}>Rs {Number(walletBalance || 0).toLocaleString()}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.balanceLabel}>Balance</Text>
+            <Text style={styles.balanceAmount}>Rs {Number(walletBalance || 0).toLocaleString()}</Text>
+          </View>
           {onTopup ? (
-            <View style={styles.balanceActions}>
-              <Pressable style={styles.balanceBtnPrimary} onPress={onTopup}>
-                <Text style={styles.balanceBtnPrimaryText}>Top up</Text>
-              </Pressable>
-              <View style={styles.gatewayRow}>
-                <PaymentLogo id="esewa" size={22} />
-                <PaymentLogo id="khalti" size={22} />
-              </View>
-            </View>
+            <Pressable style={styles.balanceBtnPrimary} onPress={onTopup}>
+              <Text style={styles.balanceBtnPrimaryText}>Top up</Text>
+            </Pressable>
           ) : null}
         </View>
+        {onTopup ? <Text style={styles.balanceHint}>Top up with eSewa or Khalti.</Text> : null}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Activity</Text>
+          <Text style={styles.sectionTitle}>Transactions</Text>
           {loading ? (
             <ActivityIndicator color={colors.primary} style={{ marginTop: 16 }} />
           ) : transactions.length === 0 ? (
@@ -224,143 +218,45 @@ export default function WalletScreen({ onBack, onTopup, refreshKey = 0, underApp
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   scroll: { paddingBottom: spacing.xxxl + spacing.sm },
-  header: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: spacing.md },
-  headerTitle: { ...type.display, color: colors.text },
-  headerSub: { ...type.small, color: colors.textMuted, marginTop: spacing.xs },
-
-  // ── Balance card ──────────────────────────────────────────────
+  // Plain bordered row: balance on the left, action on the right.
   balanceCard: {
     marginHorizontal: spacing.xl,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxl,
-    backgroundColor: colors.primary,
-    borderRadius: radius.xxl,
-    overflow: 'hidden',
-    ...shadow.fab,
-  },
-  balanceDecor: {
-    position: 'absolute',
-    top: -70,
-    right: -50,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(255,255,255,0.10)',
-  },
-  balanceDecorSmall: {
-    position: 'absolute',
-    bottom: -60,
-    left: -30,
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  balanceLabel: {
-    ...type.eyebrow,
-    color: 'rgba(255,255,255,0.85)',
-  },
-  balanceAmount: {
-    ...type.display,
-    fontSize: 40,
-    color: '#fff',
     marginTop: spacing.sm,
-    letterSpacing: -1,
-  },
-  balanceActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.xl },
-  balanceBtnPrimary: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    borderRadius: radius.pill,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  balanceBtnPrimaryText: { ...type.bodyBold, color: colors.primaryDark },
-  balanceBtnGhost: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  balanceBtnGhostText: { ...type.bodyBold, color: '#fff' },
-
-  // ── Sections ──────────────────────────────────────────────────
-  section: { paddingHorizontal: spacing.xl, marginTop: spacing.xxl },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-  },
-  sectionTitle: { ...type.eyebrow, color: colors.textMuted, marginBottom: spacing.md },
-  viewAll: { ...type.caption, color: colors.primary, marginBottom: spacing.md },
-
-  // ── Quick top up ──────────────────────────────────────────────
-  topupGrid: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  topupChip: {
-    flex: 1,
-    paddingVertical: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-  },
-  topupChipActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
-  topupChipText: { ...type.bodyBold, color: colors.text },
-  topupChipTextActive: { color: colors.primary },
-
-  cta: {
-    paddingVertical: spacing.lg,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-  },
-  ctaText: { ...type.bodyBold, fontSize: 15, color: '#fff' },
-
-  // ── Payment methods ───────────────────────────────────────────
-  methodList: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-  },
-  methodRow: {
+    padding: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
   },
-  methodLabel: { ...type.bodyBold, color: colors.text },
-  methodSub: { ...type.caption, color: colors.textMuted, marginTop: 2 },
-  preferredPill: {
-    flexDirection: 'row',
+
+
+  balanceLabel: { ...type.small, color: colors.textMuted },
+  balanceAmount: { ...type.h1, fontSize: 26, color: colors.text, marginTop: 2 },
+  balanceHint: { ...type.small, color: colors.textMuted, marginHorizontal: spacing.xl, marginTop: spacing.sm },
+  balanceBtnPrimary: {
+    paddingVertical: 10,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primarySoft,
+    justifyContent: 'center',
   },
-  preferredText: { ...type.micro, color: colors.primary },
+  balanceBtnPrimaryText: { ...type.bodyBold, color: '#ffffff' },
+
+  // ── Sections ──────────────────────────────────────────────────
+  section: { paddingHorizontal: spacing.xl, marginTop: spacing.xl },
+  sectionTitle: { ...type.h3, color: colors.text, marginBottom: spacing.sm },
+
 
   // ── Transactions ──────────────────────────────────────────────
   txList: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.xl,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   txRow: {
@@ -373,15 +269,12 @@ const styles = StyleSheet.create({
   },
   txRowLast: { borderBottomWidth: 0 },
   txIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
+    width: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  txIconPos: { backgroundColor: 'rgba(74,222,128,0.12)' },
-  txIconNeg: { backgroundColor: 'rgba(248,113,113,0.12)' },
+  txIconPos: {},
+  txIconNeg: {},
   txTitle: { ...type.bodyBold, color: colors.text },
   txMeta: { ...type.caption, color: colors.textMuted, marginTop: 2 },
   txRight: { alignItems: 'flex-end' },
@@ -395,11 +288,10 @@ const styles = StyleSheet.create({
   txState: { ...type.caption, marginTop: 4 },
   txStatePending: { color: colors.warn },
   txStateFailed: { color: colors.textMuted },
-  gatewayRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginLeft: 'auto' },
   loadMore: {
     marginTop: spacing.md,
     paddingVertical: spacing.md,
-    borderRadius: radius.pill,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
