@@ -6,9 +6,9 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import OtpInput from '../components/OtpInput';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/type';
@@ -21,7 +21,7 @@ export default function OtpScreen({ phone, onSuccess, onBack }) {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(60);
-  const refs = useRef([]);
+  const otpRef = useRef(null);
 
   // Countdown for resend button
   useEffect(() => {
@@ -29,29 +29,6 @@ export default function OtpScreen({ phone, onSuccess, onBack }) {
     const t = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
     return () => clearTimeout(t);
   }, [resendCooldown]);
-
-  const focusNext = (index) => refs.current[index + 1]?.focus();
-  const focusPrev = (index) => refs.current[index - 1]?.focus();
-
-  const handleChange = (val, index) => {
-    const cleaned = val.replace(/\D/g, '').slice(-1);
-    const next = [...digits];
-    next[index] = cleaned;
-    setDigits(next);
-    if (cleaned) focusNext(index);
-  };
-
-  const handleKeyPress = (key, index) => {
-    if (key === 'Backspace' && !digits[index]) focusPrev(index);
-  };
-
-  const handlePaste = (val) => {
-    const cleaned = val.replace(/\D/g, '').slice(0, OTP_LENGTH);
-    if (cleaned.length === OTP_LENGTH) {
-      setDigits(cleaned.split(''));
-      refs.current[OTP_LENGTH - 1]?.focus();
-    }
-  };
 
   const handleVerify = async () => {
     const otp = digits.join('');
@@ -67,7 +44,7 @@ export default function OtpScreen({ phone, onSuccess, onBack }) {
     } catch (err) {
       setError(err.message || 'Invalid OTP. Please try again.');
       setDigits(Array(OTP_LENGTH).fill(''));
-      refs.current[0]?.focus();
+      otpRef.current?.focus(0);
     } finally {
       setSubmitting(false);
     }
@@ -80,7 +57,7 @@ export default function OtpScreen({ phone, onSuccess, onBack }) {
       setResendCooldown(60);
       setDigits(Array(OTP_LENGTH).fill(''));
       setError('');
-      refs.current[0]?.focus();
+      otpRef.current?.focus(0);
     } catch (err) {
       setError(err.message || 'Could not resend OTP.');
     }
@@ -106,26 +83,7 @@ export default function OtpScreen({ phone, onSuccess, onBack }) {
           </Text>
         </View>
 
-        <View style={styles.boxRow}>
-          {digits.map((d, i) => (
-            <TextInput
-              key={i}
-              ref={(r) => (refs.current[i] = r)}
-              value={d}
-              onChangeText={(v) => {
-                if (v.length > 1) handlePaste(v);
-                else handleChange(v, i);
-              }}
-              onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, i)}
-              style={[styles.box, d && styles.boxFilled, error && styles.boxError]}
-              keyboardType="number-pad"
-              maxLength={OTP_LENGTH}
-              selectTextOnFocus
-              textContentType="oneTimeCode"
-              autoComplete={i === 0 ? 'sms-otp' : 'off'}
-            />
-          ))}
-        </View>
+        <OtpInput ref={otpRef} digits={digits} onChange={(d) => { setDigits(d); if (error) setError(''); }} error={!!error} />
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -201,39 +159,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: fonts.body,
     lineHeight: 22,
-  },
-  boxRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 24,
-  },
-  box: {
-    flex: 1,
-    // On web each box is an <input>, which has a ~150px intrinsic width that
-    // flex won't shrink below without these — six of them overflowed the screen.
-    flexBasis: 0,
-    minWidth: 0,
-    width: 0,
-    maxWidth: 56,
-    aspectRatio: 1,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: 16,
-    textAlign: 'center',
-    fontSize: 24,
-    fontFamily: fonts.displayBold,
-    color: colors.text,
-    backgroundColor: colors.surface,
-  },
-  boxFilled: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primarySoft,
-    color: colors.primaryDark,
-  },
-  boxError: {
-    borderColor: colors.danger,
-    backgroundColor: colors.dangerSoft,
   },
   error: {
     color: colors.danger,
