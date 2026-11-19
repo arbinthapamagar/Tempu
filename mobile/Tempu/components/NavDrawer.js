@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
+  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -18,6 +19,7 @@ import {
   UserIcon,
   WalletIcon,
 } from './Icons';
+import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
 import { STATUS_TOP_PAD } from '../theme';
 import { fonts } from '../theme/type';
@@ -39,6 +41,9 @@ const PANEL_W = Math.min(320, Math.round(Dimensions.get('window').width * 0.82))
  */
 export default function NavDrawer({ open, onClose, active, onChange, isDriver = false }) {
   const items = NAV;
+  const { user } = useAuth();
+  const initials = (user?.name || '?').split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+  const balance = Number(user?.walletBalance || 0);
   const [visible, setVisible] = useState(open);
   const slide = useRef(new Animated.Value(open ? 1 : 0)).current;
 
@@ -68,12 +73,29 @@ export default function NavDrawer({ open, onClose, active, onChange, isDriver = 
       </Animated.View>
 
       <Animated.View style={[styles.panel, { transform: [{ translateX }] }]}>
+        {/* Who is signed in, and their balance; tapping opens Account. */}
         <View style={styles.head}>
-          <Text style={styles.brand}>Menu</Text>
-          <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
+          <Pressable style={styles.who} onPress={() => select('account')}>
+            {user?.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.avatarEmpty]}>
+                <Text style={styles.avatarText}>{initials}</Text>
+              </View>
+            )}
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.name} numberOfLines={1}>{user?.name || 'Account'}</Text>
+              {user?.phone ? <Text style={styles.phone} numberOfLines={1}>{user.phone}</Text> : null}
+            </View>
+          </Pressable>
+          <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn} accessibilityLabel="Close menu">
             <CloseIcon size={16} color={colors.textMuted} />
           </Pressable>
         </View>
+        <Pressable style={styles.balanceRow} onPress={() => select('account')}>
+          <Text style={styles.balanceLabel}>Wallet</Text>
+          <Text style={styles.balanceValue}>Rs {balance.toLocaleString()}</Text>
+        </Pressable>
 
         <View style={styles.list}>
           {items.map((t) => {
@@ -118,13 +140,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
     paddingHorizontal: 8,
-    paddingBottom: 16,
+    paddingBottom: 12,
+  },
+  who: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, minWidth: 0 },
+  avatar: { width: 40, height: 40, borderRadius: 20 },
+  avatarEmpty: { backgroundColor: colors.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 15, fontFamily: fonts.bodyBold, color: colors.text },
+  name: { fontSize: 16, fontFamily: fonts.bodyBold, color: colors.text },
+  phone: { fontSize: 13, fontFamily: fonts.body, color: colors.textMuted, marginTop: 1 },
+  balanceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     marginBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
-  brand: { fontSize: 18, fontFamily: fonts.bodyBold, color: colors.text },
+  balanceLabel: { fontSize: 14, fontFamily: fonts.body, color: colors.textMuted },
+  balanceValue: { fontSize: 15, fontFamily: fonts.bodyBold, color: colors.text },
   closeBtn: {
     width: 32,
     height: 32,
